@@ -10,6 +10,7 @@ npm install
 npm run dev       # servidor local en http://localhost:4321
 npm run build     # genera el sitio estático en dist/
 npm run preview   # sirve dist/ localmente
+npm test          # pruebas Vitest de los cálculos
 ```
 
 ## Variables de entorno
@@ -43,3 +44,11 @@ tests/                  pruebas Vitest
    - Build output directory: `dist`
 4. En **Environment variables** agrega `SITE_URL` con tu URL final (opcional).
 5. Pulsa **Save and Deploy**. Cada push a la rama principal redespliega el sitio.
+
+## Datos y categorías
+
+- Los productos viven en `data/productos.json` (los actuales son ficticios: `notas` dice "EJEMPLO – reemplazar"; reemplaza también `enlace_referido`).
+- Para agregar una categoría, edita solo `src/config/categorias.ts` y agrega productos al JSON; las páginas se generan solas.
+- Si una métrica nueva es necesaria, agrégala en `src/lib/calculos.ts`.
+- La advertencia de precio de más de 14 días se evalúa al construir y también al abrir la página.
+- `sitemap.xml` y `robots.txt` se generan con `SITE_URL`.
