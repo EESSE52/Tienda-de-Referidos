@@ -1,0 +1,9 @@
+{
+  // Sitio 100% estático: Cloudflare sirve la carpeta dist (generada por `npm run build`).
+  "name": "dmonkesport",
+  "compatibility_date": "2026-10-01",
+  "assets": {
+    "directory": "./dist",
+    "not_found_handling": "404-page"
+  }
+}

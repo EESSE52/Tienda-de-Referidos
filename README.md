@@ -52,3 +52,9 @@ tests/                  pruebas Vitest
 - Si una métrica nueva es necesaria, agrégala en `src/lib/calculos.ts`.
 - La advertencia de precio de más de 14 días se evalúa al construir y también al abrir la página.
 - `sitemap.xml` y `robots.txt` se generan con `SITE_URL`.
+
+### Si Cloudflare muestra "Could not detect a directory containing static files"
+
+El proyecto se creó como Workers Builds y solo ejecutó `npx wrangler deploy`. Hay dos cosas:
+- `wrangler.jsonc` (incluido en el repo) indica que los archivos estáticos están en `dist`.
+- En Settings → Build, define **Build command** = `npm run build` y **Deploy command** = `npx wrangler deploy`. Sin build command, `dist` no existe y el deploy falla.
