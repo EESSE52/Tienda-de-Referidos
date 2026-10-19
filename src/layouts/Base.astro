@@ -1,0 +1,20 @@
+---
+// Layout base: estructura HTML común a todas las páginas.
+interface Props {
+  titulo: string;
+  descripcion?: string;
+}
+const { titulo, descripcion = 'Comparador de productos deportivos en Chile.' } = Astro.props;
+---
+<!doctype html>
+<html lang="es-CL">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{titulo}</title>
+    <meta name="description" content={descripcion} />
+  </head>
+  <body>
+    <main><slot /></main>
+  </body>
+</html>
