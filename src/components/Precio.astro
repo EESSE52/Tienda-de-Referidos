@@ -1,0 +1,11 @@
+---
+import { formatoCLP, formatoFecha, precioDesactualizado } from '../lib/formato';
+interface Props { precio: number; fecha: string }
+const { precio, fecha } = Astro.props;
+const viejo = precioDesactualizado(fecha);
+---
+<span class="precio">
+  <strong>{formatoCLP(precio)}</strong><br />
+  <span class="suave">Precio referencial al {formatoFecha(fecha)}. Revisa el precio actual en Mercado Libre.</span>
+  <span class="aviso-precio" data-fecha-precio={fecha} hidden={!viejo}>Precio posiblemente desactualizado</span>
+</span>

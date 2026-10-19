@@ -1,10 +1,10 @@
 ---
-// Layout base: estructura HTML común a todas las páginas.
-interface Props {
-  titulo: string;
-  descripcion?: string;
-}
-const { titulo, descripcion = 'Comparador de productos deportivos en Chile.' } = Astro.props;
+// Layout base: cabecera, navegación, SEO básico (title, description, Open Graph) y pie.
+import '../styles/global.css';
+interface Props { titulo: string; descripcion?: string; jsonLd?: object }
+const { titulo, descripcion = 'Comparador de productos deportivos en Chile.', jsonLd } = Astro.props;
+const canonica = new URL(Astro.url.pathname, Astro.site).href;
+const json = jsonLd ? JSON.stringify(jsonLd).replace(/</g, '\\u003c') : null;
 ---
 <!doctype html>
 <html lang="es-CL">
@@ -13,8 +13,44 @@ const { titulo, descripcion = 'Comparador de productos deportivos en Chile.' } =
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>{titulo}</title>
     <meta name="description" content={descripcion} />
+    <link rel="canonical" href={canonica} />
+    <meta property="og:type" content="website" />
+    <meta property="og:locale" content="es_CL" />
+    <meta property="og:site_name" content="Dmonkesport" />
+    <meta property="og:title" content={titulo} />
+    <meta property="og:description" content={descripcion} />
+    <meta property="og:url" content={canonica} />
+    <link rel="icon" href="/placeholder.svg" type="image/svg+xml" />
+    {json && <script type="application/ld+json" set:html={json} />}
   </head>
   <body>
-    <main><slot /></main>
+    <a class="salto" href="#contenido">Saltar al contenido</a>
+    <header class="sitio">
+      <div class="contenedor">
+        <a class="marca" href="/">Dmonkesport</a>
+        <nav aria-label="Principal">
+          <ul>
+            <li><a href="/creatina/">Creatina</a></li>
+            <li><a href="/proteina/">Proteína</a></li>
+            <li><a href="/comparar/">Comparar</a></li>
+            <li><a href="/como-comparamos/">Cómo comparamos</a></li>
+          </ul>
+        </nav>
+      </div>
+    </header>
+    <main id="contenido" class="contenedor"><slot /></main>
+    <footer class="sitio">
+      <div class="contenedor">
+        <p>Este sitio usa enlaces de afiliado de Mercado Libre; podemos recibir una comisión sin costo extra para ti.</p>
+        <p><a href="/aviso-afiliados/">Aviso de afiliados</a> · <a href="/como-comparamos/">Cómo comparamos</a></p>
+      </div>
+    </footer>
+    <script>
+      // Muestra la advertencia de precio antiguo si, al abrir la página, la fecha supera 14 días.
+      document.querySelectorAll<HTMLElement>('[data-fecha-precio]').forEach((el) => {
+        const t = Date.parse(`${el.dataset.fechaPrecio}T00:00:00Z`);
+        if (Number.isNaN(t) || (Date.now() - t) / 86400000 > 14) el.hidden = false;
+      });
+    </script>
   </body>
 </html>

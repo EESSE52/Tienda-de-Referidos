@@ -1,7 +1,18 @@
 ---
 import Base from '../layouts/Base.astro';
+import { categorias } from '../config/categorias';
+import { productosDe } from '../lib/productos';
 ---
-<Base titulo="Dmonkesport — comparador de productos deportivos">
+<Base titulo="Dmonkesport — comparador de productos deportivos en Chile" descripcion="Compara creatina y proteína por precio por porción y por gramo. Orden basado en datos, no en comisiones.">
   <h1>Dmonkesport</h1>
-  <p>Proyecto en construcción.</p>
+  <p>Comparador de productos deportivos en Chile. Ordenamos por precio por porción y por gramo, no por comisión. <a href="/como-comparamos/">Cómo comparamos</a>.</p>
+  <div class="tarjetas">
+    {categorias.map((c) => (
+      <article class="tarjeta">
+        <h2><a href={`/${c.slug}/`}>{c.nombre}</a></h2>
+        <p>{c.descripcion}</p>
+        <p class="suave">{productosDe(c.slug).length} productos</p>
+      </article>
+    ))}
+  </div>
 </Base>
