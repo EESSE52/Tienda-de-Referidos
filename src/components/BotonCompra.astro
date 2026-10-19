@@ -1,0 +1,11 @@
+---
+import { enlaceSeguro, type Producto } from '../lib/productos';
+interface Props { producto: Producto }
+const { producto } = Astro.props;
+const href = enlaceSeguro(producto.enlace_referido);
+---
+{producto.activo && href ? (
+  <a class="boton" href={href} target="_blank" rel="sponsored nofollow noopener">Ver en Mercado Libre</a>
+) : (
+  <span class="no-disponible">No disponible</span>
+)}

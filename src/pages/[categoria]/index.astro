@@ -1,0 +1,189 @@
+---
+// Lista por categoría generada desde categorias.ts + productos.json.
+import Base from '../../layouts/Base.astro';
+import AvisoAfiliados from '../../components/AvisoAfiliados.astro';
+import Precio from '../../components/Precio.astro';
+import BotonCompra from '../../components/BotonCompra.astro';
+import { categorias } from '../../config/categorias';
+import { productosDe, valorDe, mostrar } from '../../lib/productos';
+
+export function getStaticPaths() {
+  return categorias.map((categoria) => ({ params: { categoria: categoria.slug }, props: { categoria } }));
+}
+const { categoria } = Astro.props;
+const col = categoria.columnas;
+
+// Orden inicial: criterio por defecto de la categoría (los valores nulos van al final).
+const lista = [...productosDe(categoria.slug)].sort((a, b) => {
+  const va = valorDe(a, categoria.ordenPorDefecto) as number | null;
+  const vb = valorDe(b, categoria.ordenPorDefecto) as number | null;
+  if (va === null && vb === null) return 0;
+  if (va === null) return 1;
+  if (vb === null) return -1;
+  return va - vb;
+});
+const unicos = (f: (p: (typeof lista)[number]) => string | undefined) =>
+  [...new Set(lista.map(f).filter((x): x is string => !!x))].sort((a, b) => a.localeCompare(b, 'es'));
+const marcas = unicos((p) => p.marca);
+const formatos = unicos((p) => p.formato);
+const tipos = unicos((p) => valorDe(p, categoria.filtroTipo) as string | undefined);
+const etiquetaTipo = categoria.camposExtra.find((c) => c.clave === categoria.filtroTipo)?.etiqueta ?? 'Tipo';
+
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'ItemList',
+  name: `Comparador de ${categoria.nombre.toLowerCase()}`,
+  itemListElement: lista.map((p, i) => ({
+    '@type': 'ListItem',
+    position: i + 1,
+    name: p.nombre,
+    url: new URL(`/${categoria.slug}/${p.id}/`, Astro.site).href,
+  })),
+};
+---
+<Base titulo={`${categoria.nombre}: comparador de precios | Dmonkesport`} descripcion={categoria.descripcion} jsonLd={jsonLd}>
+  <h1>{categoria.nombre}</h1>
+  <p>{categoria.descripcion}</p>
+  <AvisoAfiliados />
+
+  <form class="filtros" id="filtros" aria-label="Filtros">
+    <label>Marca
+      <select name="marca"><option value="">Todas</option>{marcas.map((m) => <option>{m}</option>)}</select>
+    </label>
+    <label>Formato
+      <select name="formato"><option value="">Todos</option>{formatos.map((m) => <option>{m}</option>)}</select>
+    </label>
+    <label>{etiquetaTipo}
+      <select name="tipo"><option value="">Todos</option>{tipos.map((m) => <option>{m}</option>)}</select>
+    </label>
+    <label>Precio mínimo (CLP)<input type="number" name="min" min="0" step="1" inputmode="numeric" /></label>
+    <label>Precio máximo (CLP)<input type="number" name="max" min="0" step="1" inputmode="numeric" /></label>
+  </form>
+  <p id="resultado" class="suave" aria-live="polite"></p>
+
+  <div class="tabla-scroll">
+    <table id="tabla" data-orden={categoria.ordenPorDefecto}>
+      <caption class="suave" style="text-align:left;padding:.5rem .75rem">
+        Ordena con los encabezados. Selecciona de 2 a 4 productos para compararlos.
+      </caption>
+      <thead>
+        <tr>
+          <th scope="col"><span class="sr">Comparar</span></th>
+          {col.map((c) => (
+            <th scope="col" class={c.formato !== 'texto' ? 'num' : ''} aria-sort={c.clave === categoria.ordenPorDefecto ? 'ascending' : 'none'}>
+              {c.ordenable ? <button type="button" data-clave={c.clave}>{c.etiqueta}</button> : c.etiqueta}
+            </th>
+          ))}
+          <th scope="col">Compra</th>
+        </tr>
+      </thead>
+      <tbody>
+        {lista.map((p) => (
+          <tr
+            class={p.activo ? '' : 'agotado'}
+            data-id={p.id}
+            data-marca={p.marca}
+            data-formato={p.formato}
+            data-tipo={(valorDe(p, categoria.filtroTipo) as string) ?? ''}
+            data-precio={p.precio}
+            {...Object.fromEntries(col.filter((c) => c.ordenable).map((c) => [`data-v-${c.clave}`, valorDe(p, c.clave) ?? '']))}
+          >
+            <td><input type="checkbox" class="sel" value={p.id} aria-label={`Comparar ${p.nombre}`} /></td>
+            {col.map((c, i) => (
+              <td class={c.formato !== 'texto' ? 'num' : ''}>
+                {i === 0 ? <a href={`/${categoria.slug}/${p.id}/`}>{p.nombre}</a> : mostrar(p, c)}
+                {c.clave === 'precio' && <><br /><Precio precio={p.precio} fecha={p.fecha_precio} /></>}
+              </td>
+            ))}
+            <td><BotonCompra producto={p} /></td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+  <p id="vacio" class="suave" hidden>Ningún producto coincide con los filtros.</p>
+
+  <div class="barra-comparar">
+    <span id="contador" aria-live="polite">0 seleccionados (elige de 2 a 4)</span>
+    <a id="comparar" class="boton" href="/comparar/" aria-disabled="true" tabindex="-1">Comparar</a>
+  </div>
+</Base>
+
+<style is:global>
+  .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+</style>
+
+<script>
+  // Orden, filtros y selección para comparar. Solo manipula el DOM ya generado.
+  const tabla = document.getElementById('tabla') as HTMLTableElement;
+  const cuerpo = tabla.tBodies[0];
+  const filas = () => Array.from(cuerpo.rows);
+  const form = document.getElementById('filtros') as HTMLFormElement;
+
+  // --- Orden ---
+  let clave = tabla.dataset.orden!;
+  let asc = true;
+  function ordenar() {
+    const num = (f: HTMLElement) => {
+      const v = f.getAttribute(`data-v-${clave}`);
+      return v === null || v === '' ? null : Number(v);
+    };
+    const ordenadas = filas().sort((a, b) => {
+      const x = num(a), y = num(b);
+      if (x === null && y === null) return 0;
+      if (x === null) return 1; // sin dato siempre al final
+      if (y === null) return -1;
+      return asc ? x - y : y - x;
+    });
+    ordenadas.forEach((f) => cuerpo.appendChild(f));
+    tabla.querySelectorAll('th[aria-sort]').forEach((th) => {
+      const b = th.querySelector('button');
+      th.setAttribute('aria-sort', b && b.dataset.clave === clave ? (asc ? 'ascending' : 'descending') : 'none');
+    });
+  }
+  tabla.querySelectorAll<HTMLButtonElement>('th button').forEach((b) =>
+    b.addEventListener('click', () => {
+      asc = b.dataset.clave === clave ? !asc : true;
+      clave = b.dataset.clave!;
+      ordenar();
+    }),
+  );
+
+  // --- Filtros ---
+  function filtrar() {
+    const d = new FormData(form);
+    const marca = d.get('marca') as string, formato = d.get('formato') as string, tipo = d.get('tipo') as string;
+    const min = d.get('min') ? Number(d.get('min')) : -Infinity;
+    const max = d.get('max') ? Number(d.get('max')) : Infinity;
+    let visibles = 0;
+    filas().forEach((f) => {
+      const precio = Number(f.dataset.precio);
+      const ok = (!marca || f.dataset.marca === marca) && (!formato || f.dataset.formato === formato) &&
+        (!tipo || f.dataset.tipo === tipo) && precio >= min && precio <= max;
+      f.hidden = !ok;
+      if (ok) visibles++;
+    });
+    document.getElementById('resultado')!.textContent = `${visibles} de ${filas().length} productos`;
+    document.getElementById('vacio')!.hidden = visibles > 0;
+  }
+  form.addEventListener('input', filtrar);
+  form.addEventListener('submit', (e) => e.preventDefault());
+
+  // --- Selección para comparar (2 a 4) ---
+  const checks = () => Array.from(document.querySelectorAll<HTMLInputElement>('.sel'));
+  const boton = document.getElementById('comparar') as HTMLAnchorElement;
+  function actualizarSeleccion() {
+    const marcados = checks().filter((c) => c.checked);
+    checks().forEach((c) => (c.disabled = !c.checked && marcados.length >= 4));
+    const valido = marcados.length >= 2;
+    document.getElementById('contador')!.textContent = `${marcados.length} seleccionados (elige de 2 a 4)`;
+    boton.setAttribute('aria-disabled', String(!valido));
+    boton.tabIndex = valido ? 0 : -1;
+    boton.href = valido ? `/comparar/?ids=${marcados.map((c) => encodeURIComponent(c.value)).join(',')}` : '/comparar/';
+  }
+  boton.addEventListener('click', (e) => { if (boton.getAttribute('aria-disabled') === 'true') e.preventDefault(); });
+  checks().forEach((c) => (c.checked = false, c.addEventListener('change', actualizarSeleccion)));
+
+  filtrar();
+  actualizarSeleccion();
+</script>

@@ -1,0 +1,43 @@
+---
+// Ficha de producto.
+import Base from '../../layouts/Base.astro';
+import AvisoAfiliados from '../../components/AvisoAfiliados.astro';
+import Precio from '../../components/Precio.astro';
+import BotonCompra from '../../components/BotonCompra.astro';
+import { categoriaPorSlug } from '../../config/categorias';
+import { productos, metricasDe } from '../../lib/productos';
+import { formatoCLP } from '../../lib/formato';
+
+export function getStaticPaths() {
+  return productos
+    .filter((p) => categoriaPorSlug(p.categoria))
+    .map((p) => ({ params: { categoria: p.categoria, id: p.id }, props: { p } }));
+}
+const { p } = Astro.props;
+const cat = categoriaPorSlug(p.categoria)!;
+const m = metricasDe(p);
+const filas: [string, string][] = [
+  ['Marca', p.marca], ['Formato', p.formato], ['Vendedor', p.vendedor],
+  ...cat.camposExtra.map((c): [string, string] => [c.etiqueta, String((p as any)[c.clave] ?? '—')]),
+  ['Contenido', `${p.contenido_g} g`], ['Porciones', String(p.porciones)], ['Dosis por porción', `${p.dosis_g} g`],
+];
+// Métricas visibles: las columnas calculadas de la categoría.
+const calculos = cat.columnas.filter((c) => c.clave in m).map((c) => [c.etiqueta, c.formato === 'clp1' ? formatoCLP(m[c.clave], 1) : formatoCLP(m[c.clave])]);
+---
+<Base titulo={`${p.nombre} | Dmonkesport`} descripcion={`Datos y precio por porción de ${p.nombre} (${p.marca}).`}>
+  <p><a href={`/${cat.slug}/`}>← {cat.nombre}</a></p>
+  <h1>{p.nombre}</h1>
+  <AvisoAfiliados />
+  <div class="ficha">
+    <img src={p.imagen || '/placeholder.svg'} alt={p.imagen ? p.nombre : 'Imagen no disponible'} width="224" height="224" />
+    <div>
+      <p><Precio precio={p.precio} fecha={p.fecha_precio} /></p>
+      <p><BotonCompra producto={p} /> <a href={`/comparar/?ids=${p.id}`}>Comparar</a></p>
+      <h2>Datos</h2>
+      <dl class="datos">{filas.map(([k, v]) => (<><dt>{k}</dt><dd>{v}</dd></>))}</dl>
+      <h2>Cálculos</h2>
+      <dl class="datos">{calculos.map(([k, v]) => (<><dt>{k}</dt><dd>{v}</dd></>))}</dl>
+      {p.notas && <p class="suave">{p.notas}</p>}
+    </div>
+  </div>
+</Base>

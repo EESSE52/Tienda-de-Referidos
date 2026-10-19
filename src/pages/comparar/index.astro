@@ -1,0 +1,122 @@
+---
+// Comparador: lee ?ids=a,b,c en el navegador y arma las columnas lado a lado.
+import Base from '../../layouts/Base.astro';
+import AvisoAfiliados from '../../components/AvisoAfiliados.astro';
+import { productos, metricasDe, enlaceSeguro, nombreCategoria } from '../../lib/productos';
+import { formatoCLP, formatoFecha, precioDesactualizado } from '../../lib/formato';
+
+// Datos serializables para el script del navegador (valores ya formateados).
+const datos = productos.map((p) => {
+  const m = metricasDe(p);
+  const num = { precio: p.precio, ...m };
+  return {
+    id: p.id,
+    categoria: nombreCategoria(p.categoria),
+    nombre: p.nombre,
+    href: `/${p.categoria}/${p.id}/`,
+    activo: p.activo,
+    enlace: enlaceSeguro(p.enlace_referido),
+    viejo: precioDesactualizado(p.fecha_precio),
+    num,
+    txt: {
+      marca: p.marca, formato: p.formato, vendedor: p.vendedor, tipo: p.tipo ?? '—',
+      precio: formatoCLP(p.precio),
+      fecha: `Precio referencial al ${formatoFecha(p.fecha_precio)}`,
+      contenido: `${p.contenido_g} g`, porciones: String(p.porciones), dosis: `${p.dosis_g} g`,
+      precio_por_porcion: formatoCLP(m.precio_por_porcion),
+      precio_por_gramo: formatoCLP(m.precio_por_gramo, 1),
+      precio_por_dosis_3g: formatoCLP(m.precio_por_dosis_3g, 1),
+      precio_por_dosis_5g: formatoCLP(m.precio_por_dosis_5g, 1),
+      precio_por_gramo_proteina: formatoCLP(m.precio_por_gramo_proteina, 1),
+    } as Record<string, string>,
+  };
+});
+const json = JSON.stringify(datos).replace(/</g, '\\u003c');
+---
+<Base titulo="Comparador de productos | Dmonkesport" descripcion="Compara de 2 a 4 productos lado a lado y revisa cuál tiene el menor precio por porción.">
+  <h1>Comparador</h1>
+  <AvisoAfiliados />
+  <div id="mensajes" aria-live="polite"></div>
+  <div class="tabla-scroll" id="contenedor" hidden>
+    <table id="comparacion"></table>
+  </div>
+  <p class="suave">Se resalta el menor valor de cada fila de precios. <a href="/creatina/">Creatina</a> · <a href="/proteina/">Proteína</a></p>
+  <script id="datos-productos" type="application/json" set:html={json} />
+</Base>
+
+<script>
+  // Construye la tabla con DOM (textContent) a partir de los ids de la URL.
+  interface P {
+    id: string; categoria: string; nombre: string; href: string; activo: boolean; enlace: string | null; viejo: boolean;
+    num: Record<string, number | null>; txt: Record<string, string>;
+  }
+  const todos: P[] = JSON.parse(document.getElementById('datos-productos')!.textContent!);
+  const ids = (new URLSearchParams(location.search).get('ids') ?? '').split(',').map((s) => s.trim()).filter(Boolean);
+  const elegidos = [...new Set(ids)].map((id) => todos.find((p) => p.id === id)).filter((p): p is P => !!p).slice(0, 4);
+  const msgs = document.getElementById('mensajes')!;
+  const aviso = (t: string) => { const p = document.createElement('p'); p.className = 'aviso'; p.textContent = t; msgs.appendChild(p); };
+
+  if (elegidos.length < 2) {
+    aviso('Elige de 2 a 4 productos desde una categoría y pulsa "Comparar", o usa un enlace del tipo /comparar/?ids=a,b,c.');
+  } else {
+    if (ids.length > 4) aviso('Solo se comparan los primeros 4 productos.');
+    if (new Set(elegidos.map((p) => p.categoria)).size > 1) aviso('Estás comparando productos de categorías distintas; algunos valores no son equivalentes.');
+
+    // [clave, etiqueta, resaltar el menor]
+    const filas: [string, string, boolean][] = [
+      ['marca', 'Marca', false], ['formato', 'Formato', false], ['vendedor', 'Vendedor', false], ['tipo', 'Tipo', false],
+      ['precio', 'Precio', true], ['fecha', 'Fecha del precio', false],
+      ['contenido', 'Contenido', false], ['porciones', 'Porciones', false], ['dosis', 'Dosis por porción', false],
+      ['precio_por_porcion', 'Precio por porción', true], ['precio_por_gramo', 'Precio por gramo', true],
+      ['precio_por_dosis_3g', 'Precio por dosis 3 g', true], ['precio_por_dosis_5g', 'Precio por dosis 5 g', true],
+      ['precio_por_gramo_proteina', 'Precio por g de proteína', true],
+    ];
+    const t = document.getElementById('comparacion')!;
+    const celda = (tag: 'th' | 'td', texto: string, cls = '') => { const c = document.createElement(tag); c.textContent = texto; if (cls) c.className = cls; return c; };
+
+    const cab = document.createElement('tr');
+    cab.appendChild(celda('th', ''));
+    elegidos.forEach((p) => {
+      const th = document.createElement('th'); th.scope = 'col';
+      const a = document.createElement('a'); a.href = p.href; a.textContent = p.nombre; th.appendChild(a);
+      cab.appendChild(th);
+    });
+    const thead = document.createElement('thead'); thead.appendChild(cab); t.appendChild(thead);
+
+    const tbody = document.createElement('tbody');
+    filas.forEach(([k, etiqueta, resaltar]) => {
+      // Si ningún producto tiene dato (todo "—"), se omite la fila.
+      if (elegidos.every((p) => !p.txt[k] || p.txt[k] === '—')) return;
+      const tr = document.createElement('tr');
+      const th = celda('th', etiqueta); th.scope = 'row'; tr.appendChild(th);
+      const valores = elegidos.map((p) => p.num[k]).filter((v): v is number => typeof v === 'number');
+      const mejor = resaltar && valores.length > 1 ? Math.min(...valores) : null;
+      elegidos.forEach((p) => {
+        const td = celda('td', p.txt[k] ?? '—', p.num[k] !== undefined && p.num[k] === mejor ? 'mejor' : '');
+        if (td.className === 'mejor') td.title = 'Mejor valor';
+        tr.appendChild(td);
+      });
+      tbody.appendChild(tr);
+    });
+
+    const compra = document.createElement('tr');
+    compra.appendChild(celda('th', 'Compra')).setAttribute('scope', 'row');
+    elegidos.forEach((p) => {
+      const td = document.createElement('td');
+      if (p.activo && p.enlace) {
+        const a = document.createElement('a');
+        a.className = 'boton'; a.href = p.enlace; a.target = '_blank'; a.rel = 'sponsored nofollow noopener';
+        a.textContent = 'Ver en Mercado Libre'; td.appendChild(a);
+      } else td.textContent = 'No disponible';
+      if (p.viejo) { const s = document.createElement('div'); s.className = 'aviso-precio'; s.textContent = 'Precio posiblemente desactualizado'; td.appendChild(s); }
+      compra.appendChild(td);
+    });
+    tbody.appendChild(compra);
+    t.appendChild(tbody);
+
+    const nota = document.createElement('caption'); nota.className = 'suave';
+    nota.textContent = 'Precios referenciales. Revisa el precio actual en Mercado Libre.';
+    t.prepend(nota);
+    document.getElementById('contenedor')!.hidden = false;
+  }
+</script>

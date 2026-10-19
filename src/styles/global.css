@@ -1,0 +1,68 @@
+/* Estilos globales. Mobile first, con modo claro/oscuro mediante variables CSS. */
+:root {
+  --fondo: #f8fafc;
+  --superficie: #ffffff;
+  --texto: #111827;
+  --texto-suave: #4b5563;
+  --borde: #d1d5db;
+  --primario: #1d4ed8;
+  --primario-texto: #ffffff;
+  --mejor: #dcfce7;
+  --aviso-fondo: #fef9c3;
+  --aviso-texto: #713f12;
+  color-scheme: light dark;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --fondo: #0f172a;
+    --superficie: #1e293b;
+    --texto: #f1f5f9;
+    --texto-suave: #cbd5e1;
+    --borde: #475569;
+    --primario: #60a5fa;
+    --primario-texto: #0f172a;
+    --mejor: #14532d;
+    --aviso-fondo: #422006;
+    --aviso-texto: #fef08a;
+  }
+}
+* { box-sizing: border-box; }
+body { margin: 0; font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; line-height: 1.5; background: var(--fondo); color: var(--texto); }
+a { color: var(--primario); }
+:focus-visible { outline: 3px solid var(--primario); outline-offset: 2px; }
+.contenedor { max-width: 72rem; margin: 0 auto; padding: 1rem; }
+.salto { position: absolute; left: -999px; }
+.salto:focus { left: 1rem; top: 1rem; background: var(--superficie); padding: .5rem; z-index: 10; }
+header.sitio { background: var(--superficie); border-bottom: 1px solid var(--borde); }
+header.sitio .contenedor { display: flex; flex-wrap: wrap; gap: .5rem 1.5rem; align-items: center; }
+header.sitio .marca { font-weight: 700; font-size: 1.25rem; text-decoration: none; color: var(--texto); }
+nav ul { display: flex; flex-wrap: wrap; gap: 1rem; list-style: none; margin: 0; padding: 0; }
+footer.sitio { border-top: 1px solid var(--borde); margin-top: 2rem; color: var(--texto-suave); font-size: .9rem; }
+.aviso { background: var(--aviso-fondo); color: var(--aviso-texto); padding: .5rem .75rem; border-radius: .5rem; font-size: .9rem; margin: 1rem 0; }
+.aviso-precio { font-size: .85rem; color: var(--aviso-texto); background: var(--aviso-fondo); padding: .1rem .4rem; border-radius: .3rem; }
+.suave { color: var(--texto-suave); font-size: .9rem; }
+.tarjetas { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); }
+.tarjeta { background: var(--superficie); border: 1px solid var(--borde); border-radius: .75rem; padding: 1rem; }
+.tarjeta h2, .tarjeta h3 { margin-top: 0; }
+.boton { display: inline-block; background: var(--primario); color: var(--primario-texto); padding: .6rem 1rem; border: 0; border-radius: .5rem; font: inherit; font-weight: 600; text-decoration: none; cursor: pointer; }
+.boton[disabled], .boton[aria-disabled='true'] { opacity: .5; cursor: not-allowed; }
+.no-disponible { display: inline-block; padding: .4rem .8rem; border: 1px dashed var(--borde); border-radius: .5rem; color: var(--texto-suave); }
+.filtros { display: grid; gap: .75rem; grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr)); margin-bottom: 1rem; }
+.filtros label { display: flex; flex-direction: column; font-size: .9rem; gap: .2rem; }
+.filtros select, .filtros input { font: inherit; padding: .4rem; border: 1px solid var(--borde); border-radius: .4rem; background: var(--superficie); color: var(--texto); }
+.tabla-scroll { overflow-x: auto; border: 1px solid var(--borde); border-radius: .5rem; background: var(--superficie); }
+table { border-collapse: collapse; width: 100%; min-width: 40rem; }
+th, td { padding: .5rem .75rem; text-align: left; border-bottom: 1px solid var(--borde); vertical-align: top; }
+td.num, th.num { text-align: right; white-space: nowrap; }
+th button { all: unset; cursor: pointer; font-weight: 700; color: var(--primario); }
+th button:focus-visible { outline: 3px solid var(--primario); }
+td.mejor { background: var(--mejor); font-weight: 700; }
+tr.agotado { opacity: .7; }
+.barra-comparar { position: sticky; bottom: 0; background: var(--superficie); border-top: 1px solid var(--borde); padding: .75rem 1rem; display: flex; gap: 1rem; align-items: center; flex-wrap: wrap; margin-top: 1rem; }
+.ficha { display: grid; gap: 1.5rem; }
+@media (min-width: 48rem) { .ficha { grid-template-columns: 14rem 1fr; } }
+.ficha img { width: 100%; max-width: 14rem; border-radius: .75rem; background: #e5e7eb; }
+dl.datos { display: grid; grid-template-columns: max-content 1fr; gap: .25rem 1rem; }
+dl.datos dt { color: var(--texto-suave); }
+dl.datos dd { margin: 0; }
+[hidden] { display: none !important; }
