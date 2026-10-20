@@ -1,0 +1,29 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout title="Metodología" description="Cómo se comparan productos y por qué mostramos precios con advertencias de antigüedad.">
+  <section class="prose prose-slate max-w-4xl dark:prose-invert">
+    <h1>Metodología</h1>
+    <p>
+      Dmonkesport compara productos usando la realidad observable del producto: precio, cantidad, porciones y formato. No se promociona salud ni beneficios no demostrables.
+    </p>
+    <p>
+      Cada lista define su propio esquema y su métrica de comparación. El sitio toma los datos del JSON local y calcula valores seguros como precio por porción, costo por gramo, o costo por dosis.
+    </p>
+    <ul>
+      <li>Los cálculos usan solo fórmulas permitidas: precio dividido por una cantidad o campo dividido por otro campo.</li>
+      <li>Si falta un dato clave o el divisor es cero, la métrica se muestra como “—”.</li>
+      <li>La comparación resalta el mejor valor según la dirección configurada por la lista.</li>
+      <li>Si el precio tiene más de 14 días desde la última actualización, se muestra una advertencia.</li>
+    </ul>
+
+    <h2>Aviso de afiliados</h2>
+    <p>Los enlaces de afiliado llevan <code>rel="sponsored nofollow noopener"</code> y <code>target="_blank"</code> para mantener la transparencia y prevenir la manipulación de la navegación.</p>
+
+    <h2>Cómo se interpretan los resultados</h2>
+    <p>
+      Cuando una fila del comparador está marcada como “mejor menor” o “mejor mayor”, el valor óptimo se resaltará con un fondo destacado. Si se mezclan listas distintas, el sitio lo avisará para que el usuario entienda que no están comparando exactamente el mismo esquema.
+    </p>
+  </section>
+</Layout>

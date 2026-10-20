@@ -1,0 +1,44 @@
+[
+  {
+    "id": "creatina",
+    "slug": "creatina",
+    "nombre": "Creatina",
+    "descripcion": "Comparador de creatina según costo por porción, por gramo y por dosis.",
+    "unidad_base": "g",
+    "orden_defecto": { "campo": "precio_por_gramo", "direccion": "menor" },
+    "campos": [
+      { "clave": "gramos_total", "etiqueta": "Cantidad total", "tipo": "numero", "unidad": "g", "mejor": "mayor", "en_tabla": true, "filtrable": true, "requerido": true },
+      { "clave": "porciones", "etiqueta": "Porciones", "tipo": "numero", "unidad": "ud", "mejor": "mayor", "en_tabla": true, "filtrable": true, "requerido": true },
+      { "clave": "dosis_3g", "etiqueta": "Dosis de 3 g", "tipo": "numero", "unidad": "ud", "mejor": "mayor", "en_tabla": true, "filtrable": false, "requerido": false },
+      { "clave": "dosis_5g", "etiqueta": "Dosis de 5 g", "tipo": "numero", "unidad": "ud", "mejor": "mayor", "en_tabla": true, "filtrable": false, "requerido": false },
+      { "clave": "formato", "etiqueta": "Formato", "tipo": "seleccion", "unidad": null, "opciones": ["Polvo", "Capsulas", "Tabletas"], "mejor": null, "en_tabla": true, "filtrable": true, "requerido": true },
+      { "clave": "sabor", "etiqueta": "Sabor", "tipo": "texto", "unidad": null, "mejor": null, "en_tabla": false, "filtrable": false, "requerido": false }
+    ],
+    "metricas": [
+      { "clave": "precio_por_porcion", "etiqueta": "Precio por porción", "formula": { "tipo": "precio_dividido_por", "campo": "porciones" }, "mejor": "menor", "decimales": 2 },
+      { "clave": "precio_por_gramo", "etiqueta": "Precio por gramo", "formula": { "tipo": "precio_dividido_por", "campo": "gramos_total" }, "mejor": "menor", "decimales": 2 },
+      { "clave": "precio_por_dosis_3g", "etiqueta": "Precio por dosis 3 g", "formula": { "tipo": "precio_dividido_por", "campo": "dosis_3g" }, "mejor": "menor", "decimales": 2 },
+      { "clave": "precio_por_dosis_5g", "etiqueta": "Precio por dosis 5 g", "formula": { "tipo": "precio_dividido_por", "campo": "dosis_5g" }, "mejor": "menor", "decimales": 2 }
+    ]
+  },
+  {
+    "id": "proteina",
+    "slug": "proteina",
+    "nombre": "Proteína",
+    "descripcion": "Comparador de proteína según costo por porción y por gramo de proteína.",
+    "unidad_base": "g",
+    "orden_defecto": { "campo": "precio_por_gramo_proteina", "direccion": "menor" },
+    "campos": [
+      { "clave": "gramos_total", "etiqueta": "Cantidad total", "tipo": "numero", "unidad": "g", "mejor": "mayor", "en_tabla": true, "filtrable": true, "requerido": true },
+      { "clave": "proteina_total", "etiqueta": "Proteína total", "tipo": "numero", "unidad": "g", "mejor": "mayor", "en_tabla": true, "filtrable": true, "requerido": true },
+      { "clave": "porciones", "etiqueta": "Porciones", "tipo": "numero", "unidad": "ud", "mejor": "mayor", "en_tabla": true, "filtrable": true, "requerido": true },
+      { "clave": "tipo", "etiqueta": "Tipo", "tipo": "seleccion", "unidad": null, "opciones": ["Whey", "Caseína", "Vegana", "Mezcla"], "mejor": null, "en_tabla": true, "filtrable": true, "requerido": true },
+      { "clave": "sabor", "etiqueta": "Sabor", "tipo": "texto", "unidad": null, "mejor": null, "en_tabla": false, "filtrable": false, "requerido": false }
+    ],
+    "metricas": [
+      { "clave": "precio_por_porcion", "etiqueta": "Precio por porción", "formula": { "tipo": "precio_dividido_por", "campo": "porciones" }, "mejor": "menor", "decimales": 2 },
+      { "clave": "precio_por_gramo", "etiqueta": "Precio por gramo total", "formula": { "tipo": "precio_dividido_por", "campo": "gramos_total" }, "mejor": "menor", "decimales": 2 },
+      { "clave": "precio_por_gramo_proteina", "etiqueta": "Precio por gramo de proteína", "formula": { "tipo": "precio_dividido_por", "campo": "proteina_total" }, "mejor": "menor", "decimales": 2 }
+    ]
+  }
+]

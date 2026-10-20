@@ -1,0 +1,107 @@
+---
+import Layout from '../layouts/Layout.astro';
+import { currencyCLP, getBestMetricValue, getListaById, getProductoById, getProductosByListaId, listas } from '../lib/catalog';
+
+const ids = (Astro.url.searchParams.get('ids') ?? '')
+  .split(',')
+  .map((id) => id.trim())
+  .filter(Boolean)
+  .slice(0, 4);
+
+const productos = ids.map((id) => getProductoById(id)).filter(Boolean) as Array<any>;
+const mixedLists = new Set(productos.map((producto) => producto.lista_id));
+const unionMetrics = [...new Set(productos.flatMap((producto) => {
+  const lista = getListaById(producto.lista_id);
+  return lista?.metricas.map((metrica) => metrica.clave) ?? [];
+}))];
+---
+
+<Layout title="Comparador" description="Comparación de 2 a 4 productos con resaltado del mejor valor por fila.">
+  <section class="mb-6 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+    <h1 class="text-3xl font-black">Comparador</h1>
+    <p class="mt-2 text-slate-600 dark:text-slate-300">Selecciona entre 2 y 4 productos para comparar sus métricas.</p>
+    {productos.length >= 2 && (
+      <div class="mt-4 flex flex-wrap gap-3 text-sm">
+        <span class="rounded-full bg-emerald-100 px-3 py-1 font-medium text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200">{productos.length} productos</span>
+        <span class="rounded-full bg-slate-100 px-3 py-1 font-medium text-slate-700 dark:bg-slate-800 dark:text-slate-200">Precio promedio: {currencyCLP(productos.reduce((sum, producto) => sum + Number(producto.precio || 0), 0) / productos.length)}</span>
+      </div>
+    )}
+    {mixedLists.size > 1 && (
+      <div class="mt-4 rounded-xl border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:border-amber-700 dark:bg-amber-950/40 dark:text-amber-200">
+        Se mezclan listas distintas en la comparación; revisa que el criterio de comparación sea consistente.
+      </div>
+    )}
+  </section>
+
+  {productos.length < 2 ? (
+    <div class="rounded-2xl border border-dashed border-slate-300 bg-white p-10 text-center text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300">
+      Selecciona 2 a 4 productos desde una lista para comparar aquí.
+    </div>
+  ) : (
+    <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
+      <div class="overflow-x-auto">
+        <table class="min-w-full text-left">
+          <thead class="bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-100">
+            <tr>
+              <th class="px-4 py-3 font-semibold">Métrica</th>
+              {productos.map((producto) => (
+                <th class="px-4 py-3 font-semibold min-w-[180px]">
+                  <a href={`/producto/${producto.id}`} class="text-emerald-600 hover:underline dark:text-emerald-400">{producto.nombre}</a>
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            <tr class="border-t border-slate-200 dark:border-slate-800">
+              <td class="px-4 py-3 font-medium">Precio</td>
+              {productos.map((producto) => (
+                <td class="px-4 py-3 font-bold">{currencyCLP(producto.precio)}</td>
+              ))}
+            </tr>
+            {unionMetrics.map((clave) => {
+              const defs = productos.flatMap((producto) => {
+                const lista = getListaById(producto.lista_id);
+                return lista?.metricas.filter((metrica) => metrica.clave === clave) ?? [];
+              });
+              const def = defs[0];
+              if (!def) return null;
+              const values = productos.map((producto) => {
+                const lista = getListaById(producto.lista_id);
+                const metric = lista?.metricas.find((item) => item.clave === clave);
+                if (!metric) return null;
+                const value = (() => {
+                  const formula = metric.formula;
+                  if (formula.tipo === 'precio_dividido_por') {
+                    const precio = producto.precio;
+                    const divisor = producto.atributos?.[formula.campo];
+                    if (divisor === undefined || divisor === null || divisor === 0) return null;
+                    return Number(precio) / Number(divisor);
+                  }
+                  if (formula.tipo === 'campo_dividido_por') {
+                    const a = producto.atributos?.[formula.campo_a];
+                    const b = producto.atributos?.[formula.campo_b];
+                    if (a === undefined || a === null || b === undefined || b === null || Number(b) === 0) return null;
+                    return Number(a) / Number(b);
+                  }
+                  return null;
+                })();
+                return value;
+              });
+              const bestValue = getBestMetricValue(def.mejor, values);
+              return (
+                <tr class="border-t border-slate-200 dark:border-slate-800">
+                  <td class="px-4 py-3 font-medium">{def.etiqueta}</td>
+                  {values.map((value, index) => (
+                    <td class={`px-4 py-3 ${value !== null && bestValue !== null && value === bestValue ? 'bg-emerald-100 text-emerald-900 dark:bg-emerald-950 dark:text-emerald-200' : ''}`}>
+                      {value === null ? '—' : currencyCLP(value)}
+                    </td>
+                  ))}
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  )}
+</Layout>

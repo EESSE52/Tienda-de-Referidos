@@ -1,0 +1,36 @@
+{"message":"connected.","label":"vite","level":"info"}
+{"message":"Generated 1ms","label":"types","level":"info"}
+{"message":"connected.","label":"vite","level":"info"}
+{"message":"Re-optimizing dependencies because vite config has changed","label":"vite","level":"info"}
+{"message":" astro  v7.3.8 ready in 1376 ms\n┃ Local    http://localhost:4321/\n┃ Network  http://192.168.1.8:4321/","label":"SKIP_FORMAT","level":"info"}
+{"message":"watching for file changes...","label":null,"level":"info"}
+{"message":"\n update  ▶ New version of Astro available: 7.4.1\n  Run npx @astrojs/upgrade to update\n","label":"SKIP_FORMAT","level":"warn"}
+{"message":"[optimizer] bundling dependencies...","label":"vite","level":"info"}
+{"message":"[200] / 139ms","label":null,"level":"info"}
+{"message":"[200] /lista/creatina 50ms","label":null,"level":"info"}
+{"message":"[200] / 100ms","label":null,"level":"info"}
+{"message":"[200] / 27ms","label":null,"level":"info"}
+{"message":"[200] / 12ms","label":null,"level":"info"}
+{"message":"[200] /lista/proteina 16ms","label":null,"level":"info"}
+{"message":"/src/styles/global.css","label":"watch","level":"info"}
+{"message":"[200] / 99ms","label":null,"level":"info"}
+{"message":"[200] / 12ms","label":null,"level":"info"}
+{"message":"[200] /lista/proteina 160ms","label":null,"level":"info"}
+{"message":"[200] /lista/creatina 160ms","label":null,"level":"info"}
+{"message":"[200] /lista/creatina 11ms","label":null,"level":"info"}
+{"message":"[200] /metodologia 80ms","label":null,"level":"info"}
+{"message":"[200] /metodologia 15ms","label":null,"level":"info"}
+{"message":"/src/styles/global.css","label":"watch","level":"info"}
+{"message":"/src/styles/global.css","label":"watch","level":"info"}
+{"message":"program reload","label":"vite","level":"info"}
+{"message":"/src/styles/global.css","label":"watch","level":"info"}
+{"message":"[200] / 126ms","label":null,"level":"info"}
+{"message":"[200] /lista/creatina 113ms","label":null,"level":"info"}
+{"message":"[200] /lista/creatina 113ms","label":null,"level":"info"}
+{"message":"[200] / 12ms","label":null,"level":"info"}
+{"message":"/src/styles/global.css","label":"watch","level":"info"}
+{"message":"/src/styles/global.css","label":"watch","level":"info"}
+{"message":"/src/styles/global.css","label":"watch","level":"info"}
+{"message":"/src/styles/global.css","label":"watch","level":"info"}
+{"message":"/src/styles/global.css","label":"watch","level":"info"}
+{"message":"/src/styles/global.css","label":"watch","level":"info"}

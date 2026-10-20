@@ -1,0 +1,33 @@
+{
+  "name": "tienda-de-referidos",
+  "version": "1.0.0",
+  "description": "Tienda web para venta de articulos referidos",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "dev": "astro dev --host 127.0.0.1 --port 4321",
+    "build": "astro build",
+    "preview": "astro preview --host 127.0.0.1 --port 4321",
+    "admin": "node scripts/admin-server.mjs",
+    "test": "vitest run"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/EESSE52/Tienda-de-Referidos.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/EESSE52/Tienda-de-Referidos/issues"
+  },
+  "homepage": "https://github.com/EESSE52/Tienda-de-Referidos#readme",
+  "devDependencies": {
+    "vitest": "^5.0.5"
+  },
+  "dependencies": {
+    "@tailwindcss/vite": "^4.3.3",
+    "astro": "^7.3.8",
+    "tailwindcss": "^4.3.3"
+  }
+}

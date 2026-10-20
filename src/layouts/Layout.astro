@@ -1,0 +1,44 @@
+---
+import '../styles/global.css';
+
+type Props = {
+  title?: string;
+  description?: string;
+};
+
+const { title = 'Dmonkesport', description = 'Comparador de productos con enlaces de afiliado de Mercado Libre Chile.' } = Astro.props as Props;
+const currentPath = Astro.url.pathname;
+---
+
+<!doctype html>
+<html lang="es" class="h-full">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content={description} />
+    <meta name="generator" content={Astro.generator} />
+    <title>{title} | Dmonkesport</title>
+  </head>
+  <body class="min-h-full bg-slate-50 text-slate-900 antialiased dark:bg-slate-950 dark:text-slate-100">
+    <header class="border-b border-slate-200 bg-white/90 backdrop-blur dark:border-slate-800 dark:bg-slate-900/90">
+      <div class="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-4">
+        <a href="/" class="text-xl font-black tracking-tight text-slate-900 dark:text-white">Dmonkesport</a>
+        <nav class="hidden items-center gap-4 text-sm font-medium md:flex">
+          <a href="/" class={currentPath === '/' ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-600 dark:text-slate-300'}>Inicio</a>
+          <a href="/metodologia" class={currentPath === '/metodologia' ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-600 dark:text-slate-300'}>Metodología</a>
+        </nav>
+      </div>
+    </header>
+
+    <main class="mx-auto max-w-7xl px-4 py-8">
+      <slot />
+    </main>
+
+    <footer class="border-t border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
+      <div class="mx-auto flex max-w-7xl flex-col gap-3 px-4 py-6 text-sm text-slate-600 dark:text-slate-300 md:flex-row md:items-center md:justify-between">
+        <p>Los enlaces son de afiliado y pueden generar una comisión sin costo adicional para ti.</p>
+        <a href="/metodologia" class="font-medium text-emerald-600 dark:text-emerald-400">Ver metodología</a>
+      </div>
+    </footer>
+  </body>
+</html>

@@ -1,0 +1,58 @@
+---
+import Layout from '../layouts/Layout.astro';
+import { currencyCLP, getProductosByListaId, listas } from '../lib/catalog';
+
+const listaCards = listas.map((lista) => ({
+  ...lista,
+  productos: getProductosByListaId(lista.id),
+}));
+---
+
+<Layout title="Portada" description="Comparador de productos y listas de compra con enlaces de afiliado.">
+  <section class="mb-10 rounded-3xl bg-gradient-to-br from-emerald-500 to-teal-700 p-8 text-white shadow-lg shadow-emerald-200/30 dark:shadow-emerald-950/50">
+    <p class="mb-3 text-sm font-semibold uppercase tracking-[0.2em] text-emerald-100">Dmonkesport</p>
+    <h1 class="max-w-2xl text-4xl font-black tracking-tight">Comparador de productos, listas creadas por ti y precios claros.</h1>
+    <p class="mt-4 max-w-2xl text-base text-emerald-50">
+      Compara productos por mérito real, sin ruido ni promesas de salud: solo precio, cantidad, formato y métricas relevantes.
+    </p>
+  </section>
+
+  <section class="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+    {listaCards.map((lista) => (
+      <article class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md dark:border-slate-800 dark:bg-slate-900">
+        <div class="mb-4 flex items-start justify-between gap-4">
+          <div>
+            <p class="text-xs font-semibold uppercase tracking-[0.12em] text-emerald-600 dark:text-emerald-400">Lista</p>
+            <h2 class="mt-2 text-2xl font-bold text-slate-900 dark:text-white">{lista.nombre}</h2>
+          </div>
+          <span class="rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-semibold text-emerald-700 dark:bg-emerald-900 dark:text-emerald-200">
+            {lista.productos.length} productos
+          </span>
+        </div>
+
+        <p class="mb-5 text-sm text-slate-600 dark:text-slate-300">{lista.descripcion}</p>
+
+        <div class="mb-5 space-y-2 text-sm text-slate-700 dark:text-slate-200">
+          <p><span class="font-semibold">Unidad base:</span> {lista.unidad_base}</p>
+          <p><span class="font-semibold">Métricas:</span> {lista.metricas.length}</p>
+        </div>
+
+        <div class="mb-5 rounded-xl bg-slate-50 p-3 text-sm text-slate-700 dark:bg-slate-800 dark:text-slate-200">
+          <div class="font-semibold text-slate-900 dark:text-white">Producto destacado</div>
+          {lista.productos[0] ? (
+            <div class="mt-2 flex items-center justify-between gap-4">
+              <span>{lista.productos[0].nombre}</span>
+              <strong>{currencyCLP(lista.productos[0].precio)}</strong>
+            </div>
+          ) : (
+            <p class="mt-2 text-slate-500 dark:text-slate-400">Sin productos activos todavía.</p>
+          )}
+        </div>
+
+        <a href={`/lista/${lista.slug}`} class="inline-flex items-center rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-700 dark:bg-emerald-500 dark:hover:bg-emerald-400 dark:text-slate-950">
+          Ver lista
+        </a>
+      </article>
+    ))}
+  </section>
+</Layout>
