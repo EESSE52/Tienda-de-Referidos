@@ -37,8 +37,8 @@ function collectMetaValues(html) {
   for (const regex of [metaRegex, metaRegexAlt]) {
     let match;
     while ((match = regex.exec(html))) {
-      const key = decodeHtmlEntities((match[1] || match[2] || '').trim()).toLowerCase();
-      const value = decodeHtmlEntities((match[2] || match[1] || '').trim());
+      const key = decodeHtmlEntities((regex === metaRegex ? match[1] : match[2]).trim()).toLowerCase();
+      const value = decodeHtmlEntities((regex === metaRegex ? match[2] : match[1]).trim());
       if (key && value) {
         map.set(key, value);
       }
