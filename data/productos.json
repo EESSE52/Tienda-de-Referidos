@@ -73,7 +73,93 @@
     "vendedor": "Ostrovit",
     "activo": true,
     "imagen": "",
-    "notas": "OstroVit Creatina Monohidrato El monohidrato de creatina OstroVit es un suplemento de monohidrato de creatina de un solo componente de primera clase con un excelente nivel farmacéutico de micronización. La creatina es un suplemento ampliamente conocido y utilizado. Su eficacia ha sido confirmada por numerosos estudios científicos. Proporciona un mejor crecimiento del tejido muscular, una regeneración efectiva y energía para entrenamientos más largos, más efectivos y más pesados. La creatina es un compuesto químico orgánico que se produce naturalmente en el cuerpo humano. Por lo general, se entrega con productos de origen animal como carne, huevos o pescado. Su efecto beneficioso se basa en un mecanismo simple, que libera energía en forma de moléculas de ATP (trifosfato de adenosina) de alta energía a través de la descomposición de la fosfocreatina en los músculos. A pesar de que la creatina también se encuentra en los alimentos, la única forma de saturar al 100% nuestros músculos con creatina es suplementarla constantemente. El monohidrato de creatina es, sin duda, un suplemento extremadamente eficaz y seguro para los deportistas. Tiene una serie de propiedades valiosas que mejoran la función muscular, pero también muestran efectos protectores del cerebro o del músculo cardíaco. Aviso legal • Edad mínima recomendada: 15 años."
+    "notas": "OstroVit Creatina Monohidrato El monohidrato de cre[
+  {
+    "id": "creatina-monohidratada-300g",
+    "lista_id": "creatina",
+    "nombre": "Creatina Monohidratada 300 g",
+    "marca": "Nutrición Plus",
+    "id_publicacion": "MLC123456789",
+    "enlace_referido": "https://www.meli.cl/creatina-monohidratada-300g/MLC123456789",
+    "url_publicacion": "https://listado.mercadolibre.cl/creatina-monohidratada-300g",
+    "precio": 24990,
+    "fecha_precio": "2026-10-19",
+    "vendedor": "Nutrición Plus",
+    "activo": true,
+    "imagen": "",
+    "notas": "Creatina en polvo, sin sabor",
+    "atributos": {
+      "gramos_total": 300,
+      "porciones": 30,
+      "dosis_3g": 100,
+      "dosis_5g": 60,
+      "formato": "Polvo",
+      "sabor": "Sin sabor"
+    },
+    "historial_precios": [
+      {
+        "fecha": "2026-10-19",
+        "precio": 24990
+      }
+    ],
+    "creado": "2026-10-19T00:00:00.000Z",
+    "actualizado": "2026-10-19T23:06:05.685Z"
+  },
+  {
+    "id": "proteina-whey-900g",
+    "lista_id": "proteina",
+    "nombre": "Proteína Whey 900 g",
+    "marca": "BioForce",
+    "id_publicacion": "MLC987654321",
+    "enlace_referido": "https://www.meli.cl/proteina-whey-900g/MLC987654321",
+    "url_publicacion": "https://listado.mercadolibre.cl/proteina-whey-900g",
+    "precio": 32990,
+    "fecha_precio": "2026-10-19",
+    "vendedor": "BioForce",
+    "activo": true,
+    "imagen": "",
+    "notas": "Proteína aislada con sabor vainilla.",
+    "atributos": {
+      "gramos_total": 900,
+      "proteina_total": 720,
+      "porciones": 30,
+      "tipo": "Whey",
+      "sabor": "Vainilla"
+    },
+    "historial_precios": [
+      {
+        "fecha": "2026-10-19",
+        "precio": 32990
+      }
+    ],
+    "creado": "2026-10-19T00:00:00.000Z",
+    "actualizado": "2026-10-19T23:06:04.598Z"
+  },
+  {
+    "id": "creatina-monohidrato-1000-gr-1792451146469",
+    "lista_id": "creatina",
+    "nombre": "Creatina Monohidrato 1000 gr",
+    "marca": "Ostrovit",
+    "id_publicacion": "X0SXBF-EKKV",
+    "enlace_referido": "https://meli.la/27LcRxB",
+    "url_publicacion": "https://meli.la/27LcRxB",
+    "precio": 20186,
+    "fecha_precio": "2026-10-19",
+    "vendedor": "Ostrovit",
+    "activo": true,
+    "imagen": "",
+    "notas": "OstroVit Creatina Monohidrato El monohidrato de creatina OstroVit es un suplemento de monohidrato de creatina de un solo componente de primera clase con un excelente nivel farmacéutico de micronización. La creatina es un suplemento ampliamente conocido y utilizado. Su eficacia ha sido confirmada por numerosos estudios científicos. Proporciona un mejor crecimiento del tejido muscular, una regeneración efectiva y energía para entrenamientos más largos, más efectivos y más pesados. La creatina es un compuesto químico orgánico que se produce naturalmente en el cuerpo humano. Por lo general, se entrega con productos de origen animal como carne, huevos o pescado. Su efecto beneficioso se basa en un mecanismo simple, que libera energía en forma de moléculas de ATP (trifosfato de adenosina) de alta energía a través de la descomposición de la fosfocreatina en los músculos. A pesar de que la creatina también se encuentra en los alimentos, la única forma de saturar al 100% nuestros músculos con creatina es suplementarla constantemente. El monohidrato de creatina es, sin duda, un suplemento extremadamente eficaz y seguro para los deportistas. Tiene una serie de propiedades valiosas que mejoran la función muscular, pero también muestran efectos protectores del cerebro o del músculo cardíaco. Aviso legal • Edad mínima recomendada: 15 años.", 
+    "atributos": {},
+    "historial_precios": [
+      {
+        "fecha": "2026-10-19",
+        "precio": 20186
+      }
+    ],
+    "creado": "2026-10-19T23:05:46.469Z",
+    "actualizado": "2026-10-19T23:05:52.286Z"
+  }
+]atina OstroVit es un suplemento de monohidrato de creatina de un solo componente de primera clase con un excelente nivel farmacéutico de micronización. La creatina es un suplemento ampliamente conocido y utilizado. Su eficacia ha sido confirmada por numerosos estudios científicos. Proporciona un mejor crecimiento del tejido muscular, una regeneración efectiva y energía para entrenamientos más largos, más efectivos y más pesados. La creatina es un compuesto químico orgánico que se produce naturalmente en el cuerpo humano. Por lo general, se entrega con productos de origen animal como carne, huevos o pescado. Su efecto beneficioso se basa en un mecanismo simple, que libera energía en forma de moléculas de ATP (trifosfato de adenosina) de alta energía a través de la descomposición de la fosfocreatina en los músculos. A pesar de que la creatina también se encuentra en los alimentos, la única forma de saturar al 100% nuestros músculos con creatina es suplementarla constantemente. El monohidrato de creatina es, sin duda, un suplemento extremadamente eficaz y seguro para los deportistas. Tiene una serie de propiedades valiosas que mejoran la función muscular, pero también muestran efectos protectores del cerebro o del músculo cardíaco. Aviso legal • Edad mínima recomendada: 15 años."
     "atributos": {},
     "historial_precios": [
       {
