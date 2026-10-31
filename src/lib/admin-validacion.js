@@ -61,38 +61,81 @@ function parsePrice(value) {
   return Number.isFinite(numeric) ? numeric : null;
 }
 
+function coerceBoolean(value, fallback = false) {
+  if (value === undefined || value === null || value === '') {
+    return fallback;
+  }
+
+  if (typeof value === 'boolean') return value;
+  if (typeof value === 'number') return value !== 0;
+
+  const text = String(value).trim().toLowerCase();
+  if (['true', '1', 'yes', 'si', 'sí', 'on'].includes(text)) return true;
+  if (['false', '0', 'no', 'off'].includes(text)) return false;
+  return Boolean(value);
+}
+
 export function normaliseProductPayload(payload = {}, existing = null) {
   const listaId = cleanText(payload.lista_id ?? existing?.lista_id ?? '');
   const nombre = cleanText(payload.nombre ?? existing?.nombre ?? '');
   const marca = cleanText(payload.marca ?? existing?.marca ?? '');
+  const idCatalogo = cleanText(payload.id_catalogo ?? existing?.id_catalogo ?? '');
   const idPublicacion = cleanText(payload.id_publicacion ?? existing?.id_publicacion ?? '');
   const enlaceReferido = cleanText(payload.enlace_referido ?? payload.url_publicacion ?? existing?.enlace_referido ?? '');
   const urlPublicacion = cleanText(payload.url_publicacion ?? existing?.url_publicacion ?? payload.enlace_referido ?? '');
   const precio = parsePrice(payload.precio ?? existing?.precio ?? 0) ?? 0;
+  const precioOriginal = parsePrice(payload.precio_original ?? existing?.precio_original ?? null);
   const vendedor = cleanText(payload.vendedor ?? existing?.vendedor ?? '');
-  const activo = payload.activo === undefined ? (existing ? existing.activo : true) : Boolean(payload.activo);
+  const vendedorNombre = cleanText(payload.vendedor_nombre ?? existing?.vendedor_nombre ?? (vendedor || marca || ''));
+  const activo = payload.activo === undefined ? (existing ? existing.activo : true) : coerceBoolean(payload.activo, true);
   const notas = cleanText(payload.notas ?? existing?.notas ?? '');
   const atributos = payload.atributos && typeof payload.atributos === 'object' ? payload.atributos : (existing?.atributos ?? {});
   const finalId = String(payload.id ?? existing?.id ?? `${slugify(nombre || 'producto')}-${Date.now()}`).trim();
+  const estadoOferta = cleanText(payload.estado_oferta ?? existing?.estado_oferta ?? 'sin_verificar') || 'sin_verificar';
+  const imagenPropia = cleanText(payload.imagen_propia ?? existing?.imagen_propia ?? '');
+  const imagenCandidata = cleanText(payload.imagen_candidata ?? existing?.imagen_candidata ?? '');
+  const imagenFuente = cleanText(payload.imagen_fuente ?? existing?.imagen_fuente ?? '') || 'ml_api';
+  const historial = Array.isArray(payload.historial_precios)
+    ? payload.historial_precios
+    : (Array.isArray(existing?.historial_precios) ? existing.historial_precios : [{ fecha: new Date().toISOString().slice(0, 10), precio }]);
 
   return {
     id: finalId,
     lista_id: listaId,
     nombre,
     marca,
+    formato: cleanText(payload.formato ?? existing?.formato ?? ''),
+    id_catalogo: idCatalogo,
     id_publicacion: idPublicacion,
     enlace_referido: enlaceReferido,
     url_publicacion: urlPublicacion,
     precio,
+    precio_original: precioOriginal,
     fecha_precio: payload.fecha_precio || existing?.fecha_precio || new Date().toISOString().slice(0, 10),
+    precio_fuente: cleanText(payload.precio_fuente ?? existing?.precio_fuente ?? 'manual') || 'manual',
+    ultima_revision: cleanText(payload.ultima_revision ?? existing?.ultima_revision ?? new Date().toISOString()),
+    estado_oferta: estadoOferta,
     vendedor: vendedor || marca || 'Sin vendedor',
+    vendedor_nombre: vendedorNombre || vendedor || marca || 'Sin vendedor',
+    vendedor_id: cleanText(payload.vendedor_id ?? existing?.vendedor_id ?? ''),
+    reputacion_nivel: payload.reputacion_nivel ?? existing?.reputacion_nivel ?? null,
+    mercadolider: payload.mercadolider ?? existing?.mercadolider ?? null,
+    transacciones_total: payload.transacciones_total ?? existing?.transacciones_total ?? null,
+    cuenta_activa: payload.cuenta_activa ?? existing?.cuenta_activa ?? null,
+    reputacion_revisada: payload.reputacion_revisada ?? existing?.reputacion_revisada ?? null,
+    en_promocion: coerceBoolean(payload.en_promocion ?? existing?.en_promocion ?? false, false),
+    envio_gratis: coerceBoolean(payload.envio_gratis ?? existing?.envio_gratis ?? false, false),
+    despacho_full: coerceBoolean(payload.despacho_full ?? existing?.despacho_full ?? false, false),
+    tienda_oficial: coerceBoolean(payload.tienda_oficial ?? existing?.tienda_oficial ?? false, false),
+    garantia: cleanText(payload.garantia ?? existing?.garantia ?? '') || null,
     activo,
     imagen: cleanText(payload.imagen ?? existing?.imagen ?? ''),
+    imagen_propia: imagenPropia,
+    imagen_candidata: imagenCandidata,
+    imagen_fuente: imagenFuente,
     notas,
     atributos,
-    historial_precios: Array.isArray(payload.historial_precios)
-      ? payload.historial_precios
-      : (Array.isArray(existing?.historial_precios) ? existing.historial_precios : [{ fecha: new Date().toISOString().slice(0, 10), precio }]),
+    historial_precios: historial,
     creado: existing?.creado || new Date().toISOString(),
     actualizado: new Date().toISOString(),
   };

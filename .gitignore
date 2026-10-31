@@ -4,3 +4,10 @@ dist/
 .env.*
 data/backups/
 .DS_Store
+
+# Archivos generados por Astro y Cloudflare
+.astro/
+.wrangler/
+
+# Documento privado de Mercado Libre
+cliente id mercadolibre.odt

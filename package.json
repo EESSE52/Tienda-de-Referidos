@@ -9,7 +9,14 @@
     "build": "astro build",
     "preview": "astro preview --host 127.0.0.1 --port 4321",
     "admin": "node scripts/admin-server.mjs",
-    "test": "vitest run"
+    "test": "vitest run",
+    "d1:export-seed": "node scripts/export-d1-seed.mjs",
+    "ml:export": "node scripts/extract-mercadolibre-json.mjs",
+    "python:install": "python3 -m pip install -r python-extractor/requirements.txt",
+    "python:extract": "python3 python-extractor/cli.py",
+    "python:app": "python3 python-extractor/main.py",
+    "worker:dev": "npm run build && wrangler dev --config dist/server/wrangler.json",
+    "worker:deploy": "npm run build && wrangler deploy --config dist/server/wrangler.json"
   },
   "repository": {
     "type": "git",
@@ -23,11 +30,14 @@
   },
   "homepage": "https://github.com/EESSE52/Tienda-de-Referidos#readme",
   "devDependencies": {
-    "vitest": "^5.0.5"
+    "vitest": "^5.0.5",
+    "wrangler": "^4.152.0"
   },
   "dependencies": {
+    "@astrojs/cloudflare": "14.1.0",
     "@tailwindcss/vite": "^4.3.3",
-    "astro": "^7.3.8",
-    "tailwindcss": "^4.3.3"
+    "astro": "7.3.8",
+    "tailwindcss": "^4.3.3",
+    "xlsx": "^0.18.5"
   }
 }

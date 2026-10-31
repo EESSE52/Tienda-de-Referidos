@@ -6,12 +6,14 @@ import { fileURLToPath } from 'node:url';
 import { validateProductPayload } from '../src/lib/admin-validacion.js';
 import { addPriceHistoryEntry, buildPublicationSnapshot } from '../src/lib/admin-publicacion.js';
 import { extractAffiliateProductData } from '../src/lib/link-extractor.js';
+import { fetchMercadoLibreItem, getMercadoLibreItemId } from '../src/lib/mercadolibre.js';
 
-const HOST = '127.0.0.1';
-const PORT = 4322;
+const HOST = process.env.ADMIN_HOST || '127.0.0.1';
+const PORT = Number(process.env.ADMIN_PORT || 4322);
 const LISTAS_FILE = fileURLToPath(new URL('../data/listas.json', import.meta.url));
 const PRODUCTS_FILE = fileURLToPath(new URL('../data/productos.json', import.meta.url));
 const BACKUPS_DIR = fileURLToPath(new URL('../data/backups', import.meta.url));
+const XLSX_VENDOR_PATH = fileURLToPath(new URL('../node_modules/xlsx/dist/xlsx.full.min.js', import.meta.url));
 
 const sessions = new Map();
 
@@ -146,6 +148,10 @@ function normalisePayload(payload) {
   const ordenDefecto = payload.orden_defecto || { campo: 'precio_por_gramo', direccion: 'menor' };
   const campos = Array.isArray(payload.campos) ? payload.campos : [];
   const metricas = Array.isArray(payload.metricas) ? payload.metricas : [];
+  const activa = payload.activa === undefined ? true : Boolean(payload.activa);
+  const mapaAtributosMl = payload.mapa_atributos_ml && typeof payload.mapa_atributos_ml === 'object'
+    ? payload.mapa_atributos_ml
+    : {};
 
   return {
     id: slugify(slug || nombre || 'lista'),
@@ -153,12 +159,14 @@ function normalisePayload(payload) {
     nombre,
     descripcion,
     unidad_base: unidadBase,
+    activa,
     orden_defecto: {
       campo: String(ordenDefecto.campo || 'precio_por_gramo'),
       direccion: String(ordenDefecto.direccion || 'menor'),
     },
     campos,
     metricas,
+    mapa_atributos_ml: mapaAtributosMl,
   };
 }
 
@@ -172,6 +180,83 @@ function parseCurrencyNumber(value) {
   return Number.isFinite(number) ? number : null;
 }
 
+function normalizeHeaderKey(value = '') {
+  return String(value)
+    .trim()
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '');
+}
+
+function canonicalImportKey(key = '') {
+  const normalized = normalizeHeaderKey(key);
+  const aliases = {
+    lista_id: new Set(['lista_id', 'lista', 'id_lista', 'listaid', 'list_id', 'slug_lista', 'lista_name']),
+    nombre: new Set(['nombre', 'nombre_producto', 'producto', 'titulo', 'title', 'nombre_del_producto', 'producto_nombre']),
+    marca: new Set(['marca', 'brand', 'fabricante', 'proveedor']),
+    precio: new Set(['precio', 'precio_clp', 'precio_cop', 'price', 'precio_total', 'valor', 'monto']),
+    id_publicacion: new Set(['id_publicacion', 'id_publicacion_ml', 'publicacion_id', 'ml_id', 'id', 'product_id', 'identificador']),
+    enlace_referido: new Set(['enlace_referido', 'url_publicacion', 'link', 'url', 'url_producto', 'enlace_url', 'enlace', 'enlace_de_afiliado', 'affiliate_link', 'referido', 'enlace_de_referido']),
+    activo: new Set(['activo', 'active', 'enabled', 'status', 'estado']),
+    imagen: new Set(['imagen', 'image', 'foto', 'img', 'imagen_url']),
+    notas: new Set(['notas', 'observaciones', 'comentarios', 'notes', 'observacion']),
+  };
+
+  for (const [canonical, names] of Object.entries(aliases)) {
+    if (names.has(normalized)) return canonical;
+  }
+  return normalized;
+}
+
+export function normalizeImportedRow(rawRow = {}) {
+  const item = {};
+  Object.entries(rawRow).forEach(([key, value]) => {
+    const canonicalKey = canonicalImportKey(key);
+    item[canonicalKey] = value;
+  });
+
+  const attrs = {};
+  const attributeKeys = ['gramos_total', 'porciones', 'sabor', 'tipo', 'proteina_total', 'cantidad_unidades', 'objetivo', 'libre_gluten', 'formato', 'presentacion'];
+  attributeKeys.forEach((key) => {
+    const value = item[key];
+    if (value === undefined || value === null || String(value).trim() === '') return;
+    if (['gramos_total', 'porciones', 'cantidad_unidades', 'proteina_total'].includes(key)) {
+      const parsed = parseCurrencyNumber(value);
+      if (parsed !== null) attrs[key] = Number(parsed);
+      return;
+    }
+    if (key === 'libre_gluten') {
+      const text = String(value).trim().toLowerCase();
+      attrs[key] = ['true', '1', 'si', 'sí', 'yes', 'on'].includes(text);
+      return;
+    }
+    attrs[key] = String(value).trim();
+  });
+
+  const lista = String(item.lista_id || item.lista || '').trim() || 'creatina';
+  const nombre = String(item.nombre || item.producto || item.titulo || '').trim();
+  const marca = String(item.marca || item.brand || '').trim();
+  const precio = parseCurrencyNumber(item.precio ?? item.price ?? item.precio_clp ?? item.precio_cop ?? 0) ?? 0;
+  const link = String(item.enlace_referido || item.url_publicacion || item.link || item.url || '').trim();
+
+  return {
+    lista_id: lista,
+    nombre,
+    marca,
+    precio: Number(precio),
+    id_publicacion: String(item.id_publicacion || item.id_publicacion_ml || item.id || '').trim(),
+    enlace_referido: link,
+    url_publicacion: link,
+    vendedor: String(item.vendedor || item.seller || marca || '').trim(),
+    activo: item.activo === undefined ? true : ['true', '1', 'si', 'sí', 'yes', 'on'].includes(String(item.activo).trim().toLowerCase()),
+    imagen: String(item.imagen || item.image || '').trim(),
+    atributos: attrs,
+    notas: String(item.notas || item.observaciones || '').trim(),
+  };
+}
+
 function currencyToNumber(value) {
   const parsed = parseCurrencyNumber(value);
   return parsed === null ? 0 : parsed;
@@ -181,33 +266,63 @@ function normaliseProductPayload(payload, existing = null) {
   const listaId = String(payload.lista_id || existing?.lista_id || '').trim();
   const nombre = String(payload.nombre || existing?.nombre || '').trim();
   const marca = String(payload.marca || existing?.marca || '').trim();
+  const idCatalogo = String(payload.id_catalogo || existing?.id_catalogo || '').trim();
   const idPublicacion = String(payload.id_publicacion || existing?.id_publicacion || '').trim();
   const enlaceReferido = String(payload.enlace_referido || existing?.enlace_referido || payload.url_publicacion || '').trim();
   const urlPublicacion = String(payload.url_publicacion || existing?.url_publicacion || payload.enlace_referido || '').trim();
   const precio = currencyToNumber(payload.precio ?? existing?.precio ?? 0);
+  const precioOriginal = payload.precio_original === undefined ? (existing?.precio_original ?? null) : currencyToNumber(payload.precio_original);
   const vendedor = String(payload.vendedor || existing?.vendedor || '').trim();
+  const vendedorNombre = String(payload.vendedor_nombre || existing?.vendedor_nombre || vendedor || marca || '').trim();
   const activo = payload.activo === undefined ? (existing ? existing.activo : true) : Boolean(payload.activo);
   const notas = String(payload.notas || existing?.notas || '').trim();
   const atributos = payload.atributos && typeof payload.atributos === 'object' ? payload.atributos : (existing?.atributos || {});
-
   const finalId = String(payload.id || existing?.id || `${slugify(nombre || 'producto')}-${Date.now()}`).trim();
+  const estadoOferta = String(payload.estado_oferta || existing?.estado_oferta || 'sin_verificar').trim() || 'sin_verificar';
+  const imagenPropia = String(payload.imagen_propia || existing?.imagen_propia || '').trim();
+  const imagenCandidata = String(payload.imagen_candidata || existing?.imagen_candidata || '').trim();
+  const imagenFuente = String(payload.imagen_fuente || existing?.imagen_fuente || 'ml_api').trim() || 'ml_api';
+  const historial = Array.isArray(payload.historial_precios)
+    ? payload.historial_precios
+    : (Array.isArray(existing?.historial_precios) ? existing.historial_precios : [{ fecha: new Date().toISOString().slice(0, 10), precio }]);
 
   return {
     id: finalId,
     lista_id: listaId,
     nombre,
     marca,
+    formato: String(payload.formato || existing?.formato || '').trim(),
+    id_catalogo: idCatalogo,
     id_publicacion: idPublicacion || existing?.id_publicacion || '',
     enlace_referido: enlaceReferido,
     url_publicacion: urlPublicacion,
     precio,
+    precio_original: precioOriginal,
     fecha_precio: payload.fecha_precio || existing?.fecha_precio || new Date().toISOString().slice(0, 10),
+    precio_fuente: String(payload.precio_fuente || existing?.precio_fuente || 'manual').trim() || 'manual',
+    ultima_revision: String(payload.ultima_revision || existing?.ultima_revision || new Date().toISOString()).trim(),
+    estado_oferta: estadoOferta,
     vendedor: vendedor || marca || 'Sin vendedor',
+    vendedor_nombre: vendedorNombre || vendedor || marca || 'Sin vendedor',
+    vendedor_id: String(payload.vendedor_id || existing?.vendedor_id || '').trim(),
+    reputacion_nivel: payload.reputacion_nivel ?? existing?.reputacion_nivel ?? null,
+    mercadolider: payload.mercadolider ?? existing?.mercadolider ?? null,
+    transacciones_total: payload.transacciones_total ?? existing?.transacciones_total ?? null,
+    cuenta_activa: payload.cuenta_activa ?? existing?.cuenta_activa ?? null,
+    reputacion_revisada: payload.reputacion_revisada ?? existing?.reputacion_revisada ?? null,
+    en_promocion: Boolean(payload.en_promocion ?? existing?.en_promocion ?? false),
+    envio_gratis: Boolean(payload.envio_gratis ?? existing?.envio_gratis ?? false),
+    despacho_full: Boolean(payload.despacho_full ?? existing?.despacho_full ?? false),
+    tienda_oficial: Boolean(payload.tienda_oficial ?? existing?.tienda_oficial ?? false),
+    garantia: String(payload.garantia ?? existing?.garantia ?? '').trim() || null,
     activo,
     imagen: String(payload.imagen || existing?.imagen || '').trim(),
+    imagen_propia: imagenPropia,
+    imagen_candidata: imagenCandidata,
+    imagen_fuente: imagenFuente,
     notas,
     atributos,
-    historial_precios: Array.isArray(payload.historial_precios) ? payload.historial_precios : (Array.isArray(existing?.historial_precios) ? existing.historial_precios : [{ fecha: new Date().toISOString().slice(0, 10), precio }]),
+    historial_precios: historial,
     creado: existing?.creado || new Date().toISOString(),
     actualizado: new Date().toISOString(),
   };
@@ -222,35 +337,54 @@ async function parseLinkSuggestion(rawText) {
   const matchUrl = source.match(/https?:\/\/[^\s]+/i);
   const url = matchUrl ? matchUrl[0] : '';
   const titleFromUrl = url ? decodeURIComponent(url.split('/').filter(Boolean).slice(-1)[0] || '') : '';
-  const idPublicacion = (url.match(/(ML[A-Z0-9]+)/i) || [])[1] || '';
+  const idPublicacion = getMercadoLibreItemId(url);
 
   let extracted = {};
   if (url) {
-    try {
-      const response = await fetch(url, {
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (compatible; TiendaReferidosBot/1.0; +https://example.com/bot)',
-          'Accept-Language': 'es-CL,es;q=0.9,en;q=0.8',
-        },
-      });
-
-      if (response.ok) {
-        const html = await response.text();
-        extracted = extractAffiliateProductData(html, url);
+    if (/mercadolibre\./i.test(url)) {
+      if (!idPublicacion) {
+        return {
+          error: 'El enlace debe ser una publicación individual de Mercado Libre, no una página de resultados.',
+          ok: false,
+        };
       }
-    } catch (error) {
-      extracted = {};
+
+      try {
+        extracted = await fetchMercadoLibreItem(idPublicacion);
+      } catch (error) {
+        return { error: error.message, ok: false };
+      }
+    } else {
+      try {
+        const response = await fetch(url, {
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (compatible; TiendaReferidosBot/1.0; +https://dmonkeysport.com)',
+            'Accept-Language': 'es-CL,es;q=0.9,en;q=0.8',
+          },
+        });
+
+        if (response.ok) {
+          const html = await response.text();
+          extracted = extractAffiliateProductData(html, url);
+        }
+      } catch (error) {
+        extracted = {};
+      }
     }
   }
 
   const priceMatch = source.match(/\$?\s?(\d{1,3}(?:[\.\s]\d{3})*(?:[.,]\d{1,2})?|\d+(?:[.,]\d{1,2})?)/);
   const precio = priceMatch ? parseCurrencyNumber(priceMatch[1]) : null;
-  const nombreBase = (source.match(/[A-Za-zÁÉÍÓÚáéíóúÑñ0-9][A-Za-zÁÉÍÓÚáéíóúÑñ0-9\s\-]{4,80}/) || [])[0] || extracted.name || titleFromUrl || 'Producto';
+  const sourceWithoutUrl = source.replace(url, '').trim();
+  const nombreBase = extracted.name
+    || (sourceWithoutUrl.match(/[A-Za-zÁÉÍÓÚáéíóúÑñ0-9][A-Za-zÁÉÍÓÚáéíóúÑñ0-9\s\-]{4,80}/) || [])[0]
+    || titleFromUrl
+    || 'Producto';
   const nombre = nombreBase.replace(/\s+/g, ' ').trim();
   const marca = (source.match(/(?:marca|brand)\s*[:\-]?\s*([A-Za-zÁÉÍÓÚáéíóúÑñ0-9\s]+)/i) || [])[1] || extracted.brand || 'Sin marca';
   const vendedor = (source.match(/(?:vendedor|seller)\s*[:\-]?\s*([A-Za-zÁÉÍÓÚáéíóúÑñ0-9\s]+)/i) || [])[1] || extracted.seller || marca;
 
-  const attrs = {};
+  const attrs = { ...(extracted.attributes || {}) };
   const gramosMatch = source.match(/(\d{1,4})(?:\s|\.|,)?(?:g|gr|gramos|grams)\b/i);
   const proteinaMatch = source.match(/(?:proteina|protein)(?:\s+(?:total|total de))?\s*(\d{1,4})(?:\s|\.|,)?(?:g|gr|gramos|grams)\b/i);
   const porcionesMatch = source.match(/(\d{1,4})\s*(?:porciones|servings|dosis|scoops|raciones)\b/i);
@@ -290,6 +424,7 @@ const adminPage = `
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Administrador local</title>
+    <script src="/admin/vendor/xlsx.full.min.js"></script>
     <style>
       :root {
         --bg: #071521;
@@ -459,6 +594,28 @@ const adminPage = `
         </div>
       </div>
 
+      <section class="panel" style="margin-bottom:24px;">
+        <h2>Importación masiva</h2>
+        <div id="import-dropzone" style="border:1.5px dashed rgba(56,189,248,0.7); background: rgba(56,189,248,0.06); border-radius: 14px; padding: 24px 18px; text-align:center; cursor:pointer; transition: all 0.2s ease;">
+          <div style="font-size:1.1rem; font-weight:700; margin-bottom:8px;">Arrastra tu Excel o CSV aquí</div>
+          <div class="muted" style="margin-bottom:12px;">Acepta .csv, .xlsx y .xls. También puedes clicar para elegir el archivo.</div>
+          <input id="excel-input" type="file" accept=".csv,.xlsx,.xls" style="display:block; width: min(360px, 100%); margin: 0 auto;" />
+        </div>
+        <div class="actions" style="margin-top:16px;">
+          <button id="preview-import-button" class="btn-primary" type="button">Previsualizar</button>
+          <button id="save-import-button" class="btn-secondary" type="button">Guardar lote</button>
+          <a href="/admin/plantilla-productos.csv" download class="btn-secondary" style="text-decoration:none; display:inline-flex; align-items:center; justify-content:center;">Descargar plantilla</a>
+        </div>
+        <div id="import-status" class="status" aria-live="polite"></div>
+        <div id="import-summary" class="summary-box" style="display:none; margin-top:16px;">
+          <strong>Resumen de importación</strong>
+          <div><span id="import-count">0</span> filas recuperadas</div>
+          <div><span id="import-valid">0</span> válidas para guardar</div>
+          <div><span id="import-errors">0</span> con problemas</div>
+        </div>
+        <div id="import-preview" style="margin-top:18px; overflow:auto;"></div>
+      </section>
+
       <div class="grid">
         <section class="panel">
           <h2 id="form-title">Nueva lista</h2>
@@ -493,7 +650,7 @@ const adminPage = `
 
             <label>
               <span>Métricas JSON</span>
-              <textarea name="metricas" placeholder='[{"clave":"precio_por_gramo","etiqueta":"Precio por gramo","formula":{"tipo":"precio_dividido_por","campo":"gramos_total"},"mejor":"menor","decimales":2}]'></textarea>
+              <textarea name="metricas" placeholder='[{"clave":"precio_por_gramo","etiqueta":"Precio por gramo","plantilla":{"tipo":"precio_dividido_por","campo":"gramos_total"},"formula":{"tipo":"precio_dividido_por","campo":"gramos_total"},"mejor":"menor","decimales":2}]'></textarea>
             </label>
 
             <div class="actions">
@@ -680,7 +837,7 @@ const adminPage = `
       }
 
       async function ensureSession() {
-        const response = await fetch('/admin/session', { cache: 'no-store' });
+        const response = await fetch('/admin/session', { cache: 'no-store', credentials: 'include' });
         if (!response.ok) {
           throw new Error('No se pudo inicializar la sesión del administrador.');
         }
@@ -713,6 +870,252 @@ const adminPage = `
         document.getElementById('stat-listas').textContent = String(listas.length || 0);
         document.getElementById('stat-productos').textContent = String(productos.length || 0);
         document.getElementById('stat-backups').textContent = String(backups.length || 0);
+      }
+
+      function parseCurrencyNumber(value) {
+        if (value === null || value === undefined || value === '') return null;
+        if (typeof value === 'number' && Number.isFinite(value)) return value;
+        const text = String(value).trim().replace(/\s+/g, '').replace(/\./g, '').replace(',', '.');
+        const parsed = Number(text.replace(/[^0-9.\-]/g, ''));
+        return Number.isFinite(parsed) ? parsed : null;
+      }
+
+      function normalizeImportedRow(rawRow = {}) {
+        const item = {};
+        Object.entries(rawRow).forEach(([key, value]) => {
+          const canonicalKey = (() => {
+            const normalized = String(key).trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
+            const aliases = {
+              lista_id: new Set(['lista_id', 'lista', 'id_lista', 'listaid', 'list_id', 'slug_lista', 'lista_name']),
+              nombre: new Set(['nombre', 'nombre_producto', 'producto', 'titulo', 'title', 'nombre_del_producto', 'producto_nombre']),
+              marca: new Set(['marca', 'brand', 'fabricante', 'proveedor']),
+              precio: new Set(['precio', 'precio_clp', 'precio_cop', 'price', 'precio_total', 'valor', 'monto']),
+              id_publicacion: new Set(['id_publicacion', 'id_publicacion_ml', 'publicacion_id', 'ml_id', 'id', 'product_id', 'identificador']),
+              enlace_referido: new Set(['enlace_referido', 'url_publicacion', 'link', 'url', 'url_producto', 'enlace_url', 'enlace', 'enlace_de_afiliado', 'affiliate_link', 'referido', 'enlace_de_referido']),
+              activo: new Set(['activo', 'active', 'enabled', 'status', 'estado']),
+              imagen: new Set(['imagen', 'image', 'foto', 'img', 'imagen_url']),
+              notas: new Set(['notas', 'observaciones', 'comentarios', 'notes', 'observacion']),
+            };
+            for (const [canonical, names] of Object.entries(aliases)) {
+              if (names.has(normalized)) return canonical;
+            }
+            return normalized;
+          })();
+          item[canonicalKey] = value;
+        });
+
+        const attrs = {};
+        const attributeKeys = ['gramos_total', 'porciones', 'sabor', 'tipo', 'proteina_total', 'cantidad_unidades', 'objetivo', 'libre_gluten', 'formato', 'presentacion'];
+        attributeKeys.forEach((key) => {
+          const value = item[key];
+          if (value === undefined || value === null || String(value).trim() === '') return;
+          if (['gramos_total', 'porciones', 'cantidad_unidades', 'proteina_total'].includes(key)) {
+            const parsed = parseCurrencyNumber(value);
+            if (parsed !== null) attrs[key] = Number(parsed);
+            return;
+          }
+          if (key === 'libre_gluten') {
+            const text = String(value).trim().toLowerCase();
+            attrs[key] = ['true', '1', 'si', 'sí', 'yes', 'on'].includes(text);
+            return;
+          }
+          attrs[key] = String(value).trim();
+        });
+
+        const lista = String(item.lista_id || item.lista || '').trim() || 'creatina';
+        const nombre = String(item.nombre || item.producto || item.titulo || '').trim();
+        const marca = String(item.marca || item.brand || '').trim();
+        const precio = parseCurrencyNumber(item.precio ?? item.price ?? item.precio_clp ?? item.precio_cop ?? 0) ?? 0;
+        const link = String(item.enlace_referido || item.url_publicacion || item.link || item.url || '').trim();
+
+        return {
+          lista_id: lista,
+          nombre,
+          marca,
+          precio: Number(precio),
+          id_publicacion: String(item.id_publicacion || item.id_publicacion_ml || item.id || '').trim(),
+          enlace_referido: link,
+          url_publicacion: link,
+          vendedor: String(item.vendedor || item.seller || marca || '').trim(),
+          activo: item.activo === undefined ? true : ['true', '1', 'si', 'sí', 'yes', 'on'].includes(String(item.activo).trim().toLowerCase()),
+          imagen: String(item.imagen || item.image || '').trim(),
+          atributos: attrs,
+          notas: String(item.notas || item.observaciones || '').trim(),
+        };
+      }
+
+      function parseCsvText(text) {
+        const rows = [];
+        let current = [];
+        let row = [];
+        let inQuotes = false;
+
+        for (let i = 0; i < text.length; i += 1) {
+          const ch = text[i];
+          const next = text[i + 1];
+
+          if (ch === '"') {
+            if (inQuotes && next === '"') {
+              current.push('"');
+              i += 1;
+            } else {
+              inQuotes = !inQuotes;
+            }
+            continue;
+          }
+
+          if (ch === ',' && !inQuotes) {
+            row.push(current.join(''));
+            current = [];
+            continue;
+          }
+
+          if ((ch === '\n' || ch === '\r') && !inQuotes) {
+            if (ch === '\r' && next === '\n') i += 1;
+            row.push(current.join(''));
+            if (row.some((cell) => String(cell).trim() !== '')) {
+              rows.push(row);
+            }
+            row = [];
+            current = [];
+            continue;
+          }
+
+          current.push(ch);
+        }
+
+        if (current.length || row.length) {
+          row.push(current.join(''));
+          if (row.some((cell) => String(cell).trim() !== '')) {
+            rows.push(row);
+          }
+        }
+
+        if (!rows.length) return [];
+        const [header, ...body] = rows;
+        const keys = header.map((value) => String(value).trim().toLowerCase());
+        return body.filter((entry) => entry.some((cell) => String(cell).trim() !== '')).map((entry) => {
+          const obj = {};
+          keys.forEach((key, index) => {
+            obj[key] = entry[index] ?? '';
+          });
+          return obj;
+        });
+      }
+
+      async function loadImportedRows(file) {
+        const extension = (file.name || '').split('.').pop()?.toLowerCase();
+        if (!extension || ['csv'].includes(extension)) {
+          const text = await file.text();
+          return parseCsvText(text);
+        }
+
+        if (typeof window.XLSX === 'undefined') {
+          throw new Error('La librería Excel no está disponible. Usa CSV o vuelve a cargar la página.');
+        }
+
+        const arrayBuffer = await file.arrayBuffer();
+        const workbook = window.XLSX.read(arrayBuffer, { type: 'array' });
+        const firstSheetName = workbook.SheetNames[0];
+        const rows = window.XLSX.utils.sheet_to_json(workbook.Sheets[firstSheetName], { defval: '', raw: false });
+        return rows;
+      }
+
+      function validateBatchRow(row) {
+        const issues = [];
+        if (!row.lista_id) issues.push('lista_id');
+        if (!row.nombre) issues.push('nombre');
+        if (!Number.isFinite(Number(row.precio)) || Number(row.precio) <= 0) issues.push('precio');
+        if (!row.enlace_referido && !row.id_publicacion) issues.push('enlace_referido');
+        return { valid: issues.length === 0, issues };
+      }
+
+      function renderImportPreview(rows) {
+        const preview = document.getElementById('import-preview');
+        if (!rows.length) {
+          preview.innerHTML = '<div class="muted">No hay filas para mostrar.</div>';
+          return;
+        }
+
+        const columns = ['lista_id', 'nombre', 'marca', 'precio', 'id_publicacion', 'enlace_referido', 'activo'];
+        const tableMarkup = '<table><thead><tr>' + columns.map((col) => '<th>' + col + '</th>').join('') + '</tr></thead><tbody>' + rows.slice(0, 12).map((row) => {
+          const values = columns.map((col) => '<td>' + String(row[col] ?? '').replace(/</g, '&lt;') + '</td>');
+          return '<tr>' + values.join('') + '</tr>';
+        }).join('') + '</tbody></table>';
+        preview.innerHTML = tableMarkup;
+      }
+
+      async function handleImportFile(file) {
+        const importStatus = document.getElementById('import-status');
+        const importSummary = document.getElementById('import-summary');
+        const importCount = document.getElementById('import-count');
+        const importValid = document.getElementById('import-valid');
+        const importErrors = document.getElementById('import-errors');
+
+        try {
+          const rawRows = await loadImportedRows(file);
+          const normalized = rawRows.map(normalizeImportedRow);
+          const validation = normalized.map((row) => validateBatchRow(row));
+          const validRows = normalized.filter((_, index) => validation[index].valid);
+          const invalidRows = normalized.length - validRows.length;
+
+          importSummary.style.display = 'block';
+          importCount.textContent = String(normalized.length);
+          importValid.textContent = String(validRows.length);
+          importErrors.textContent = String(invalidRows);
+          renderImportPreview(validRows);
+
+          importStatus.className = 'status' + (validRows.length ? ' success' : ' error');
+          importStatus.textContent = validRows.length
+            ? 'Vista previa lista. Puedes guardar el lote.'
+            : 'No hay filas válidas para importar.';
+
+          window.__importRows = validRows;
+        } catch (error) {
+          importStatus.className = 'status error';
+          importStatus.textContent = error.message || 'No se pudo cargar el archivo.';
+          window.__importRows = [];
+          document.getElementById('import-preview').innerHTML = '<div class="muted">Sin vista previa.</div>';
+        }
+      }
+
+      async function saveImportedRows() {
+        const rows = window.__importRows || [];
+        const importStatus = document.getElementById('import-status');
+
+        if (!rows.length) {
+          importStatus.className = 'status error';
+          importStatus.textContent = 'Primero selecciona un archivo con filas válidas.';
+          return;
+        }
+
+        try {
+          importStatus.className = 'status';
+          importStatus.textContent = 'Guardando lote...';
+
+          const response = await fetch('/admin/api/productos/import', {
+            method: 'POST',
+            credentials: 'include',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-CSRF-Token': productCsrfInput.value,
+            },
+            body: JSON.stringify({ rows }),
+          });
+
+          const data = await response.json();
+          if (!response.ok) throw new Error(data.error || 'No se pudo guardar el lote.');
+
+          importStatus.className = 'status success';
+          importStatus.textContent = 'Lote importado correctamente: ' + data.imported + ' productos guardados.';
+          window.__importRows = [];
+          document.getElementById('excel-input').value = '';
+          await refreshOverview();
+          await loadPreview();
+        } catch (error) {
+          importStatus.className = 'status error';
+          importStatus.textContent = error.message || 'La importación falló.';
+        }
       }
 
       function getListaNameById(listaId, listas = []) {
@@ -791,7 +1194,7 @@ const adminPage = `
       }
 
       async function loadPreview() {
-        const response = await fetch('/admin/api/publicacion/preview', { cache: 'no-store' });
+        const response = await fetch('/admin/api/publicacion/preview', { cache: 'no-store', credentials: 'include' });
         const data = await response.json();
         if (!response.ok) {
           publicationSummary.innerHTML = '<strong>Sin preview disponible.</strong><div class="muted">' + (data.error || 'Error') + '</div>';
@@ -818,7 +1221,7 @@ const adminPage = `
       }
 
       async function loadBackups() {
-        const response = await fetch('/admin/api/backups', { cache: 'no-store' });
+        const response = await fetch('/admin/api/backups', { cache: 'no-store', credentials: 'include' });
         const data = await response.json();
         if (!response.ok) {
           backupList.innerHTML = '<div class="muted">' + (data.error || 'No se pudieron cargar las copias.') + '</div>';
@@ -864,14 +1267,14 @@ const adminPage = `
       }
 
       async function loadLists() {
-        const response = await fetch('/admin/api/listas', { cache: 'no-store' });
+        const response = await fetch('/admin/api/listas', { cache: 'no-store', credentials: 'include' });
         const listas = await response.json();
         renderRows(listas);
         return listas;
       }
 
       async function loadProducts() {
-        const response = await fetch('/admin/api/productos', { cache: 'no-store' });
+        const response = await fetch('/admin/api/productos', { cache: 'no-store', credentials: 'include' });
         const productos = await response.json();
         const listas = await loadLists().catch(() => []);
         renderProductRows(productos, listas);
@@ -960,6 +1363,7 @@ const adminPage = `
 
           const response = await fetch(url, {
             method,
+            credentials: 'include',
             headers: {
               'Content-Type': 'application/json',
               'X-CSRF-Token': csrfInput.value,
@@ -1015,6 +1419,7 @@ const adminPage = `
 
           const response = await fetch('/admin/api/listas/' + encodeURIComponent(id), {
             method: 'DELETE',
+            credentials: 'include',
             headers: { 'X-CSRF-Token': csrfInput.value },
           });
 
@@ -1090,6 +1495,7 @@ const adminPage = `
         try {
           const response = await fetch('/admin/api/parse-link', {
             method: 'POST',
+            credentials: 'include',
             headers: {
               'Content-Type': 'application/json',
               'X-CSRF-Token': productCsrfInput.value,
@@ -1164,6 +1570,7 @@ const adminPage = `
 
           const response = await fetch(url, {
             method,
+            credentials: 'include',
             headers: {
               'Content-Type': 'application/json',
               'X-CSRF-Token': productCsrfInput.value,
@@ -1298,6 +1705,42 @@ const adminPage = `
         }
       });
 
+      document.getElementById('excel-input').addEventListener('change', async function (event) {
+        const [file] = event.target.files || [];
+        if (!file) return;
+        await handleImportFile(file);
+      });
+
+      const importDropzone = document.getElementById('import-dropzone');
+      importDropzone.addEventListener('dragover', function (event) {
+        event.preventDefault();
+        importDropzone.style.borderColor = 'rgba(34,197,94,0.9)';
+      });
+      importDropzone.addEventListener('dragleave', function () {
+        importDropzone.style.borderColor = 'rgba(56,189,248,0.7)';
+      });
+      importDropzone.addEventListener('drop', async function (event) {
+        event.preventDefault();
+        importDropzone.style.borderColor = 'rgba(56,189,248,0.7)';
+        const [file] = event.dataTransfer.files || [];
+        if (file) {
+          await handleImportFile(file);
+        }
+      });
+      importDropzone.addEventListener('click', function () {
+        document.getElementById('excel-input').click();
+      });
+      document.getElementById('preview-import-button').addEventListener('click', async function () {
+        const file = document.getElementById('excel-input').files && document.getElementById('excel-input').files[0];
+        if (!file) {
+          document.getElementById('import-status').className = 'status error';
+          document.getElementById('import-status').textContent = 'Selecciona un archivo antes de previsualizar.';
+          return;
+        }
+        await handleImportFile(file);
+      });
+      document.getElementById('save-import-button').addEventListener('click', saveImportedRows);
+
       ensureSession().then(async function () {
         await populateProductListSelect();
         await refreshOverview();
@@ -1316,6 +1759,31 @@ const server = createServer(async (req, res) => {
     if ((req.method === 'GET' || req.method === 'HEAD') && url.pathname === '/admin') {
       const session = ensureSession(req, res);
       return htmlResponse(res, adminPage);
+    }
+
+    if ((req.method === 'GET' || req.method === 'HEAD') && url.pathname === '/admin/plantilla-productos.csv') {
+      const template = [
+        'lista_id,nombre,marca,precio,id_publicacion,enlace_referido,imagen,activo,gramos_total,proteina_total,porciones,sabor,tipo,notas',
+        'creatina,Creatina Monohidratada,PowerLab,24990,MLC-TEST-001,https://example.com/creatina-monohidratada,https://example.com/img.jpg,true,300,200,60,Vainilla,Polvo,Producto de ejemplo',
+        'proteina,Proteína Whey Isolate,Nutribox,32990,MLC-TEST-002,https://example.com/proteina-whey,https://example.com/img2.jpg,true,900,720,30,Chocolate,Whey,Producto de ejemplo'
+      ].join('\n');
+      res.writeHead(200, {
+        'Content-Type': 'text/csv; charset=utf-8',
+        'Content-Disposition': 'attachment; filename="plantilla-productos.csv"',
+        'Cache-Control': 'no-store',
+      });
+      res.end(template);
+      return;
+    }
+
+    if ((req.method === 'GET' || req.method === 'HEAD') && url.pathname === '/admin/vendor/xlsx.full.min.js') {
+      const script = await readFile(XLSX_VENDOR_PATH, 'utf8');
+      res.writeHead(200, {
+        'Content-Type': 'application/javascript; charset=utf-8',
+        'Cache-Control': 'no-store',
+      });
+      res.end(script);
+      return;
     }
 
     if ((req.method === 'GET' || req.method === 'HEAD') && url.pathname === '/admin/session') {
@@ -1545,6 +2013,54 @@ const server = createServer(async (req, res) => {
       productos[index] = updated;
       await writeProducts(productos);
       return jsonResponse(res, 200, { ok: true, producto: updated, snapshot: buildPublicationSnapshot(productos) });
+    }
+
+    if (req.method === 'POST' && url.pathname === '/admin/api/productos/import') {
+      const session = ensureSession(req, res);
+      const csrfToken = req.headers['x-csrf-token'];
+      if (csrfToken !== session.csrfToken) {
+        return jsonResponse(res, 403, { error: 'CSRF inválido o sesión expirada.' });
+      }
+
+      const payload = await parseJsonBody(req);
+      const rows = Array.isArray(payload.rows) ? payload.rows : [];
+      if (!rows.length) {
+        return jsonResponse(res, 400, { error: 'No hay filas válidas para importar.' });
+      }
+
+      const listas = await readLists();
+      const productos = await readProducts();
+      const accepted = [];
+
+      for (const row of rows) {
+        const candidate = {
+          ...row,
+          lista_id: String(row.lista_id || '').trim() || 'creatina',
+          nombre: String(row.nombre || '').trim(),
+          precio: Number(row.precio ?? 0),
+          enlace_referido: String(row.enlace_referido || row.url_publicacion || '').trim(),
+          url_publicacion: String(row.url_publicacion || row.enlace_referido || '').trim(),
+          activo: row.activo === undefined ? true : Boolean(row.activo),
+        };
+
+        if (!listas.some((lista) => lista.id === candidate.lista_id || lista.slug === candidate.lista_id)) {
+          continue;
+        }
+        if (!candidate.nombre || !candidate.enlace_referido || !Number.isFinite(candidate.precio) || candidate.precio <= 0) {
+          continue;
+        }
+
+        try {
+          const saved = validateProductPayload(candidate, productos);
+          productos.push(saved);
+          accepted.push(saved);
+        } catch (error) {
+          continue;
+        }
+      }
+
+      await writeProducts(productos);
+      return jsonResponse(res, 200, { ok: true, imported: accepted.length, total: rows.length });
     }
 
     if (req.method === 'POST' && url.pathname === '/admin/api/productos') {

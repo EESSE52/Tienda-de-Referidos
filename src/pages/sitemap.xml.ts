@@ -1,13 +1,19 @@
 import type { APIRoute } from 'astro';
-import { listas, productos } from '../lib/catalog';
+import { env } from 'cloudflare:workers';
+import { loadCatalog } from '../lib/catalog';
 
-export const GET: APIRoute = () => {
-  const site = 'https://dmonkesport.example';
+export const GET: APIRoute = async () => {
+  const site = 'https://dmonkeysport.com';
+  const catalog = await loadCatalog(env?.dmonkeysport_db);
+  const listasActivas = catalog.listas.filter((lista) => lista.activa !== false);
+  const productosActivos = catalog.productos.filter((producto) => producto.activo);
   const urls = [
     '',
+    '/como-comparamos',
+    '/aviso-afiliados',
     '/metodologia',
-    ...listas.map((lista) => `/lista/${lista.slug}`),
-    ...productos.map((producto) => `/producto/${producto.id}`),
+    ...listasActivas.map((lista) => `/lista/${lista.slug}`),
+    ...productosActivos.map((producto) => `/producto/${producto.id}`),
     '/comparador',
   ];
 

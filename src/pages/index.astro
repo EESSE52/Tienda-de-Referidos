@@ -1,10 +1,13 @@
 ---
 import Layout from '../layouts/Layout.astro';
-import { currencyCLP, getProductosByListaId, listas } from '../lib/catalog';
+import { env } from 'cloudflare:workers';
+import { currencyCLP, loadCatalog } from '../lib/catalog';
+import { AVISO_AFILIADOS_BREVE } from '../lib/public-site';
 
-const listaCards = listas.map((lista) => ({
+const catalog = await loadCatalog(env?.dmonkeysport_db);
+const listaCards = catalog.listas.filter((lista) => lista.activa !== false).map((lista) => ({
   ...lista,
-  productos: getProductosByListaId(lista.id),
+  productos: catalog.getProductosByListaId(lista.id),
 }));
 ---
 
@@ -15,6 +18,7 @@ const listaCards = listas.map((lista) => ({
     <p class="mt-4 max-w-2xl text-base text-emerald-50">
       Compara productos por mérito real, sin ruido ni promesas de salud: solo precio, cantidad, formato y métricas relevantes.
     </p>
+    <p class="mt-4 inline-flex rounded-lg bg-white/20 px-3 py-2 text-sm text-emerald-50">{AVISO_AFILIADOS_BREVE}</p>
   </section>
 
   <section class="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
@@ -54,5 +58,11 @@ const listaCards = listas.map((lista) => ({
         </a>
       </article>
     ))}
+  </section>
+
+  <section class="mt-8 rounded-2xl border border-slate-200 bg-white p-5 text-sm text-slate-700 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200">
+    <p>
+      Revisa la metodología completa en <a href="/como-comparamos" class="font-semibold text-emerald-600 hover:underline dark:text-emerald-400">Cómo comparamos</a> y el detalle en <a href="/aviso-afiliados" class="font-semibold text-emerald-600 hover:underline dark:text-emerald-400">Aviso de afiliados</a>.
+    </p>
   </section>
 </Layout>

@@ -1,11 +1,13 @@
-export type Formula =
+export type PlantillaMetrica =
   | { tipo: 'precio_dividido_por'; campo: string }
   | { tipo: 'campo_dividido_por'; campo_a: string; campo_b: string };
 
 export type MetricDefinition = {
   clave: string;
   etiqueta: string;
-  formula: Formula;
+  plantilla?: PlantillaMetrica;
+  // Compatibilidad temporal con el modelo anterior.
+  formula?: PlantillaMetrica;
   mejor: 'menor' | 'mayor' | null;
   decimales?: number;
 };
@@ -15,6 +17,24 @@ export type ProductLike = {
   atributos?: Record<string, number | string | null | undefined>;
   [key: string]: unknown;
 };
+
+export function resolveMetricTemplate(metric: MetricDefinition): PlantillaMetrica | null {
+  const template = metric.plantilla ?? metric.formula;
+  if (!template || typeof template !== 'object' || !('tipo' in template)) {
+    return null;
+  }
+  if (template.tipo === 'precio_dividido_por' && 'campo' in template) {
+    return { tipo: template.tipo, campo: String(template.campo) };
+  }
+  if (template.tipo === 'campo_dividido_por' && 'campo_a' in template && 'campo_b' in template) {
+    return {
+      tipo: template.tipo,
+      campo_a: String(template.campo_a),
+      campo_b: String(template.campo_b),
+    };
+  }
+  return null;
+}
 
 export function parseNumber(value: unknown): number | null {
   if (typeof value === 'number' && Number.isFinite(value)) {
@@ -98,7 +118,7 @@ export function resolveFieldValue(producto: ProductLike, fieldName: string): num
   return null;
 }
 
-export function evaluateFormula(formula: Formula, producto: ProductLike): number | null {
+export function evaluateFormula(formula: PlantillaMetrica, producto: ProductLike): number | null {
   if (formula.tipo === 'precio_dividido_por') {
     const precio = resolveFieldValue(producto, 'precio');
     const divisor = resolveFieldValue(producto, formula.campo);
@@ -117,7 +137,9 @@ export function evaluateFormula(formula: Formula, producto: ProductLike): number
 }
 
 export function evaluateMetric(metric: MetricDefinition, producto: ProductLike): number | null {
-  return evaluateFormula(metric.formula, producto);
+  const template = resolveMetricTemplate(metric);
+  if (!template) return null;
+  return evaluateFormula(template, producto);
 }
 
 export function formatMetricValue(value: number | null, decimals = 2): string {

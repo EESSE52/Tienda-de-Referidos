@@ -1,0 +1,5 @@
+lista_id,nombre,marca,precio,id_publicacion,enlace_referido,activo,imagen,notas,gramos_total,proteina_total,porciones,sabor
+creatina,Creatina Monohydrate,Foodtech,29990,MLC35176477,https://www.mercadolibre.cl/creatina-gomitas-150-unidades-foodtech-sabor-blueberry-libre-gluten/p/MLC35176477,TRUE,https://example.com/creatina.jpg,Producto de prueba para validar importación,150,120,30,Blueberry
+creatina,Pre Workout Energizante,PowerMax,34990,MLC98765432,https://example.com/preworkout,TRUE,https://example.com/preworkout.jpg,Segundo producto de prueba,250,180,20,Citrus
+protein,Proteína Whey 900g,NutriLab,42990,MLC11111111,https://example.com/whey,TRUE,https://example.com/whey.jpg,Validación de lista secundaria,900,720,30,Vainilla
+vitaminas,Multivitamínico Daily,HealthPlus,18990,MLC22222222,https://example.com/multivitaminico,TRUE,https://example.com/multi.jpg,Importación simple,0,0,0,Frutos rojos

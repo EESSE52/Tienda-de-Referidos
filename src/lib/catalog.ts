@@ -1,6 +1,6 @@
 import listasData from '../../data/listas.json';
 import productosData from '../../data/productos.json';
-import { evaluateMetric, formatMetricValue, parseNumber } from './metricas';
+import { evaluateMetric, formatMetricValue, parseNumber, type PlantillaMetrica } from './metricas';
 
 export type Lista = {
   id: string;
@@ -23,10 +23,13 @@ export type Lista = {
   metricas: Array<{
     clave: string;
     etiqueta: string;
-    formula: any;
+    plantilla?: PlantillaMetrica;
+    formula?: PlantillaMetrica;
     mejor: 'menor' | 'mayor' | null;
     decimales?: number;
   }>;
+  mapa_atributos_ml?: Record<string, { campo: string; conversion: string }>;
+  activa?: boolean;
 };
 
 export type Producto = {
@@ -34,14 +37,35 @@ export type Producto = {
   lista_id: string;
   nombre: string;
   marca: string;
+  formato?: string;
+  id_catalogo?: string | null;
   id_publicacion: string;
   enlace_referido: string;
   url_publicacion?: string;
   precio: number;
+  precio_original?: number | null;
   fecha_precio: string;
+  precio_fuente?: 'manual' | 'api';
+  ultima_revision?: string;
+  estado_oferta?: 'disponible' | 'no_disponible' | 'sin_verificar';
   vendedor: string;
+  vendedor_nombre?: string | null;
+  vendedor_id?: string | null;
+  reputacion_nivel?: string | null;
+  mercadolider?: string | null;
+  transacciones_total?: number | null;
+  cuenta_activa?: boolean | null;
+  reputacion_revisada?: string | null;
+  en_promocion?: boolean;
+  envio_gratis?: boolean;
+  despacho_full?: boolean;
+  tienda_oficial?: boolean;
+  garantia?: string | null;
   activo: boolean;
   imagen?: string;
+  imagen_propia?: string;
+  imagen_candidata?: string;
+  imagen_fuente?: 'propia' | 'autorizada' | 'ml_api';
   notas?: string;
   atributos: Record<string, unknown>;
   historial_precios: Array<{ fecha: string; precio: number }>;
@@ -52,21 +76,70 @@ export type Producto = {
 export const listas = listasData as Lista[];
 export const productos = productosData as Producto[];
 
-export function getListaBySlug(slug: string): Lista | undefined {
-  return listas.find((lista) => lista.slug === slug);
+export type Catalog = ReturnType<typeof createCatalog>;
+
+type D1DatabaseLike = {
+  prepare(query: string): {
+    all<T>(): Promise<{ results?: T[] }>;
+  };
+};
+
+function parseCatalogRows<T>(rows: Array<{ data: string }>): T[] {
+  return rows.flatMap((row) => {
+    try {
+      return [JSON.parse(row.data) as T];
+    } catch {
+      return [];
+    }
+  });
 }
 
-export function getListaById(id: string): Lista | undefined {
-  return listas.find((lista) => lista.id === id);
+export function createCatalog(catalogLists: Lista[], catalogProducts: Producto[]) {
+  return {
+    listas: catalogLists,
+    productos: catalogProducts,
+    getListaBySlug(slug: string) {
+      return catalogLists.find((lista) => lista.slug === slug);
+    },
+    getListaById(id: string) {
+      return catalogLists.find((lista) => lista.id === id);
+    },
+    getProductosByListaId(listaId: string) {
+      return catalogProducts.filter((producto) => producto.lista_id === listaId && producto.activo);
+    },
+    getProductoById(id: string) {
+      return catalogProducts.find((producto) => producto.id === id);
+    },
+  };
 }
 
-export function getProductosByListaId(listaId: string): Producto[] {
-  return productos.filter((producto) => producto.lista_id === listaId && producto.activo);
+const localCatalog = createCatalog(listas, productos);
+
+export async function loadCatalog(database?: D1DatabaseLike): Promise<Catalog> {
+  if (!database || typeof (database as D1DatabaseLike & { prepare?: unknown }).prepare !== 'function') {
+    return localCatalog;
+  }
+
+  try {
+    const [listResult, productResult] = await Promise.all([
+      database.prepare('SELECT data FROM catalog_lists ORDER BY nombre').all<{ data: string }>(),
+      database.prepare('SELECT data FROM catalog_products ORDER BY nombre').all<{ data: string }>(),
+    ]);
+
+    return createCatalog(
+      parseCatalogRows<Lista>(listResult.results ?? []),
+      parseCatalogRows<Producto>(productResult.results ?? []),
+    );
+  } catch (error) {
+    console.warn('[catalog] Fallback local activado por D1 no disponible o no inicializado:', error);
+    return localCatalog;
+  }
 }
 
-export function getProductoById(id: string): Producto | undefined {
-  return productos.find((producto) => producto.id === id);
-}
+export const getListaBySlug = localCatalog.getListaBySlug;
+export const getListaById = localCatalog.getListaById;
+export const getProductosByListaId = localCatalog.getProductosByListaId;
+export const getProductoById = localCatalog.getProductoById;
 
 export function currencyCLP(value: number | null | undefined): string {
   if (value === null || value === undefined || Number.isNaN(value)) return '—';

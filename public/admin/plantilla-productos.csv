@@ -1,0 +1,5 @@
+lista_id,nombre,marca,precio,id_publicacion,enlace_referido,imagen,gramos_total,sabor,tipo,libre_gluten,cantidad_unidades,objetivo,activo
+creatina,Creatina Gomitas 150 unidades,Foodtech,18990,MLC35176477,https://www.mercadolibre.cl/creatina-gomitas-150-unidades-foodtech-sabor-blueberry-libre-gluten/p/MLC35176477,https://example.com/creatina-gomitas.jpg,150,Blueberry,gomitas,true,150,energia,true
+creatina,Creatina Monohidratada 300 g,Nutrición Plus,24990,MLC123456789,https://example.com/creatina-300,https://example.com/creatina-300.jpg,300,Sin sabor,monohidratada,true,1,energia,true
+proteina,Proteína Whey 900 g,BioForce,32990,MLC987654321,https://example.com/proteina,https://example.com/proteina.jpg,900,Vainilla,whey,false,1,masa muscular,true
+preentreno,Pre Entreno 250 g,MuscleMax,29990,MLC555666777,https://example.com/preentreno,https://example.com/preentreno.jpg,250,Citrus,energetico,true,1,energia,true

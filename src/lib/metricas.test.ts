@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { evaluateFormula, evaluateMetric, parseNumber } from './metricas';
+import { evaluateFormula, evaluateMetric, parseNumber, resolveMetricTemplate } from './metricas';
 
 describe('parseNumber', () => {
   it('normaliza precios chilenos con separadores', () => {
@@ -51,7 +51,7 @@ describe('evaluateFormula', () => {
 });
 
 describe('evaluateMetric', () => {
-  it('evalúa una métrica del esquema del producto', () => {
+  it('evalua una metrica del esquema del producto con plantilla', () => {
     const product = {
       precio: 27000,
       atributos: {
@@ -63,11 +63,44 @@ describe('evaluateMetric', () => {
     const metric = {
       clave: 'precio_por_gramo',
       etiqueta: 'Precio por gramo',
-      formula: { tipo: 'precio_dividido_por', campo: 'gramos_total' },
+      plantilla: { tipo: 'precio_dividido_por', campo: 'gramos_total' },
       mejor: 'menor',
       decimales: 2,
     };
 
     expect(evaluateMetric(metric, product)).toBeCloseTo(90, 2);
+  });
+
+  it('mantiene compatibilidad con formula legado', () => {
+    const product = {
+      precio: 32000,
+      atributos: {
+        porciones: 40,
+      },
+    };
+
+    const metric = {
+      clave: 'precio_por_porcion',
+      etiqueta: 'Precio por porcion',
+      formula: { tipo: 'precio_dividido_por', campo: 'porciones' },
+      mejor: 'menor',
+      decimales: 2,
+    };
+
+    expect(evaluateMetric(metric, product)).toBeCloseTo(800, 2);
+  });
+
+  it('devuelve null cuando la plantilla es invalida', () => {
+    const product = { precio: 1000, atributos: { porciones: 10 } };
+    const metric = {
+      clave: 'invalida',
+      etiqueta: 'Invalida',
+      plantilla: { tipo: 'precio_dividido_por' } as unknown as { tipo: 'precio_dividido_por'; campo: string },
+      mejor: 'menor',
+      decimales: 2,
+    };
+
+    expect(resolveMetricTemplate(metric)).toBeNull();
+    expect(evaluateMetric(metric, product)).toBeNull();
   });
 });

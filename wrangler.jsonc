@@ -1,9 +1,22 @@
 {
+  "$schema": "./node_modules/wrangler/config-schema.json",
   "name": "tienda-de-referidos",
   "compatibility_date": "2026-10-20",
   "assets": {
     "directory": "./dist",
     "not_found_handling": "404-page",
     "html_handling": "auto-trailing-slash"
-  }
+  },
+  "d1_databases": [
+    {
+      "binding": "CATALOG_DB",
+      "database_name": "tienda_referidos",
+      "database_id": "c9cc30c6-365e-489a-9c5d-f4b213c674b2"
+    },
+    {
+      "binding": "dmonkeysport_db",
+      "database_name": "dmonkeysport-db",
+      "database_id": "060d57f0-8bf5-4787-8d27-98ef9ade6251"
+    }
+  ]
 }

@@ -1,17 +1,20 @@
 ---
 import Layout from '../layouts/Layout.astro';
-import { currencyCLP, getBestMetricValue, getListaById, getProductoById, getProductosByListaId, listas } from '../lib/catalog';
+import { env } from 'cloudflare:workers';
+import { currencyCLP, getBestMetricValue, getMetricResult, loadCatalog, productHasOldPrice } from '../lib/catalog';
+import { AVISO_AFILIADOS_BREVE, getPrecioReferencialLabel } from '../lib/public-site';
 
+const catalog = await loadCatalog(env?.dmonkeysport_db);
 const ids = (Astro.url.searchParams.get('ids') ?? '')
   .split(',')
   .map((id) => id.trim())
   .filter(Boolean)
   .slice(0, 4);
 
-const productos = ids.map((id) => getProductoById(id)).filter(Boolean) as Array<any>;
+const productos = ids.map((id) => catalog.getProductoById(id)).filter(Boolean) as Array<any>;
 const mixedLists = new Set(productos.map((producto) => producto.lista_id));
 const unionMetrics = [...new Set(productos.flatMap((producto) => {
-  const lista = getListaById(producto.lista_id);
+  const lista = catalog.getListaById(producto.lista_id);
   return lista?.metricas.map((metrica) => metrica.clave) ?? [];
 }))];
 ---
@@ -31,6 +34,7 @@ const unionMetrics = [...new Set(productos.flatMap((producto) => {
         Se mezclan listas distintas en la comparación; revisa que el criterio de comparación sea consistente.
       </div>
     )}
+    <p class="mt-4 text-sm text-slate-600 dark:text-slate-300">{AVISO_AFILIADOS_BREVE}</p>
   </section>
 
   {productos.length < 2 ? (
@@ -55,37 +59,25 @@ const unionMetrics = [...new Set(productos.flatMap((producto) => {
             <tr class="border-t border-slate-200 dark:border-slate-800">
               <td class="px-4 py-3 font-medium">Precio</td>
               {productos.map((producto) => (
-                <td class="px-4 py-3 font-bold">{currencyCLP(producto.precio)}</td>
+                <td class="px-4 py-3 font-bold">
+                  <div>{currencyCLP(producto.precio)}</div>
+                  <div class="text-xs font-normal text-slate-500 dark:text-slate-300">{getPrecioReferencialLabel(producto.fecha_precio)}</div>
+                  {productHasOldPrice(producto.fecha_precio) ? <div class="text-xs font-normal text-amber-700 dark:text-amber-300">Precio posiblemente desactualizado</div> : null}
+                </td>
               ))}
             </tr>
             {unionMetrics.map((clave) => {
               const defs = productos.flatMap((producto) => {
-                const lista = getListaById(producto.lista_id);
+                const lista = catalog.getListaById(producto.lista_id);
                 return lista?.metricas.filter((metrica) => metrica.clave === clave) ?? [];
               });
               const def = defs[0];
               if (!def) return null;
               const values = productos.map((producto) => {
-                const lista = getListaById(producto.lista_id);
+                const lista = catalog.getListaById(producto.lista_id);
                 const metric = lista?.metricas.find((item) => item.clave === clave);
                 if (!metric) return null;
-                const value = (() => {
-                  const formula = metric.formula;
-                  if (formula.tipo === 'precio_dividido_por') {
-                    const precio = producto.precio;
-                    const divisor = producto.atributos?.[formula.campo];
-                    if (divisor === undefined || divisor === null || divisor === 0) return null;
-                    return Number(precio) / Number(divisor);
-                  }
-                  if (formula.tipo === 'campo_dividido_por') {
-                    const a = producto.atributos?.[formula.campo_a];
-                    const b = producto.atributos?.[formula.campo_b];
-                    if (a === undefined || a === null || b === undefined || b === null || Number(b) === 0) return null;
-                    return Number(a) / Number(b);
-                  }
-                  return null;
-                })();
-                return value;
+                return getMetricResult(producto, metric);
               });
               const bestValue = getBestMetricValue(def.mejor, values);
               return (

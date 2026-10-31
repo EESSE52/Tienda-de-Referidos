@@ -8,6 +8,7 @@ type Props = {
 
 const { title = 'Dmonkesport', description = 'Comparador de productos con enlaces de afiliado de Mercado Libre Chile.' } = Astro.props as Props;
 const currentPath = Astro.url.pathname;
+const canonicalUrl = new URL(currentPath, Astro.site ?? Astro.url.origin).toString();
 ---
 
 <!doctype html>
@@ -17,6 +18,7 @@ const currentPath = Astro.url.pathname;
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content={description} />
     <meta name="generator" content={Astro.generator} />
+    <link rel="canonical" href={canonicalUrl} />
     <title>{title} | Dmonkesport</title>
   </head>
   <body class="min-h-full bg-slate-50 text-slate-900 antialiased dark:bg-slate-950 dark:text-slate-100">
@@ -25,7 +27,8 @@ const currentPath = Astro.url.pathname;
         <a href="/" class="text-xl font-black tracking-tight text-slate-900 dark:text-white">Dmonkesport</a>
         <nav class="hidden items-center gap-4 text-sm font-medium md:flex">
           <a href="/" class={currentPath === '/' ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-600 dark:text-slate-300'}>Inicio</a>
-          <a href="/metodologia" class={currentPath === '/metodologia' ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-600 dark:text-slate-300'}>Metodología</a>
+          <a href="/como-comparamos" class={currentPath === '/como-comparamos' ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-600 dark:text-slate-300'}>Cómo comparamos</a>
+          <a href="/aviso-afiliados" class={currentPath === '/aviso-afiliados' ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-600 dark:text-slate-300'}>Afiliados</a>
         </nav>
       </div>
     </header>
@@ -37,7 +40,10 @@ const currentPath = Astro.url.pathname;
     <footer class="border-t border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
       <div class="mx-auto flex max-w-7xl flex-col gap-3 px-4 py-6 text-sm text-slate-600 dark:text-slate-300 md:flex-row md:items-center md:justify-between">
         <p>Los enlaces son de afiliado y pueden generar una comisión sin costo adicional para ti.</p>
-        <a href="/metodologia" class="font-medium text-emerald-600 dark:text-emerald-400">Ver metodología</a>
+        <div class="flex items-center gap-4">
+          <a href="/como-comparamos" class="font-medium text-emerald-600 dark:text-emerald-400">Ver metodología</a>
+          <a href="/aviso-afiliados" class="font-medium text-emerald-600 dark:text-emerald-400">Aviso de afiliados</a>
+        </div>
       </div>
     </footer>
   </body>
