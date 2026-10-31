@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url';
 import { validateProductPayload } from '../src/lib/admin-validacion.js';
 import { addPriceHistoryEntry, buildPublicationSnapshot } from '../src/lib/admin-publicacion.js';
 import { extractAffiliateProductData } from '../src/lib/link-extractor.js';
+import { resolveMercadoLibreUrl, extractMercadoLibreIds, fetchMercadoLibreItem } from '../src/lib/mercadolibre.js';
 
 const HOST = '127.0.0.1';
 const PORT = 4322;
@@ -215,74 +216,83 @@ function normaliseProductPayload(payload, existing = null) {
 
 async function parseLinkSuggestion(rawText) {
   const source = String(rawText || '').trim();
-  if (!source) {
-    return { error: 'Pega una URL o un texto con el producto.', ok: false };
-  }
+  if (!source) return { error: 'Pega una URL o un texto con el producto.', ok: false };
 
   const matchUrl = source.match(/https?:\/\/[^\s]+/i);
-  const url = matchUrl ? matchUrl[0] : '';
-  const titleFromUrl = url ? decodeURIComponent(url.split('/').filter(Boolean).slice(-1)[0] || '') : '';
-  const idPublicacion = (url.match(/(ML[A-Z0-9]+)/i) || [])[1] || '';
+  const originalUrl = matchUrl ? matchUrl[0].replace(/[),.;]+$/, '') : '';
+  if (!originalUrl) return { error: 'No encontré un enlace válido. Pega la URL completa del producto.', ok: false };
 
+  let resolvedUrl = originalUrl;
+  let item = null;
   let extracted = {};
-  if (url) {
+  let apiError = '';
+
+  try {
+    resolvedUrl = await resolveMercadoLibreUrl(originalUrl);
+    const ids = extractMercadoLibreIds(resolvedUrl);
+    if (ids.itemId) {
+      const result = await fetchMercadoLibreItem(ids.itemId);
+      item = result.item;
+      apiError = result.error || '';
+    }
+  } catch (error) {
+    apiError = error.message || 'No fue posible resolver el enlace.';
+  }
+
+  if (!item) {
     try {
-      const response = await fetch(url, {
+      const response = await fetch(resolvedUrl, {
         headers: {
-          'User-Agent': 'Mozilla/5.0 (compatible; TiendaReferidosBot/1.0; +https://example.com/bot)',
+          'User-Agent': 'Mozilla/5.0 (compatible; DMonkeySport/1.0)',
           'Accept-Language': 'es-CL,es;q=0.9,en;q=0.8',
         },
+        signal: AbortSignal.timeout(10000),
       });
-
-      if (response.ok) {
-        const html = await response.text();
-        extracted = extractAffiliateProductData(html, url);
-      }
+      if (response.ok) extracted = extractAffiliateProductData(await response.text(), resolvedUrl);
     } catch (error) {
-      extracted = {};
+      // La API oficial es prioritaria; el scraping queda como respaldo no garantizado.
     }
   }
 
-  const priceMatch = source.match(/\$?\s?(\d{1,3}(?:[\.\s]\d{3})*(?:[.,]\d{1,2})?|\d+(?:[.,]\d{1,2})?)/);
-  const precio = priceMatch ? parseCurrencyNumber(priceMatch[1]) : null;
-  const nombreBase = (source.match(/[A-Za-zÁÉÍÓÚáéíóúÑñ0-9][A-Za-zÁÉÍÓÚáéíóúÑñ0-9\s\-]{4,80}/) || [])[0] || extracted.name || titleFromUrl || 'Producto';
-  const nombre = nombreBase.replace(/\s+/g, ' ').trim();
-  const marca = (source.match(/(?:marca|brand)\s*[:\-]?\s*([A-Za-zÁÉÍÓÚáéíóúÑñ0-9\s]+)/i) || [])[1] || extracted.brand || 'Sin marca';
-  const vendedor = (source.match(/(?:vendedor|seller)\s*[:\-]?\s*([A-Za-zÁÉÍÓÚáéíóúÑñ0-9\s]+)/i) || [])[1] || extracted.seller || marca;
-
-  const attrs = {};
-  const gramosMatch = source.match(/(\d{1,4})(?:\s|\.|,)?(?:g|gr|gramos|grams)\b/i);
-  const proteinaMatch = source.match(/(?:proteina|protein)(?:\s+(?:total|total de))?\s*(\d{1,4})(?:\s|\.|,)?(?:g|gr|gramos|grams)\b/i);
-  const porcionesMatch = source.match(/(\d{1,4})\s*(?:porciones|servings|dosis|scoops|raciones)\b/i);
-  const saborMatch = source.match(/(?:sabor|flavor|sabores)\s*[:\-]?\s*([A-Za-zÁÉÍÓÚáéíóúÑñ0-9\s]+)/i);
-
-  if (gramosMatch) attrs.gramos_total = Number(String(gramosMatch[1]).replace(/\./g, '').replace(',', '.'));
-  if (proteinaMatch) attrs.proteina_total = Number(String(proteinaMatch[1]).replace(/\./g, '').replace(',', '.'));
-  if (porcionesMatch) attrs.porciones = Number(String(porcionesMatch[1]).replace(/\./g, '').replace(',', '.'));
-  if (saborMatch) attrs.sabor = saborMatch[1].trim();
-
-  if (!Object.keys(attrs).length && extracted && typeof extracted === 'object') {
-    if (extracted.gramos_total) attrs.gramos_total = extracted.gramos_total;
-    if (extracted.proteina_total) attrs.proteina_total = extracted.proteina_total;
-    if (extracted.porciones) attrs.porciones = extracted.porciones;
-    if (extracted.sabor) attrs.sabor = extracted.sabor;
+  const ids = extractMercadoLibreIds(resolvedUrl);
+  const titleFromUrl = (() => {
+    try { return decodeURIComponent(new URL(resolvedUrl).pathname.split('/').filter(Boolean).at(-1) || ''); }
+    catch { return ''; }
+  })();
+  const attributes = {};
+  for (const attr of (Array.isArray(item?.attributes) ? item.attributes : [])) {
+    const key = String(attr.id || '').toUpperCase();
+    const value = attr.value_name ?? attr.value_struct?.number ?? '';
+    if (!value) continue;
+    if (key === 'BRAND') attributes.marca = String(value);
+    if (/WEIGHT|PACKAGE_WEIGHT/.test(key)) attributes.peso = String(value);
+    if (/FLAVOR|SABOR/.test(key)) attributes.sabor = String(value);
   }
+
+  const priceMatch = source.match(/\$?\s?(\d{1,3}(?:[\.\s]\d{3})*(?:[.,]\d{1,2})?|\d+(?:[.,]\d{1,2})?)/);
+  const typedPrice = priceMatch ? parseCurrencyNumber(priceMatch[1]) : null;
+  const name = item?.title || extracted.name || titleFromUrl || 'Producto';
+  const brand = attributes.marca || extracted.brand || 'Sin marca';
+  const seller = item?.seller_id ? String(item.seller_id) : (extracted.seller || brand);
+  const picture = item?.pictures?.[0]?.secure_url || item?.pictures?.[0]?.url || extracted.image || '';
+  const price = Number(item?.price ?? extracted.price ?? typedPrice ?? 0);
 
   return {
     ok: true,
-    id_publicacion: idPublicacion,
-    nombre: nombre.replace(/\b(?:ml|mercado libre|mercadolibre)\b/gi, '').trim() || 'Producto',
-    marca: marca.trim(),
-    vendedor: vendedor.trim(),
-    precio: Number(extracted.price ?? precio ?? 0),
-    enlace_referido: url || '',
-    url_publicacion: url || '',
-    imagen: extracted.image || '',
-    notas: source.slice(0, 240),
-    atributos: attrs,
+    id_publicacion: ids.itemId || '',
+    id_catalogo: ids.productId || '',
+    nombre: String(name).replace(/\s+/g, ' ').trim(),
+    marca: String(brand).trim(),
+    vendedor: String(seller).trim(),
+    precio: Number.isFinite(price) ? price : 0,
+    enlace_referido: originalUrl,
+    url_publicacion: resolvedUrl,
+    imagen: picture,
+    notas: apiError ? 'Importación parcial: ' + apiError : source.slice(0, 240),
+    atributos: attributes,
+    fuente_datos: item ? 'api_mercadolibre' : (extracted.name ? 'html_respaldo' : 'url'),
   };
 }
-
 const adminPage = `
   <!DOCTYPE html>
   <html lang="es">
