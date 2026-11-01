@@ -1379,6 +1379,80 @@
           }
         });
         manualDownloadButton.addEventListener('click', () => bulkExportButton.click());
+        function manualBatchRows() {
+          return bulkCatalogItems.map(item => ({
+            lista_id: bulkCategoryId,
+            nombre: item.name,
+            marca: item.brand || '',
+            precio: item.price,
+            id_publicacion: item.id_publicacion,
+            enlace_referido: item.url_publicacion,
+            imagen: item.image || '',
+            atributos: item.attributes || {},
+            activo: false,
+            es_prueba: false,
+          }));
+        }
+        previewD1Button.addEventListener('click', async () => {
+          invalidateD1Preview();
+          if (!adminToken || !bulkCatalogItems.length) return message(previewD1Status, 'Conecta el administrador y prepara productos primero.', true);
+          previewD1Button.disabled = true;
+          try {
+            const rows = manualBatchRows();
+            const result = await api('/api/admin/products/manual-batch', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ action: 'preview', rows }),
+            });
+            previewedD1Rows = rows;
+            previewD1Table.replaceChildren();
+            const table = document.createElement('table');
+            const header = document.createElement('tr');
+            for (const label of ['Nombre', 'Publicación', 'Precio CLP', 'Estado']) {
+              const th = document.createElement('th');
+              th.textContent = label;
+              header.appendChild(th);
+            }
+            table.appendChild(header);
+            for (const record of result.preview || []) {
+              const tr = document.createElement('tr');
+              for (const value of [record.nombre, record.id_publicacion, String(record.precio), 'Inactivo']) {
+                const td = document.createElement('td');
+                td.textContent = value;
+                tr.appendChild(td);
+              }
+              table.appendChild(tr);
+            }
+            previewD1Table.appendChild(table);
+            saveD1Button.disabled = false;
+            message(previewD1Status, 'Vista previa aprobada: ' + rows.length + ' productos. Confirma para guardarlos inactivos.');
+          } catch (error) {
+            message(previewD1Status, error.message, true);
+          } finally {
+            previewD1Button.disabled = bulkCatalogItems.length === 0;
+          }
+        });
+        saveD1Button.addEventListener('click', async () => {
+          if (!previewedD1Rows || !previewedD1Rows.length) return message(previewD1Status, 'Revisa el lote antes de guardar.', true);
+          if (!window.confirm('¿Guardar ' + previewedD1Rows.length + ' productos en D1, todos INACTIVOS?')) return;
+          saveD1Button.disabled = true;
+          previewD1Button.disabled = true;
+          try {
+            const result = await api('/api/admin/products/manual-batch', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ action: 'confirm', rows: previewedD1Rows }),
+            });
+            message(previewD1Status, result.imported + ' productos guardados en D1 como INACTIVOS. Revísalos antes de activar.');
+            resetBulk();
+            await refresh();
+          } catch (error) {
+            message(previewD1Status, error.message, true);
+            saveD1Button.disabled = false;
+          } finally {
+            previewD1Button.disabled = bulkCatalogItems.length === 0;
+          }
+        });
         bulkExportButton.addEventListener('click', async () => {
           const chosen = categories.find(category => category.id === bulkCategoryId);
           if (!chosen || !bulkCatalogItems.length) return message(bulkStatus, 'Consulta los enlaces antes de exportar.', true);
