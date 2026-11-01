@@ -1274,11 +1274,24 @@
         const bulkResults = document.getElementById('ml-bulk-results');
         const bulkSearchButton = document.getElementById('ml-bulk-search');
         const bulkExportButton = document.getElementById('ml-bulk-export');
+        const previewD1Button = document.getElementById('ml-batch-preview-d1');
+        const saveD1Button = document.getElementById('ml-batch-save-d1');
+        const previewD1Status = document.getElementById('ml-batch-preview-status');
+        const previewD1Table = document.getElementById('ml-batch-preview-table');
+        let previewedD1Rows = null;
+        function invalidateD1Preview() {
+          previewedD1Rows = null;
+          saveD1Button.disabled = true;
+          previewD1Button.disabled = bulkCatalogItems.length === 0;
+          previewD1Table.replaceChildren();
+        }
+
         const manualDownloadButton = document.getElementById('ml-manual-download');
         const manualStatus = document.getElementById('ml-manual-status');
         const resetBulk = () => {
           bulkCatalogItems = [];
           bulkCategoryId = '';
+          invalidateD1Preview();
           bulkExportButton.disabled = true;
           manualDownloadButton.disabled = true;
           bulkResults.replaceChildren();
@@ -1320,6 +1333,7 @@
                 row.textContent = 'No incluido: ' + url + ' — ' + error.message;
               }
             }
+            invalidateD1Preview();
             bulkExportButton.disabled = bulkCatalogItems.length === 0;
             manualDownloadButton.disabled = bulkCatalogItems.length === 0;
             message(bulkStatus, bulkCatalogItems.length + ' publicaciones preparadas. '
@@ -1351,6 +1365,7 @@
             }
             bulkCategoryId = chosen.id;
             bulkCatalogItems.push(candidate);
+            invalidateD1Preview();
             const item = document.createElement('p');
             item.textContent = 'Ingreso manual (sin validación API): ' + candidate.name + ' · '
               + candidate.id_publicacion + ' · CLP ' + candidate.price.toLocaleString('es-CL');
