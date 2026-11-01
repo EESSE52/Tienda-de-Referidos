@@ -1152,6 +1152,17 @@
             templateSelect.appendChild(option);
           }
           templateSelect.value = categories.some(category => category.id === selectedTemplate) ? selectedTemplate : '';
+          const fieldCategorySelect = document.querySelector('#category-field-form select[name="category_id"]');
+          const previousFieldCategory = fieldCategorySelect.value;
+          fieldCategorySelect.replaceChildren();
+          for (const category of categories) {
+            const option = document.createElement('option');
+            option.value = category.id;
+            option.textContent = category.nombre;
+            fieldCategorySelect.appendChild(option);
+          }
+          if (categories.some(item => item.id === previousFieldCategory)) fieldCategorySelect.value = previousFieldCategory;
+          renderCategoryFieldOptions();
           const metricSelect = document.querySelector('#metric-form select[name="category_id"]');
           const chosenMetricCategory = metricSelect.value;
           metricSelect.replaceChildren();
