@@ -17,6 +17,14 @@ function ensurePayload(body) {
   return body;
 }
 
+function checkedAttributes(category, incoming, previous) {
+  try {
+    return normalizeCategoryAttributes(category, incoming, previous);
+  } catch (error) {
+    throw new AdminProductError(error instanceof Error ? error.message : 'Atributos inválidos.');
+  }
+}
+
 function validateCategory(catalog, listId) {
   if (!catalog.listas.some((lista) => lista.id === listId || lista.slug === listId)) {
     throw new AdminProductError('La categoría seleccionada no existe.');
@@ -32,7 +40,7 @@ export async function createAdminProduct(env, body) {
     throw new AdminProductError('Ya existe un producto con ese identificador.', 409);
   }
   const category = catalog.listas.find((item) => item.id === candidate.lista_id || item.slug === candidate.lista_id);
-  candidate.atributos = normalizeCategoryAttributes(category, candidate.atributos);
+  candidate.atributos = checkedAttributes(category, candidate.atributos);
   await saveRecord(env, 'catalog_products', candidate);
   return candidate;
 }
@@ -55,7 +63,7 @@ export async function updateAdminProduct(env, id, body) {
   const candidate = validateProductPayload({ ...existing, ...payload, id }, catalog.productos, id);
   validateCategory(catalog, candidate.lista_id);
   const category = catalog.listas.find((item) => item.id === candidate.lista_id || item.slug === candidate.lista_id);
-  candidate.atributos = normalizeCategoryAttributes(category, candidate.atributos, existing.atributos);
+  candidate.atributos = checkedAttributes(category, candidate.atributos, existing.atributos);
   await saveRecord(env, 'catalog_products', candidate);
   return candidate;
 }
