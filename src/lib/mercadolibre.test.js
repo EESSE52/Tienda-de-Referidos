@@ -112,6 +112,6 @@ describe('Mercado Libre item lookup', () => {
 
     await expect(fetchMercadoLibreItem('MLC-1234567890', fetchImplementation))
       .rejects
-      .toThrow('Este entorno bloquea las consultas a la API de Mercado Libre.');
+      .toThrow('Mercado Libre rechazó esta consulta a su API');
   });
 });
