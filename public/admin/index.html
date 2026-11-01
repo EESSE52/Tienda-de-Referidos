@@ -164,6 +164,13 @@
         margin: 0 auto;
         max-width: 320px;
       }
+
+      .admin-fields {display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px;margin-top:16px}
+      .admin-fields label {display:flex;flex-direction:column;gap:6px;font-weight:600;font-size:.9rem}
+      .admin-fields input,.admin-fields select {border:1px solid #cbd5e1;padding:10px;border-radius:8px;font:inherit}
+      .admin-fields input[type=checkbox]{width:18px;height:18px}
+      .admin-actions {display:flex;gap:6px;flex-wrap:wrap}
+      .admin-actions button {padding:7px 10px;font-size:.8rem}
     </style>
   </head>
   <body>
@@ -184,6 +191,49 @@
           <h1 class="title">Importación masiva</h1>
           <button class="secondary" type="button">Cerrar sesión</button>
         </div>
+
+
+        <section class="card" style="margin-bottom:20px">
+          <h2>Acceso de administración (entorno de pruebas)</h2>
+          <p class="subtle">Introduce el token del servidor local. Solo se mantiene en memoria mientras esta página esté abierta; no se guarda en el navegador. No publiques este panel sin proteger también /admin/ mediante Cloudflare Access.</p>
+          <div class="button-row">
+            <input id="admin-token" type="password" autocomplete="off" placeholder="Token administrativo local" aria-label="Token administrativo" style="flex:1;min-width:220px;padding:12px;border:1px solid #cbd5e1;border-radius:10px" />
+            <button id="connect-btn" type="button">Conectar a D1</button>
+          </div>
+          <div id="admin-status" class="status" aria-live="polite"></div>
+        </section>
+
+        <section class="card" style="margin-bottom:20px">
+          <h2>Productos guardados en D1</h2>
+          <p class="subtle">Los cambios se reflejan en el comparador local después de recargar la página. Desactivar oculta el producto sin eliminar su registro.</p>
+          <div class="button-row"><button id="refresh-products" class="secondary" type="button">Actualizar listado</button></div>
+          <div id="product-list" class="preview"><p class="subtle">Conecta el administrador para consultar productos.</p></div>
+        </section>
+
+        <section class="card" style="margin-bottom:20px">
+          <h2 id="product-form-title">Crear producto</h2>
+          <form id="product-form">
+            <div class="admin-fields">
+              <label>Categoría<select name="lista_id" required><option value="creatina">Creatina</option><option value="proteina">Proteína</option></select></label>
+              <label>Nombre<input name="nombre" required maxlength="200" /></label>
+              <label>Marca<input name="marca" maxlength="150" /></label>
+              <label>Precio CLP<input name="precio" type="number" min="1" step="1" required /></label>
+              <label>Enlace de afiliado<input name="enlace_referido" type="url" required placeholder="https://..." /></label>
+              <label>ID publicación Mercado Libre<input name="id_publicacion" /></label>
+              <label>Imagen (URL)<input name="imagen" type="url" placeholder="https://..." /></label>
+              <label>Gramos totales<input name="gramos_total" type="number" min="0" step="any" /></label>
+              <label>Porciones<input name="porciones" type="number" min="0" step="any" /></label>
+              <label>Tipo o formato<input name="tipo" /></label>
+              <label>Sabor<input name="sabor" /></label>
+              <label><input name="activo" type="checkbox" checked /> Producto activo</label>
+            </div>
+            <div class="button-row">
+              <button type="submit">Guardar producto</button>
+              <button id="reset-product-form" class="secondary" type="button">Cancelar edición</button>
+            </div>
+          </form>
+          <div id="product-status" class="status" aria-live="polite"></div>
+        </section>
 
         <section class="card">
           <h2>Importar productos</h2>
@@ -436,7 +486,7 @@
           setStatus('Guardando productos...');
           const response = await fetch('/api/admin/products/import', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', ...(window.dmonkeysportAdminHeaders?.() || {}) },
             body: JSON.stringify({ rows: state.validRows }),
           });
           const payload = await response.json();
@@ -453,6 +503,168 @@
       csvInput.addEventListener('change', readSelectedFile);
       previewBtn.addEventListener('click', readSelectedFile);
       importBtn.addEventListener('click', importRows);
+    </script>
+
+    <script>
+      (() => {
+        let adminToken = '';
+        let currentProducts = [];
+        let editingId = null;
+        const form = document.getElementById('product-form');
+        const productStatus = document.getElementById('product-status');
+        const adminStatus = document.getElementById('admin-status');
+        const list = document.getElementById('product-list');
+        const tokenInput = document.getElementById('admin-token');
+
+        function message(node, text, error = false) {
+          node.textContent = text;
+          node.className = error ? 'status error' : 'status success';
+        }
+
+        async function api(path, options = {}) {
+          if (!adminToken) throw new Error('Primero debes conectar con el token local.');
+          const response = await fetch(path, {
+            ...options,
+            cache: 'no-store',
+            headers: {
+              ...(options.headers || {}),
+              'Authorization': 'Bearer ' + adminToken,
+            },
+          });
+          const body = await response.json().catch(() => ({}));
+          if (!response.ok) throw new Error(body.error || 'Error HTTP ' + response.status);
+          return body;
+        }
+
+        function cell(row, value) {
+          const td = document.createElement('td');
+          td.textContent = String(value ?? '');
+          row.appendChild(td);
+          return td;
+        }
+
+        function resetForm() {
+          editingId = null;
+          form.reset();
+          document.getElementById('product-form-title').textContent = 'Crear producto';
+        }
+
+        function renderProducts() {
+          list.replaceChildren();
+          if (!currentProducts.length) {
+            const p = document.createElement('p');
+            p.textContent = 'No hay productos registrados.';
+            list.appendChild(p);
+            return;
+          }
+          const table = document.createElement('table');
+          const head = document.createElement('tr');
+          ['Producto', 'Categoría', 'Precio', 'Estado', 'Acciones'].forEach((title) => {
+            const th = document.createElement('th');
+            th.textContent = title;
+            head.appendChild(th);
+          });
+          table.appendChild(head);
+          currentProducts.forEach((product) => {
+            const row = document.createElement('tr');
+            cell(row, product.nombre);
+            cell(row, product.lista_id);
+            cell(row, new Intl.NumberFormat('es-CL', {style:'currency',currency:'CLP',maximumFractionDigits:0}).format(product.precio || 0));
+            cell(row, product.activo ? 'Activo' : 'Inactivo');
+            const actions = document.createElement('td');
+            const div = document.createElement('div');
+            div.className = 'admin-actions';
+            const edit = document.createElement('button');
+            edit.type = 'button';
+            edit.textContent = 'Editar';
+            edit.addEventListener('click', () => {
+              editingId = product.id;
+              for (const name of ['lista_id','nombre','marca','precio','enlace_referido','id_publicacion','imagen']) {
+                form.elements[name].value = product[name] ?? '';
+              }
+              for (const name of ['gramos_total','porciones','tipo','sabor']) {
+                form.elements[name].value = product.atributos?.[name] ?? '';
+              }
+              form.elements.activo.checked = !!product.activo;
+              document.getElementById('product-form-title').textContent = 'Editar: ' + product.nombre;
+              form.scrollIntoView({behavior:'smooth'});
+            });
+            div.appendChild(edit);
+            if (product.activo) {
+              const disable = document.createElement('button');
+              disable.type = 'button';
+              disable.className = 'secondary';
+              disable.textContent = 'Desactivar';
+              disable.addEventListener('click', async () => {
+                if (!confirm('¿Desactivar este producto?')) return;
+                try {
+                  await api('/api/admin/products/' + encodeURIComponent(product.id), {method:'DELETE'});
+                  await refresh();
+                  message(productStatus, 'Producto desactivado correctamente.');
+                } catch (error) { message(productStatus, error.message, true); }
+              });
+              div.appendChild(disable);
+            }
+            actions.appendChild(div);
+            row.appendChild(actions);
+            table.appendChild(row);
+          });
+          list.appendChild(table);
+        }
+
+        async function refresh() {
+          const body = await api('/api/admin/products');
+          currentProducts = body.productos || [];
+          renderProducts();
+        }
+
+        document.getElementById('connect-btn').addEventListener('click', async () => {
+          adminToken = tokenInput.value.trim();
+          tokenInput.value = '';
+          if (!adminToken) return message(adminStatus, 'Ingresa el token administrativo local.', true);
+          try {
+            await refresh();
+            message(adminStatus, 'Conectado a D1. Productos: ' + currentProducts.length);
+          } catch (error) {
+            adminToken = '';
+            message(adminStatus, error.message, true);
+          }
+        });
+        document.getElementById('refresh-products').addEventListener('click', () => refresh().catch(error => message(adminStatus, error.message, true)));
+        document.getElementById('reset-product-form').addEventListener('click', resetForm);
+
+        form.addEventListener('submit', async (event) => {
+          event.preventDefault();
+          try {
+            const data = new FormData(form);
+            const body = Object.fromEntries(data.entries());
+            body.precio = Number(body.precio);
+            body.activo = form.elements.activo.checked;
+            body.atributos = {};
+            for (const key of ['gramos_total','porciones']) {
+              if (body[key] !== '') body.atributos[key] = Number(body[key]);
+              delete body[key];
+            }
+            for (const key of ['tipo','sabor']) {
+              if (body[key]) body.atributos[key] = body[key];
+              delete body[key];
+            }
+            await api(editingId ? '/api/admin/products/' + encodeURIComponent(editingId) : '/api/admin/products', {
+              method: editingId ? 'PUT' : 'POST',
+              headers: {'Content-Type':'application/json'},
+              body: JSON.stringify(body),
+            });
+            resetForm();
+            await refresh();
+            message(productStatus, 'Producto guardado correctamente en D1 local.');
+          } catch (error) {
+            message(productStatus, error.message, true);
+          }
+        });
+
+        // La importación CSV existente usa la misma credencial en memoria.
+        window.dmonkeysportAdminHeaders = () => adminToken ? {'Authorization':'Bearer ' + adminToken} : {};
+      })();
     </script>
   </body>
 </html>
