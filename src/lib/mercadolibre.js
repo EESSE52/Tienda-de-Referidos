@@ -83,7 +83,7 @@ async function fallbackMercadoLibrePage(normalizedId, fetchImplementation = fetc
   return null;
 }
 
-export async function fetchMercadoLibreItem(itemId, fetchImplementation = fetch) {
+export async function fetchMercadoLibreItem(itemId, fetchImplementation = fetch, accessToken = '') {
   const normalizedId = getMercadoLibreItemId(itemId);
   if (!normalizedId) {
     throw new Error('El enlace no contiene un ID de publicación válido de Mercado Libre.');
@@ -94,6 +94,7 @@ export async function fetchMercadoLibreItem(itemId, fetchImplementation = fetch)
       Accept: 'application/json',
       'Accept-Language': 'es-CL,es;q=0.9',
       'User-Agent': 'TiendaDeReferidos/1.0 (+https://github.com/EESSE52/Tienda-de-Referidos)',
+      ...(accessToken ? { Authorization: 'Bearer ' + accessToken } : {}),
     },
   });
 
@@ -110,6 +111,18 @@ export async function fetchMercadoLibreItem(itemId, fetchImplementation = fetch)
       return fallback;
     }
 
+    if (response.status === 401) {
+      throw new Error('Mercado Libre respondió 401: el token API está ausente, expirado o no es válido. Reautoriza la aplicación oficial y verifica sus credenciales.');
+    }
+    if (response.status === 429) {
+      throw new Error('Mercado Libre respondió 429: límite de solicitudes. Reduce las consultas y vuelve a intentar más tarde.');
+    }
+    if (response.status === 403 && !accessToken) {
+      throw new Error('Mercado Libre respondió 403 sin token API. Configura ML_ACCESS_TOKEN con una autorización oficial y los permisos adecuados para acceder a publicaciones.');
+    }
+    if (response.status === 403 && accessToken) {
+      throw new Error('Mercado Libre respondió 403 con token API. Revisa los permisos funcionales de la aplicación y la autorización del usuario; Mercado Libre podría restringir este recurso.');
+    }
     if (errorPayload.code === 'PA_UNAUTHORIZED_RESULT_FROM_POLICIES') {
       throw new Error('Mercado Libre rechazó esta consulta a su API (restricción de acceso). No se puede obtener un precio automático en este momento; usa el ingreso manual supervisado del administrador o configura acceso oficial autorizado.');
     }
