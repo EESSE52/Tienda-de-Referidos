@@ -11,3 +11,7 @@ data/backups/
 
 # Documento privado de Mercado Libre
 cliente id mercadolibre.odt
+
+# Secreto administrativo de desarrollo (nunca subir a Git)
+.dev.vars
+.dev.vars.*
