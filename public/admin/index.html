@@ -349,7 +349,8 @@
               <label>Enlace de afiliado (generado desde tu cuenta)<input name="enlace_referido" type="url" placeholder="https://meli.la/..." /></label>
               <label>URL de publicación del producto<input name="url_publicacion" type="url" placeholder="https://www.mercadolibre.cl/..." /></label>
               <label>ID publicación Mercado Libre<input name="id_publicacion" /></label>
-              <label>Imagen candidata (solo administración)<input name="imagen" type="url" placeholder="https://..." /></label>
+              <label>Imagen candidata (URL HTTPS; solo administración)<input name="imagen_candidata" type="url" placeholder="https://http2.mlstatic.com/..." /></label>
+              <label>Origen de la imagen candidata (URL de publicación)<input name="imagen_origen_url" type="url" placeholder="https://www.mercadolibre.cl/..." /></label>
               <label>Imagen autorizada para publicar (URL HTTPS)<input name="imagen_propia" type="url" placeholder="https://tusitio.cl/foto-producto.webp" /></label>
             </div>
             <div class="upload-box">
@@ -825,7 +826,7 @@
             edit.textContent = 'Editar';
             edit.addEventListener('click', () => {
               editingId = product.id;
-              for (const name of ['lista_id','nombre','marca','precio','enlace_referido','url_publicacion','id_publicacion','imagen','imagen_propia']) {
+              for (const name of ['lista_id','nombre','marca','precio','enlace_referido','url_publicacion','id_publicacion','imagen_candidata','imagen_origen_url','imagen_propia']) {
                 form.elements[name].value = product[name] ?? '';
               }
               form.elements.imagen_autorizada_confirmada.checked = false;
@@ -1110,6 +1111,7 @@
             body.activo = form.elements.activo.checked;
             body.es_prueba = form.elements.es_prueba.checked;
             body.imagen_autorizada_confirmada = form.elements.imagen_autorizada_confirmada.checked;
+            if (body.imagen_candidata && !body.imagen_origen_url) body.imagen_origen_url = body.url_publicacion || '';
             if (body.activo && !body.enlace_referido) throw new Error('Para activar el producto, pega primero el enlace de afiliado de tu cuenta.');
             if (!body.url_publicacion && !body.enlace_referido) throw new Error('Indica la URL del producto o el enlace de afiliado.');
             body.atributos = editingId
@@ -1670,6 +1672,8 @@
               ['Nombre', item.name], ['Marca', item.brand],
               ['Precio consultado', new Intl.NumberFormat('es-CL', {style:'currency',currency:'CLP',maximumFractionDigits:0}).format(item.price)],
               ['Publicación', item.id_publicacion], ['Vendedor', item.seller],
+              ['Origen de datos', 'Consulta a Mercado Libre; uso externo de imágenes no autorizado automáticamente'],
+              ['Imagen candidata', item.image ? 'URL obtenida para revisión privada (no publicada)' : 'No disponible'],
               ['Afiliación', 'No verificada: requiere enlace de referido válido'],
             ]) {
               const p = document.createElement('p');
@@ -1691,7 +1695,8 @@
           const item = previewedMercadoLibre;
           for (const [key, value] of Object.entries({
             nombre: item.name, marca: item.brand, precio: item.price,
-            id_publicacion: item.id_publicacion, imagen: item.image,
+            id_publicacion: item.id_publicacion, imagen_candidata: item.image,
+            imagen_origen_url: item.url_publicacion,
             url_publicacion: item.url_publicacion,
             enlace_referido: '',
           })) form.elements[key].value = value ?? '';
