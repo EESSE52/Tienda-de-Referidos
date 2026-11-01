@@ -700,6 +700,7 @@
               }
               renderProductFields(product.atributos || {});
               form.elements.activo.checked = !!product.activo;
+              form.elements.es_prueba.checked = product.es_prueba === true;
               document.getElementById('product-form-title').textContent = 'Editar: ' + product.nombre;
               form.scrollIntoView({behavior:'smooth'});
             });
