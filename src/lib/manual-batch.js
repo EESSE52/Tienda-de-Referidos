@@ -17,7 +17,7 @@ export function prepareManualBatch(rows, catalog) {
       if (!/^MLC[0-9]{6,}$/.test(id)) throw new Error('ID de publicación MLC inválido.');
       const source = normalizeChileMercadoLibreUrl(candidate.enlace_referido || candidate.url_publicacion || '');
       if (source.kind !== 'item' || source.id !== id) throw new Error('La URL no corresponde al ID MLC de la publicación.');
-      if (seen.has(id)) throw new Error('La publicación ya existe o está repetida en el lote.');
+      if (seen.has(id)) throw new Error('Publicación duplicada: ya existe en el catálogo o está repetida en este lote.');
       seen.add(id);
       eligible.push({
         ...candidate,
