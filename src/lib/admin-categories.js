@@ -47,6 +47,16 @@ function ensureUnique(catalog, category, currentId = null) {
 export async function createAdminCategory(env, payload) {
   const catalog = await readCatalog(env);
   const category = normalizedCategory(payload);
+  if (payload?.plantilla_id) {
+    const source = catalog.listas.find((item) => item.id === payload.plantilla_id);
+    if (!source) throw new AdminCategoryError('La categoría usada como plantilla no existe.');
+    // Copia independiente de la configuración de comparación. No copia productos.
+    category.unidad_base = source.unidad_base ?? 'ud';
+    category.orden_defecto = structuredClone(source.orden_defecto ?? { campo: 'precio', direccion: 'menor' });
+    category.campos = structuredClone(source.campos ?? []);
+    category.metricas = structuredClone(source.metricas ?? []);
+    category.mapa_atributos_ml = structuredClone(source.mapa_atributos_ml ?? {});
+  }
   ensureUnique(catalog, category);
   await saveRecord(env, 'catalog_lists', category);
   return category;
