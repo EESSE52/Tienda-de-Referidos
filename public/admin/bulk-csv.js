@@ -6,7 +6,7 @@ export function buildMercadoLibreReviewCsv(category, items) {
   if (!Array.isArray(items) || items.length === 0 || items.length > 10) {
     throw new Error('Selecciona entre 1 y 10 publicaciones válidas.');
   }
-  const fixed = ['lista_id', 'nombre', 'marca', 'precio', 'enlace_referido', 'id_publicacion', 'imagen', 'activo', 'es_prueba'];
+  const fixed = ['lista_id', 'nombre', 'marca', 'precio', 'enlace_referido', 'url_publicacion', 'id_publicacion', 'imagen', 'activo', 'es_prueba'];
   const attributes = (Array.isArray(category.campos) ? category.campos : [])
     .map(field => String(field.clave || ''))
     .filter((key, index, all) => /^[a-z][a-z0-9_]*$/.test(key) && !fixed.includes(key) && all.indexOf(key) === index);
@@ -28,7 +28,8 @@ export function buildMercadoLibreReviewCsv(category, items) {
       nombre: item.name,
       marca: item.brand,
       precio: item.price,
-      enlace_referido: item.url_publicacion,
+      enlace_referido: item.enlace_referido || item.url_publicacion,
+      url_publicacion: item.url_publicacion,
       id_publicacion: item.id_publicacion,
       imagen: item.image,
       activo: 'false',
@@ -61,6 +62,8 @@ export function createManualMercadoLibreCandidate(input) {
   if (!name || name.length > 200 || !Number.isSafeInteger(price) || price <= 0) {
     throw new Error('Introduce un nombre y un precio CLP entero positivo, revisados en Mercado Libre.');
   }
+  const affiliate = String(input?.affiliate_url || '').trim();
+  if (affiliate && !isValidAffiliateUrl(affiliate)) throw new Error('El enlace de afiliado debe ser HTTPS de meli.la o Mercado Libre Chile.');
   const image = String(input?.image || '').trim();
   if (image) {
     let imageUrl;
@@ -68,7 +71,17 @@ export function createManualMercadoLibreCandidate(input) {
     if (imageUrl.protocol !== 'https:') throw new Error('La imagen debe usar HTTPS.');
   }
   return {
-    name, brand, price, image, id_publicacion: id, url_publicacion: url.href,
+    name, brand, price, image, id_publicacion: id, url_publicacion: url.href, enlace_referido: affiliate,
     attributes: {}, manual_price: true, afiliado_verificado: false,
   };
+}
+
+/** El enlace de afiliado se conserva íntegro, sin eliminar códigos de seguimiento. */
+export function isValidAffiliateUrl(value) {
+  try {
+    const url = new URL(String(value || '').trim());
+    return url.protocol === 'https:' && !url.username && !url.password && !url.port &&
+      ['meli.la', 'mercadolibre.cl', 'www.mercadolibre.cl', 'articulo.mercadolibre.cl'].includes(url.hostname.toLowerCase()) &&
+      url.href.length <= 2048;
+  } catch { return false; }
 }
