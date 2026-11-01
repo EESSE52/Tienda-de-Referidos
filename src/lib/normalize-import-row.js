@@ -58,7 +58,7 @@ export function normalizeImportRow(row, category) {
     nombre: String(values.nombre ?? '').trim(),
     marca: String(values.marca ?? '').trim(),
     precio: priceNumber(values.precio ?? values.precio_clp),
-    id_publicacion: idPublicacion, enlace_referido: affiliateUrl || publicationUrl, url_publicacion: publicationUrl,
+    id_publicacion: idPublicacion, enlace_referido: values.enlace_referido === undefined && values.link === undefined ? publicationUrl : affiliateUrl, url_publicacion: publicationUrl,
     imagen: String(values.imagen ?? '').trim(),
     activo: bool(values.activo, false),
     es_prueba: bool(values.es_prueba, false),
