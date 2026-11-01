@@ -130,3 +130,36 @@ export function categoryErrorResponse(error, jsonResponse) {
   console.error('Error de categorías D1:', error);
   return jsonResponse({ error: 'Error interno de categorías.' }, 500);
 }
+
+/**
+ * Ajusta un campo de una categoría sin alterar las demás categorías o sus métricas.
+ * Útil para variantes como Creatina gomitas: no exigir gramos sin información.
+ */
+export async function configureCategoryField(env, id, payload) {
+  if (!isObject(payload)) throw new AdminCategoryError('Se requiere un objeto JSON.');
+  const catalog = await readCatalog(env);
+  const previous = catalog.listas.find(item => item.id === id);
+  if (!previous) throw new AdminCategoryError('Categoría no encontrada.', 404);
+  const clave = text(payload.clave);
+  const campos = structuredClone(previous.campos ?? []);
+  const field = campos.find(item => item.clave === clave);
+  if (!field) throw new AdminCategoryError('Campo no encontrado en esta categoría.', 404);
+  if (payload.requerido !== undefined && typeof payload.requerido !== 'boolean') {
+    throw new AdminCategoryError('El estado obligatorio debe ser verdadero o falso.');
+  }
+  if (payload.requerido !== undefined) field.requerido = payload.requerido;
+  if (payload.opciones !== undefined) {
+    if (field.tipo !== 'seleccion') throw new AdminCategoryError('Solo los campos de selección admiten opciones.');
+    if (!Array.isArray(payload.opciones) || payload.opciones.length < 1 || payload.opciones.length > 30) {
+      throw new AdminCategoryError('Debes indicar entre 1 y 30 opciones.');
+    }
+    const opciones = payload.opciones.map(value => text(value));
+    if (opciones.some(value => !value || value.length > 90) || new Set(opciones).size !== opciones.length) {
+      throw new AdminCategoryError('Las opciones deben ser únicas y tener entre 1 y 90 caracteres.');
+    }
+    field.opciones = opciones;
+  }
+  const category = { ...previous, campos };
+  await saveRecord(env, 'catalog_lists', category);
+  return category;
+}
