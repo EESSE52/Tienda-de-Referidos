@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { readFileSync } from 'node:fs';
 import { buildMercadoLibreReviewCsv, createManualMercadoLibreCandidate } from '../../public/admin/bulk-csv.js';
 
 const category = {
@@ -61,6 +62,13 @@ describe('descarga CSV de revisión Mercado Libre', () => {
     expect(() => createManualMercadoLibreCandidate({ ...base, url: 'https://evil.example/MLC2908577036' })).toThrow();
     expect(() => createManualMercadoLibreCandidate({ ...base, url: 'https://www.mercadolibre.cl/creatina/up/MLCU3220313328' })).toThrow('wid');
     expect(() => createManualMercadoLibreCandidate({ ...base, price: 'No disponible', url: 'https://articulo.mercadolibre.cl/MLC-2908577036' })).toThrow('precio');
+  });
+  it('muestra descarga inmediata y confirma el resultado del ingreso manual', () => {
+    const html = readFileSync(new URL('../../public/admin/index.html', import.meta.url), 'utf8');
+    expect(html).toContain('id="ml-manual-download"');
+    expect(html).toContain('id="ml-manual-status"');
+    expect(html).toContain("manualDownloadButton.addEventListener('click', () => bulkExportButton.click())");
+    expect(html).toContain("message(manualStatus, 'Producto agregado correctamente.");
   });
   it('limita el lote y exige una categoría válida', () => {
     expect(() => buildMercadoLibreReviewCsv(category, [])).toThrow();
