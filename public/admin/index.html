@@ -712,7 +712,7 @@
             historyButton.textContent = 'Historial';
             historyButton.addEventListener('click', () => showPriceHistory(product.id));
             div.appendChild(historyButton);
-            if (/^MLC[0-9]{6,}$/i.test(String(product.id_publicacion || '').replace(/[-_]/g, ''))) {
+            if (!product.es_prueba && /^MLC[0-9]{6,}$/i.test(String(product.id_publicacion || '').replace(/[-_]/g, ''))) {
               const reviewButton = document.createElement('button');
               reviewButton.type = 'button';
               reviewButton.className = 'secondary';
@@ -1120,6 +1120,7 @@
           })) form.elements[key].value = value ?? '';
           renderProductFields(item.attributes || {});
           form.elements.activo.checked = false;
+          form.elements.es_prueba.checked = false;
           message(productStatus, 'Datos copiados al formulario, sin guardar. Publicación inactiva: verifica el enlace de afiliado antes de activar.');
           form.scrollIntoView({ behavior: 'smooth' });
         });
