@@ -1,5 +1,6 @@
 import { readCatalog, saveRecord } from './cloudflare-catalog.js';
 import { validateProductPayload } from './admin-validacion.js';
+import { normalizeCategoryAttributes } from './category-attributes.js';
 
 export class AdminProductError extends Error {
   constructor(message, status = 400) {
@@ -30,6 +31,8 @@ export async function createAdminProduct(env, body) {
   if (catalog.productos.some((product) => product.id === candidate.id)) {
     throw new AdminProductError('Ya existe un producto con ese identificador.', 409);
   }
+  const category = catalog.listas.find((item) => item.id === candidate.lista_id || item.slug === candidate.lista_id);
+  candidate.atributos = normalizeCategoryAttributes(category, candidate.atributos);
   await saveRecord(env, 'catalog_products', candidate);
   return candidate;
 }
@@ -51,6 +54,8 @@ export async function updateAdminProduct(env, id, body) {
   }
   const candidate = validateProductPayload({ ...existing, ...payload, id }, catalog.productos, id);
   validateCategory(catalog, candidate.lista_id);
+  const category = catalog.listas.find((item) => item.id === candidate.lista_id || item.slug === candidate.lista_id);
+  candidate.atributos = normalizeCategoryAttributes(category, candidate.atributos, existing.atributos);
   await saveRecord(env, 'catalog_products', candidate);
   return candidate;
 }
