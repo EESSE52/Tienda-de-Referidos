@@ -40,7 +40,7 @@ const itemListLd = {
 };
 
 const formatMetricValueForDisplay = (metrica: any, valor: number | null) => {
-  if (valor === null || Number.isNaN(valor)) return '—';
+  if (valor === null || !Number.isFinite(valor)) return 'No disponible';
   const key = String(metrica?.clave || '').toLowerCase();
   const label = String(metrica?.etiqueta || '').toLowerCase();
   const isMonetary = key.includes('precio') || label.includes('precio') || metrica?.plantilla?.tipo === 'precio_dividido_por' || metrica?.formula?.tipo === 'precio_dividido_por';
@@ -172,7 +172,7 @@ const formatMetricValueForDisplay = (metrica: any, valor: number | null) => {
       const cell = row.querySelector(`[data-metric-key="${key}"]`);
       const raw = cell?.dataset.metricValue;
       const value = Number(raw);
-      return Number.isFinite(value) ? value : Number.MAX_SAFE_INTEGER;
+      return raw && Number.isFinite(value) ? value : null;
     };
 
     const refreshSort = () => {
@@ -181,6 +181,8 @@ const formatMetricValueForDisplay = (metrica: any, valor: number | null) => {
       const ordered = rows().sort((a, b) => {
         const aValue = getRowValue(a, key);
         const bValue = getRowValue(b, key);
+        if (aValue === null) return bValue === null ? 0 : 1;
+        if (bValue === null) return -1;
         return (aValue - bValue) * direction;
       });
       ordered.forEach((row) => tableBody.appendChild(row));
