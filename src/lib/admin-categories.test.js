@@ -31,6 +31,30 @@ describe('administración de categorías D1', () => {
     expect(saveRecord).toHaveBeenCalledWith({}, 'catalog_lists', expect.objectContaining({ slug: 'accesorios' }));
   });
 
+  it('clona métricas y campos de una plantilla sin modificar la categoría original', async () => {
+    const created = await createAdminCategory({}, {
+      slug: 'suplementos-nuevos',
+      nombre: 'Suplementos nuevos',
+      plantilla_id: 'creatina',
+    });
+    expect(created.campos).toEqual(existing.campos);
+    expect(created.metricas).toEqual(existing.metricas);
+    expect(created.mapa_atributos_ml).toEqual(existing.mapa_atributos_ml);
+    expect(created.campos).not.toBe(existing.campos);
+    expect(created.metricas).not.toBe(existing.metricas);
+    created.campos[0].etiqueta = 'Cambiado';
+    expect(existing.campos[0].etiqueta).toBe('Gramos');
+  });
+
+  it('rechaza una plantilla inexistente y no escribe datos', async () => {
+    await expect(createAdminCategory({}, {
+      slug: 'nueva',
+      nombre: 'Nueva categoría',
+      plantilla_id: 'no-existe',
+    })).rejects.toThrow('plantilla');
+    expect(saveRecord).not.toHaveBeenCalled();
+  });
+
   it('rechaza slug existente', async () => {
     await expect(createAdminCategory({}, { slug: 'creatina', nombre: 'Otra creatina' })).rejects.toMatchObject({ status: 409 });
   });
