@@ -96,6 +96,25 @@ describe('descarga CSV de revisión Mercado Libre', () => {
     const data = { url: 'https://articulo.mercadolibre.cl/MLC-2908577036', name: 'Creatina', price: 19990 };
     expect(() => createManualMercadoLibreCandidate({ ...data, affiliate_url: 'https://evil.example/producto' })).toThrow('afiliado');
   });
+  it('conserva cantidad de unidades y formato aportados por el administrador', () => {
+    const candidate = createManualMercadoLibreCandidate({
+      url: 'https://www.mercadolibre.cl/creatina/up/MLCU3220313328#wid=MLC2908577036',
+      name: 'Gomitas Perfect Bear', price: 18990,
+      attributes: { cantidad_unidades: 60, formato: 'Gomitas' },
+    });
+    expect(candidate.attributes).toEqual({ cantidad_unidades: 60, formato: 'Gomitas' });
+    const csv = buildMercadoLibreReviewCsv({ id: 'creatina', campos: [
+      { clave: 'cantidad_unidades' }, { clave: 'formato' },
+    ] }, [candidate]);
+    expect(csv).toContain('"60","Gomitas"');
+  });
+  it('incluye campos dinámicos y validaciones requeridas en el formulario manual', () => {
+    const html = readFileSync(new URL('../../public/admin/index.html', import.meta.url), 'utf8');
+    expect(html).toContain('id="ml-manual-attributes"');
+    expect(html).toContain('function renderManualAttributes()');
+    expect(html).toContain('attributes: collectManualAttributes(chosen)');
+    expect(html).toContain("if (field.requerido) throw new Error");
+  });
   it('limita el lote y exige una categoría válida', () => {
     expect(() => buildMercadoLibreReviewCsv(category, [])).toThrow();
     expect(() => buildMercadoLibreReviewCsv(category, Array(11).fill(product))).toThrow();
