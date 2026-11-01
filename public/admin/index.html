@@ -1277,8 +1277,7 @@
           manualDownloadButton.disabled = true;
           bulkResults.replaceChildren();
         };
-        // Escribir enlaces para una consulta no debe borrar productos agregados manualmente.
-        bulkUrls.addEventListener('input', () => {});
+        // Escribir enlaces no borra los productos ingresados manualmente.
         bulkCategory.addEventListener('change', resetBulk);
         bulkSearchButton.addEventListener('click', async () => {
           resetBulk();
