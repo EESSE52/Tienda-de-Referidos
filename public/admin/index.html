@@ -203,6 +203,30 @@
           <div id="admin-status" class="status" aria-live="polite"></div>
         </section>
 
+
+        <section class="card" style="margin-bottom:20px">
+          <h2>Categorías de comparación</h2>
+          <p class="subtle">Puedes crear categorías nuevas y cambiar sus nombres y descripciones. Las métricas y filtros existentes se conservan.</p>
+          <div class="button-row">
+            <button id="refresh-categories" class="secondary" type="button">Actualizar categorías</button>
+          </div>
+          <div id="category-list" class="preview"><p class="subtle">Conecta el administrador para consultar categorías.</p></div>
+          <h3 id="category-form-title">Crear categoría</h3>
+          <form id="category-form">
+            <div class="admin-fields">
+              <label>Identificador (slug)<input name="slug" required pattern="[a-z0-9]+(-[a-z0-9]+)*" placeholder="ejemplo-accesorios"/></label>
+              <label>Nombre<input name="nombre" required maxlength="150"/></label>
+              <label>Descripción<input name="descripcion" maxlength="2000"/></label>
+              <label><input type="checkbox" name="activa" checked/> Categoría activa</label>
+            </div>
+            <div class="button-row">
+              <button type="submit">Guardar categoría</button>
+              <button class="secondary" type="button" id="cancel-category">Cancelar edición</button>
+            </div>
+          </form>
+          <div id="category-status" class="status" aria-live="polite"></div>
+        </section>
+
         <section class="card" style="margin-bottom:20px">
           <h2>Productos guardados en D1</h2>
           <p class="subtle">Los cambios se reflejan en el comparador local después de recargar la página. Desactivar oculta el producto sin eliminar su registro.</p>
@@ -624,6 +648,7 @@
           if (!adminToken) return message(adminStatus, 'Ingresa el token administrativo local.', true);
           try {
             await refresh();
+            await refreshCategories();
             message(adminStatus, 'Conectado a D1. Productos: ' + currentProducts.length);
           } catch (error) {
             adminToken = '';
@@ -659,6 +684,99 @@
             message(productStatus, 'Producto guardado correctamente en D1 local.');
           } catch (error) {
             message(productStatus, error.message, true);
+          }
+        });
+
+
+        const categoryForm = document.getElementById('category-form');
+        const categoryStatus = document.getElementById('category-status');
+        const categoryList = document.getElementById('category-list');
+        let categories = [];
+        let editingCategoryId = null;
+
+        function resetCategoryForm() {
+          editingCategoryId = null;
+          categoryForm.reset();
+          categoryForm.elements.slug.disabled = false;
+          document.getElementById('category-form-title').textContent = 'Crear categoría';
+        }
+
+        function renderCategories() {
+          categoryList.replaceChildren();
+          const select = form.elements.lista_id;
+          const selectedId = select.value;
+          select.replaceChildren();
+          for (const category of categories) {
+            const option = document.createElement('option');
+            option.value = category.id;
+            option.textContent = category.nombre;
+            select.appendChild(option);
+          }
+          if (categories.some(category => category.id === selectedId)) select.value = selectedId;
+
+          const table = document.createElement('table');
+          const head = document.createElement('tr');
+          for (const label of ['Categoría', 'Slug', 'Estado', 'Acción']) {
+            const th = document.createElement('th');
+            th.textContent = label;
+            head.appendChild(th);
+          }
+          table.appendChild(head);
+          for (const category of categories) {
+            const row = document.createElement('tr');
+            cell(row, category.nombre);
+            cell(row, category.slug);
+            cell(row, category.activa === false ? 'Inactiva' : 'Activa');
+            const actions = document.createElement('td');
+            const edit = document.createElement('button');
+            edit.textContent = 'Editar';
+            edit.type = 'button';
+            edit.addEventListener('click', () => {
+              editingCategoryId = category.id;
+              categoryForm.elements.slug.value = category.slug;
+              categoryForm.elements.slug.disabled = true;
+              categoryForm.elements.nombre.value = category.nombre;
+              categoryForm.elements.descripcion.value = category.descripcion || '';
+              categoryForm.elements.activa.checked = category.activa !== false;
+              document.getElementById('category-form-title').textContent = 'Editar categoría: ' + category.nombre;
+              categoryForm.scrollIntoView({ behavior: 'smooth' });
+            });
+            actions.appendChild(edit);
+            row.appendChild(actions);
+            table.appendChild(row);
+          }
+          categoryList.appendChild(table);
+        }
+
+        async function refreshCategories() {
+          const response = await api('/api/admin/categories');
+          categories = response.categorias || [];
+          renderCategories();
+        }
+
+        document.getElementById('refresh-categories').addEventListener('click', () => {
+          refreshCategories().catch(error => message(categoryStatus, error.message, true));
+        });
+        document.getElementById('cancel-category').addEventListener('click', resetCategoryForm);
+        categoryForm.addEventListener('submit', async event => {
+          event.preventDefault();
+          const body = {
+            slug: categoryForm.elements.slug.value,
+            nombre: categoryForm.elements.nombre.value,
+            descripcion: categoryForm.elements.descripcion.value,
+            activa: categoryForm.elements.activa.checked,
+          };
+          try {
+            await api(editingCategoryId ? '/api/admin/categories/' + encodeURIComponent(editingCategoryId) : '/api/admin/categories', {
+              method: editingCategoryId ? 'PUT' : 'POST',
+              headers: {'Content-Type': 'application/json'},
+              body: JSON.stringify(body),
+            });
+            resetCategoryForm();
+            await refreshCategories();
+            message(categoryStatus, 'Categoría guardada en D1 local.');
+          } catch (error) {
+            message(categoryStatus, error.message, true);
           }
         });
 
