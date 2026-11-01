@@ -155,6 +155,12 @@ export function validateProductPayload(payload, productos = [], existingId = nul
   }
 
   const link = product.enlace_referido || product.url_publicacion;
+  if (product.activo && !product.es_prueba && !product.enlace_referido) {
+    throw new Error('Para activar este producto debes ingresar un enlace de afiliado.');
+  }
+  if (product.enlace_referido && !/^https:\/\//i.test(product.enlace_referido)) {
+    throw new Error('El enlace de afiliado debe usar HTTPS.');
+  }
   if (!link) {
     throw new Error('Debes pegar un enlace o URL del producto.');
   }
