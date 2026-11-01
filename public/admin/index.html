@@ -1420,6 +1420,7 @@
               brand: document.getElementById('ml-manual-brand').value,
               price: document.getElementById('ml-manual-price').value,
               image: document.getElementById('ml-manual-image').value,
+              attributes: collectManualAttributes(chosen),
             });
             if (bulkCategoryId && bulkCategoryId !== chosen.id) {
               throw new Error('Ya hay productos de otra categoría en el lote. Limpia la selección o selecciona la misma categoría.');
