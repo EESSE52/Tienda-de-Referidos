@@ -1,7 +1,7 @@
 import type { APIRoute } from 'astro';
 import { env } from 'cloudflare:workers';
 import { jsonResponse, readJsonBody, requireAdmin } from '../../../../lib/cloudflare-catalog.js';
-import { updateAdminCategory, addCategoryMetric, categoryErrorResponse } from '../../../../lib/admin-categories.js';
+import { updateAdminCategory, addCategoryMetric, configureCategoryField, categoryErrorResponse } from '../../../../lib/admin-categories.js';
 
 export const prerender = false;
 
@@ -20,5 +20,14 @@ export const POST: APIRoute = async ({ request, params }) => {
   try {
     const category = await addCategoryMetric(env, params.id ?? '', await readJsonBody(request));
     return jsonResponse({ ok: true, categoria: category }, 201);
+  } catch (error) { return categoryErrorResponse(error, jsonResponse); }
+};
+
+export const PATCH: APIRoute = async ({ request, params }) => {
+  const denied = requireAdmin({ env, request });
+  if (denied) return denied;
+  try {
+    const category = await configureCategoryField(env, params.id ?? '', await readJsonBody(request));
+    return jsonResponse({ ok: true, categoria: category });
   } catch (error) { return categoryErrorResponse(error, jsonResponse); }
 };
