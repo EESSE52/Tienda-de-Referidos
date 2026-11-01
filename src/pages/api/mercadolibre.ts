@@ -18,10 +18,11 @@ export const GET: APIRoute = async (context) => {
 
   try {
     const source = await resolveChileMercadoLibreUrl(productUrl);
+    const accessToken = typeof env?.ML_ACCESS_TOKEN === 'string' ? env.ML_ACCESS_TOKEN.trim() : '';
     if (source.kind === 'catalog') {
-      return jsonResponse(await fetchChileCatalogOffer(source));
+      return jsonResponse(await fetchChileCatalogOffer(source, fetch, fetchMercadoLibreItem, accessToken));
     }
-    const item = await fetchMercadoLibreItem(source.id);
+    const item = await fetchMercadoLibreItem(source.id, fetch, accessToken);
     return jsonResponse({ ...item, id_publicacion: source.id, url_publicacion: source.url, afiliado_verificado: false });
   } catch (error) {
     return jsonResponse({
