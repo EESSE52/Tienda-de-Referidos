@@ -49,7 +49,6 @@ async function fallbackMercadoLibrePage(normalizedId, fetchImplementation = fetc
   const pageUrls = [
     `https://www.mercadolibre.cl/${normalizedId}`,
     `https://articulo.mercadolibre.cl/${normalizedId}`,
-    `https://www.mercadolibre.com.ar/${normalizedId}`,
   ];
 
   for (const pageUrl of pageUrls) {
@@ -66,7 +65,7 @@ async function fallbackMercadoLibrePage(normalizedId, fetchImplementation = fetc
 
       const html = await response.text();
       const extracted = extractAffiliateProductData(html, pageUrl);
-      if (!extracted || !extracted.name || extracted.name === 'Producto') continue;
+      if (!extracted || !extracted.name || extracted.name === 'Producto' || !Number.isSafeInteger(Number(extracted.price)) || Number(extracted.price) <= 0) continue;
 
       return {
         name: extracted.name,
@@ -118,5 +117,9 @@ export async function fetchMercadoLibreItem(itemId, fetchImplementation = fetch)
     throw new Error(`Mercado Libre no pudo entregar la publicación (${response.status}).`);
   }
 
-  return mapMercadoLibreItem(await response.json());
+  const item = await response.json();
+  if (!Number.isSafeInteger(Number(item?.price)) || Number(item?.price) <= 0 || item?.currency_id && item.currency_id !== 'CLP') {
+    throw new Error('La API de Mercado Libre no entregó un precio válido en pesos chilenos para esta publicación. Comprueba que sea una publicación real, vigente y con precio visible. No se modificó el precio guardado.');
+  }
+  return mapMercadoLibreItem(item);
 }
