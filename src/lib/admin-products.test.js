@@ -63,6 +63,12 @@ describe('API de administración: lógica de productos D1', () => {
     await expect(updateAdminProduct({}, 'real-1', { id: 'otro-id' })).rejects.toThrow('identificador');
   });
 
+  it('conserva bandera de prueba entre ediciones', async () => {
+    const result = await updateAdminProduct({}, 'real-1', { es_prueba: true });
+    expect(result.es_prueba).toBe(true);
+    expect(saveRecord).toHaveBeenCalledWith({}, 'catalog_products', expect.objectContaining({ es_prueba: true }));
+  });
+
   it('desactiva sin eliminar el registro', async () => {
     const product = await deactivateAdminProduct({}, 'real-1');
     expect(product.activo).toBe(false);
