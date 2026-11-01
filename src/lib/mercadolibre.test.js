@@ -48,6 +48,20 @@ describe('Mercado Libre item lookup', () => {
     );
   });
 
+  it('envía token oficial de servidor por Authorization sin alterar otros encabezados', async () => {
+    const request = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ title: 'Creatina', price: 12000, currency_id: 'CLP' }) });
+    await fetchMercadoLibreItem('MLC1234567890', request, 'APP_USR-token-validado');
+    expect(request.mock.calls[0][1].headers.Authorization).toBe('Bearer APP_USR-token-validado');
+  });
+  it('diferencia token vencido de permisos insuficientes', async () => {
+    const blocked = status => vi.fn()
+      .mockResolvedValueOnce({ ok: false, status, json: async () => ({ code: 'PA_UNAUTHORIZED_RESULT_FROM_POLICIES' }) })
+      .mockResolvedValueOnce({ ok: false, status: 404 })
+      .mockResolvedValueOnce({ ok: false, status: 404 });
+    await expect(fetchMercadoLibreItem('MLC1234567890', blocked(401), 'token')).rejects.toThrow('401');
+    await expect(fetchMercadoLibreItem('MLC1234567890', blocked(403), 'token')).rejects.toThrow('permisos');
+  });
+
   it('falls back to the public product page when the API is blocked', async () => {
     const fetchImplementation = vi.fn()
       .mockResolvedValueOnce({
