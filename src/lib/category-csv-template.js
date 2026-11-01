@@ -1,5 +1,5 @@
 const COMMON_COLUMNS = [
-  'lista_id', 'nombre', 'marca', 'precio', 'enlace_referido',
+  'lista_id', 'nombre', 'marca', 'precio', 'enlace_referido', 'url_publicacion',
   'id_publicacion', 'imagen', 'activo', 'es_prueba',
 ];
 
