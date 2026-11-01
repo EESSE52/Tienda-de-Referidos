@@ -2,6 +2,7 @@ import type { APIRoute } from 'astro';
 import { env } from 'cloudflare:workers';
 import { jsonResponse, requireAdmin } from '../../lib/cloudflare-catalog.js';
 import { fetchMercadoLibreItem } from '../../lib/mercadolibre.js';
+import { normalizeChileMercadoLibreUrl } from '../../lib/mercadolibre-review.js';
 
 export const GET: APIRoute = async (context) => {
   const denied = requireAdmin({ env, request: context.request });
@@ -15,8 +16,9 @@ export const GET: APIRoute = async (context) => {
   }
 
   try {
-    const item = await fetchMercadoLibreItem(productUrl);
-    return jsonResponse(item);
+    const source = normalizeChileMercadoLibreUrl(productUrl);
+    const item = await fetchMercadoLibreItem(source.id);
+    return jsonResponse({ ...item, id_publicacion: source.id, url_publicacion: source.url, afiliado_verificado: false });
   } catch (error) {
     return jsonResponse({
       error: error instanceof Error ? error.message : 'No se pudo obtener la publicación de Mercado Libre.',
