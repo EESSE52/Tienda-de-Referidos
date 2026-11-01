@@ -263,9 +263,10 @@
             <button type="button" class="secondary" id="ml-bulk-export" disabled>Descargar CSV revisado</button>
           </div>
           <h3>Ingreso manual cuando la API no responde</h3>
-          <p class="subtle">Abre la publicación en tu navegador, copia su URL COMPLETA (no el enlace corto meli.la), comprueba el precio en CLP y completa nombre, precio y dirección. Se incluirá en el CSV como producto inactivo, sin afirmar que el precio o la afiliación hayan sido verificados automáticamente.</p>
+          <p class="subtle">Pega la URL completa de la publicación para identificar el producto y, por separado, el enlace meli.la creado en tu cuenta de afiliados. Comprueba el precio real en CLP. Se incluirá en el CSV como producto inactivo, sin afirmar que el precio o la afiliación hayan sido verificados automáticamente.</p>
           <div class="admin-fields">
-            <label>URL completa del producto<input id="ml-manual-url" type="url" placeholder="https://www.mercadolibre.cl/.../up/MLCU...#wid=MLC..." /></label>
+            <label>URL completa del producto (para identificarlo)<input id="ml-manual-url" type="url" placeholder="https://www.mercadolibre.cl/.../up/MLCU...#wid=MLC..." /></label>
+            <label>Enlace de afiliado de tu cuenta (meli.la)<input id="ml-manual-affiliate" type="url" placeholder="https://meli.la/..." /></label>
             <label>Nombre del producto<input id="ml-manual-name" maxlength="200" /></label>
             <label>Marca<input id="ml-manual-brand" maxlength="150" /></label>
             <label>Precio CLP observado<input id="ml-manual-price" type="number" min="1" step="1" /></label>
@@ -1350,6 +1351,7 @@
             const { createManualMercadoLibreCandidate } = await import('/admin/bulk-csv.js');
             const candidate = createManualMercadoLibreCandidate({
               url: document.getElementById('ml-manual-url').value,
+              affiliate_url: document.getElementById('ml-manual-affiliate').value,
               name: document.getElementById('ml-manual-name').value,
               brand: document.getElementById('ml-manual-brand').value,
               price: document.getElementById('ml-manual-price').value,
@@ -1386,7 +1388,8 @@
             marca: item.brand || '',
             precio: item.price,
             id_publicacion: item.id_publicacion,
-            enlace_referido: item.url_publicacion,
+            enlace_referido: item.enlace_referido || '',
+            url_publicacion: item.url_publicacion,
             imagen: item.image || '',
             atributos: item.attributes || {},
             activo: false,
