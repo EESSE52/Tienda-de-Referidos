@@ -1,7 +1,7 @@
 import type { APIRoute } from 'astro';
 import { env } from 'cloudflare:workers';
-import { jsonResponse, requireAdmin } from '../../../../lib/cloudflare-catalog.js';
-import { createMlOauthStart } from '../../../../lib/mercadolibre-oauth-test.js';
+import { jsonResponse, requireAdmin } from '../../../../../lib/cloudflare-catalog.js';
+import { createMlOauthStart } from '../../../../../lib/mercadolibre-oauth-test.js';
 
 export const prerender = false;
 export const POST: APIRoute = async ({ request }) => {
