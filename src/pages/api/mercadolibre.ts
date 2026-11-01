@@ -2,6 +2,7 @@ import type { APIRoute } from 'astro';
 import { env } from 'cloudflare:workers';
 import { jsonResponse, requireAdmin } from '../../lib/cloudflare-catalog.js';
 import { fetchMercadoLibreItem } from '../../lib/mercadolibre.js';
+import { fetchChileCatalogOffer } from '../../lib/mercadolibre-catalog-offer.js';
 import { resolveChileMercadoLibreUrl } from '../../lib/mercadolibre-review.js';
 
 export const GET: APIRoute = async (context) => {
@@ -17,6 +18,9 @@ export const GET: APIRoute = async (context) => {
 
   try {
     const source = await resolveChileMercadoLibreUrl(productUrl);
+    if (source.kind === 'catalog') {
+      return jsonResponse(await fetchChileCatalogOffer(source));
+    }
     const item = await fetchMercadoLibreItem(source.id);
     return jsonResponse({ ...item, id_publicacion: source.id, url_publicacion: source.url, afiliado_verificado: false });
   } catch (error) {
