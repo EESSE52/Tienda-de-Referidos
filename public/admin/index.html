@@ -356,6 +356,8 @@
             <div class="upload-box">
               <label><input name="imagen_autorizada_confirmada" type="checkbox" /> Confirmo que soy titular de la imagen o tengo permiso para publicarla en D’MonkeySport.</label>
               <p class="subtle">La foto candidata no se muestra públicamente. No uses imágenes de Mercado Libre sin permiso. Este formulario acepta URL HTTPS; no sube archivos.</p>
+              <p class="subtle">Los enlaces de la consulta se conservan para trazabilidad. Obtener una URL de la API no equivale a recibir licencia de publicación.</p>
+              <div id="candidate-image-summary" class="preview" aria-live="polite">Sin imagen candidata.</div>
               <div id="product-image-preview" class="preview" aria-live="polite">
                 <p class="subtle">Sin imagen autorizada seleccionada. La tienda utilizará una imagen genérica.</p>
               </div>
@@ -743,6 +745,35 @@
           }
         }
 
+        function updateCandidateImageSummary() {
+          const box = document.getElementById('candidate-image-summary');
+          const url = form.elements.imagen_candidata.value.trim();
+          const source = form.elements.imagen_origen_url.value.trim();
+          box.replaceChildren();
+          const p = document.createElement('p');
+          p.textContent = url ? 'Imagen candidata guardada solo para revisión; no aparece en el sitio público.' : 'Sin imagen candidata.';
+          box.appendChild(p);
+          if (url) {
+            const link = document.createElement('a');
+            link.textContent = 'Abrir imagen candidata';
+            link.target = '_blank';
+            link.rel = 'noopener noreferrer';
+            try {
+              const parsed = new URL(url);
+              if (parsed.protocol === 'https:' && !parsed.username && !parsed.password) {
+                link.href = parsed.href;
+                box.appendChild(link);
+              }
+            } catch {}
+          }
+          if (source) {
+            const pSource = document.createElement('p');
+            pSource.textContent = 'URL de origen: ' + source;
+            box.appendChild(pSource);
+          }
+        }
+        form.elements.imagen_candidata.addEventListener('change', updateCandidateImageSummary);
+        form.elements.imagen_origen_url.addEventListener('change', updateCandidateImageSummary);
         const imagePreview = document.getElementById('product-image-preview');
         function showAuthorizedImagePreview() {
           imagePreview.replaceChildren();
@@ -779,6 +810,7 @@
           editingId = null;
           form.reset();
           showAuthorizedImagePreview();
+          updateCandidateImageSummary();
           renderProductFields();
           document.getElementById('product-form-title').textContent = 'Crear producto';
         }
@@ -831,6 +863,7 @@
               }
               form.elements.imagen_autorizada_confirmada.checked = false;
               showAuthorizedImagePreview();
+              updateCandidateImageSummary();
               renderProductFields(product.atributos || {});
               form.elements.activo.checked = !!product.activo;
               form.elements.es_prueba.checked = product.es_prueba === true;
@@ -1701,6 +1734,7 @@
             enlace_referido: '',
           })) form.elements[key].value = value ?? '';
           renderProductFields(item.attributes || {});
+          updateCandidateImageSummary();
           form.elements.activo.checked = false;
           form.elements.es_prueba.checked = false;
           message(productStatus, 'Datos copiados al formulario, sin guardar. Publicación inactiva: verifica el enlace de afiliado antes de activar.');
