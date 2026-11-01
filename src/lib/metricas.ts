@@ -122,7 +122,7 @@ export function evaluateFormula(formula: PlantillaMetrica, producto: ProductLike
   if (formula.tipo === 'precio_dividido_por') {
     const precio = resolveFieldValue(producto, 'precio');
     const divisor = resolveFieldValue(producto, formula.campo);
-    if (precio === null || divisor === null || divisor === 0) return null;
+    if (precio === null || !Number.isFinite(precio) || precio <= 0 || divisor === null || !Number.isFinite(divisor) || divisor <= 0) return null;
     return precio / divisor;
   }
 
