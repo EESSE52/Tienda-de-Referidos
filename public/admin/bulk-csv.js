@@ -28,7 +28,7 @@ export function buildMercadoLibreReviewCsv(category, items) {
       nombre: item.name,
       marca: item.brand,
       precio: item.price,
-      enlace_referido: item.enlace_referido || item.url_publicacion,
+      enlace_referido: Object.hasOwn(item, 'enlace_referido') ? item.enlace_referido : item.url_publicacion,
       url_publicacion: item.url_publicacion,
       id_publicacion: item.id_publicacion,
       imagen: item.image,
