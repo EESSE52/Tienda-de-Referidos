@@ -1317,6 +1317,39 @@
             bulkSearchButton.disabled = false;
           }
         });
+        document.getElementById('ml-manual-add').addEventListener('click', async () => {
+          if (!adminToken) return message(bulkStatus, 'Primero conecta el administrador.', true);
+          const chosen = categories.find(category => category.id === bulkCategory.value);
+          if (!chosen) return message(bulkStatus, 'Selecciona una categoría.', true);
+          try {
+            const { createManualMercadoLibreCandidate } = await import('/admin/bulk-csv.js');
+            const candidate = createManualMercadoLibreCandidate({
+              url: document.getElementById('ml-manual-url').value,
+              name: document.getElementById('ml-manual-name').value,
+              brand: document.getElementById('ml-manual-brand').value,
+              price: document.getElementById('ml-manual-price').value,
+              image: document.getElementById('ml-manual-image').value,
+            });
+            if (bulkCategoryId && bulkCategoryId !== chosen.id) {
+              throw new Error('Ya hay productos de otra categoría en el lote. Limpia la selección o selecciona la misma categoría.');
+            }
+            if (bulkCatalogItems.length >= 10) throw new Error('Máximo 10 productos por CSV.');
+            if (bulkCatalogItems.some(item => item.id_publicacion === candidate.id_publicacion)
+              || currentProducts.some(item => String(item.id_publicacion || '').replace(/[-_]/g, '') === candidate.id_publicacion)) {
+              throw new Error('Esta publicación ya está incluida o existe en el catálogo.');
+            }
+            bulkCategoryId = chosen.id;
+            bulkCatalogItems.push(candidate);
+            const item = document.createElement('p');
+            item.textContent = 'Ingreso manual (sin validación API): ' + candidate.name + ' · '
+              + candidate.id_publicacion + ' · CLP ' + candidate.price.toLocaleString('es-CL');
+            bulkResults.appendChild(item);
+            bulkExportButton.disabled = false;
+            message(bulkStatus, bulkCatalogItems.length + ' productos preparados para CSV. Revisa los datos antes de importarlos.');
+          } catch (error) {
+            message(bulkStatus, error.message, true);
+          }
+        });
         bulkExportButton.addEventListener('click', async () => {
           const chosen = categories.find(category => category.id === bulkCategoryId);
           if (!chosen || !bulkCatalogItems.length) return message(bulkStatus, 'Consulta los enlaces antes de exportar.', true);
