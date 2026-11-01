@@ -695,6 +695,18 @@
           table.appendChild(head);
           currentProducts.filter(p => originFilter.value === 'todos' || originStatus(p) === originFilter.value).forEach((product) => {
             const row = document.createElement('tr');
+            const selectCell = document.createElement('td');
+            const selectBatch = document.createElement('input');
+            selectBatch.type = 'checkbox';
+            selectBatch.setAttribute('aria-label', 'Seleccionar para revisar precio: ' + product.nombre);
+            selectBatch.disabled = product.es_prueba === true || !/^MLC[0-9]{6,}$/i.test(String(product.id_publicacion || '').replace(/[-_]/g, ''));
+            selectBatch.checked = selectedBatchIds.has(product.id) && !selectBatch.disabled;
+            selectBatch.addEventListener('change', () => {
+              if (selectBatch.checked) selectedBatchIds.add(product.id);
+              else selectedBatchIds.delete(product.id);
+            });
+            selectCell.appendChild(selectBatch);
+            row.appendChild(selectCell);
             cell(row, product.nombre);
             cell(row, product.lista_id);
             cell(row, new Intl.NumberFormat('es-CL', {style:'currency',currency:'CLP',maximumFractionDigits:0}).format(product.precio || 0));
