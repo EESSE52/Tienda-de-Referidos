@@ -252,6 +252,21 @@
         </section>
 
         <section class="card" style="margin-bottom:20px">
+          <h2>Consultar varios productos de Mercado Libre</h2>
+          <p class="subtle">Pega hasta 10 enlaces HTTPS de publicaciones de Mercado Libre Chile, uno por línea. El sistema solo consulta y prepara un CSV; no guarda productos ni certifica enlaces de afiliado.</p>
+          <div class="admin-fields">
+            <label>Categoría para los productos<select id="ml-bulk-category"><option value="">Conecta el administrador</option></select></label>
+            <label>Enlaces de publicaciones<textarea id="ml-bulk-urls" rows="6" style="width:100%;border:1px solid #cbd5e1;border-radius:8px;padding:10px" placeholder="https://articulo.mercadolibre.cl/MLC-1234567890"></textarea></label>
+          </div>
+          <div class="button-row">
+            <button type="button" id="ml-bulk-search">Consultar enlaces</button>
+            <button type="button" class="secondary" id="ml-bulk-export" disabled>Descargar CSV revisado</button>
+          </div>
+          <div id="ml-bulk-status" class="status" aria-live="polite"></div>
+          <div id="ml-bulk-results" class="preview" aria-live="polite"></div>
+        </section>
+
+        <section class="card" style="margin-bottom:20px">
           <h2>Productos guardados en D1</h2>
           <p class="subtle">Los cambios se reflejan en el comparador local después de recargar la página. Desactivar oculta el producto sin eliminar su registro.</p>
           <div class="button-row"><button id="refresh-products" class="secondary" type="button">Actualizar listado</button></div>
