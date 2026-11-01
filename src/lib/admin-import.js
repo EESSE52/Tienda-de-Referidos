@@ -14,8 +14,11 @@ export function validateImportBatch(rows, catalog, normalize) {
       if (!row || typeof row !== 'object' || Array.isArray(row)) {
         throw new Error('La fila debe contener columnas válidas.');
       }
-      const candidate = normalize(row);
-      if (!categories.some((category) => category.id === candidate.lista_id || category.slug === candidate.lista_id)) {
+      const categoryId = String(row.lista_id ?? row.lista ?? 'creatina').trim() || 'creatina';
+      const category = categories.find(item => item.id === categoryId || item.slug === categoryId);
+      if (!category) throw new Error('La categoría indicada no existe.');
+      const candidate = normalize(row, category);
+      if (candidate.lista_id !== category.id && candidate.lista_id !== category.slug) {
         throw new Error('La categoría indicada no existe.');
       }
       const validated = validateProductPayload(candidate, [...currentProducts, ...accepted], null);
