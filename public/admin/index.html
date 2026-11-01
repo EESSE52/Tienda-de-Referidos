@@ -766,6 +766,79 @@
           list.appendChild(table);
         }
 
+        const batchResults = document.getElementById('batch-review-results');
+        const batchStatus = document.getElementById('batch-review-status');
+        const batchButton = document.getElementById('batch-review-btn');
+        document.getElementById('batch-clear-btn').addEventListener('click', () => {
+          selectedBatchIds.clear();
+          batchResults.replaceChildren();
+          renderProducts();
+          message(batchStatus, 'Selección limpia.');
+        });
+        batchButton.addEventListener('click', async () => {
+          const eligible = currentProducts.filter(p => selectedBatchIds.has(p.id)
+            && !p.es_prueba
+            && /^MLC[0-9]{6,}$/i.test(String(p.id_publicacion || '').replace(/[-_]/g, '')));
+          if (!eligible.length) return message(batchStatus, 'Selecciona al menos un producto MLC que no sea de prueba.', true);
+          if (eligible.length > 10) return message(batchStatus, 'Selecciona máximo 10 productos por lote.', true);
+          batchResults.replaceChildren();
+          batchButton.disabled = true;
+          try {
+            let success = 0;
+            for (const [index, product] of eligible.entries()) {
+              message(batchStatus, 'Consultando ' + (index + 1) + ' de ' + eligible.length + '...');
+              const item = document.createElement('div');
+              item.style.padding = '12px 0';
+              item.style.borderBottom = '1px solid #dfe6ee';
+              const heading = document.createElement('strong');
+              heading.textContent = product.nombre;
+              item.appendChild(heading);
+              const summary = document.createElement('p');
+              item.appendChild(summary);
+              batchResults.appendChild(item);
+              try {
+                const data = await api('/api/admin/products/' + encodeURIComponent(product.id) + '/price-review');
+                const review = data.revision;
+                success++;
+                const fmt = n => new Intl.NumberFormat('es-CL', {style:'currency',currency:'CLP',maximumFractionDigits:0}).format(n);
+                summary.textContent = fmt(review.precio_actual) + ' → ' + fmt(review.precio_consultado)
+                  + ' · Variación: ' + review.porcentaje + '%';
+                if (review.cambio) {
+                  const confirmButton = document.createElement('button');
+                  confirmButton.type = 'button';
+                  confirmButton.textContent = 'Confirmar solo este precio';
+                  confirmButton.addEventListener('click', async () => {
+                    if (!confirm('¿Actualizar el precio de ' + review.nombre + ' a ' + fmt(review.precio_consultado) + '?')) return;
+                    confirmButton.disabled = true;
+                    try {
+                      const output = await api('/api/admin/products/' + encodeURIComponent(review.producto_id) + '/price-review', {
+                        method:'POST',
+                        headers:{'Content-Type':'application/json'},
+                        body: JSON.stringify({
+                          confirmar:true, precio_actual:review.precio_actual,
+                          precio_consultado:review.precio_consultado,
+                          id_publicacion:review.id_publicacion,
+                        }),
+                      });
+                      summary.textContent = output.actualizado ? 'Precio actualizado y registrado en historial.' : 'Sin cambios.';
+                      await refresh();
+                    } catch (error) {
+                      summary.textContent = 'No se guardó el cambio: ' + error.message + '. Vuelve a consultar el lote.';
+                    }
+                  });
+                  item.appendChild(confirmButton);
+                } else summary.textContent += ' · Sin cambios.';
+              } catch (error) {
+                summary.textContent = 'No se pudo consultar: ' + error.message;
+              }
+            }
+            message(batchStatus, 'Consultas completadas: ' + success + ' de ' + eligible.length
+              + '. No se ha guardado ningún cambio sin confirmación.');
+          } finally {
+            batchButton.disabled = false;
+          }
+        });
+
         const historyPanel = document.getElementById('price-history-panel');
         const historyContent = document.getElementById('price-history-content');
         const historyStatus = document.getElementById('price-history-status');
