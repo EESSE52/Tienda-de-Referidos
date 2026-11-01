@@ -32,7 +32,8 @@ describe('plantilla CSV de categoría', () => {
   it('acepta una categoría sin campos propios', () => {
     const columns = categoryCsvColumns({ id: 'accesorios', campos: [] });
     expect(columns).toContain('es_prueba');
-    expect(columns).toHaveLength(9);
+    expect(columns).toContain('url_publicacion');
+    expect(columns).toHaveLength(10);
   });
   it('rechaza una categoría inválida', () => {
     expect(() => generateCategoryCsvTemplate({ id: '../otra' })).toThrow('Categoría');
