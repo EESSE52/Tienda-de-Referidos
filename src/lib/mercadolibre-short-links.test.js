@@ -48,6 +48,16 @@ describe('enlaces cortos oficiales meli.la', () => {
         .rejects.toThrow('fuera');
     }
   });
+  it('identifica URL final sin MLC para diagnóstico', async () => {
+    const request = vi.fn().mockResolvedValue(redirect('https://www.mercadolibre.cl/creatina-sin-id'));
+    await expect(resolveChileMercadoLibreUrl('https://meli.la/1Lm2tz7', request))
+      .rejects.toThrow('https://www.mercadolibre.cl/creatina-sin-id');
+  });
+  it('distingue User Product de publicación individual', async () => {
+    const request = vi.fn().mockResolvedValue(redirect('https://www.mercadolibre.cl/creatina/up/MLCU123456789'));
+    await expect(resolveChileMercadoLibreUrl('https://meli.la/1Lm2tz7', request))
+      .rejects.toThrow('User Product');
+  });
   it('explica si el enlace no ofrece redirección', async () => {
     await expect(resolveChileMercadoLibreUrl('https://meli.la/1f9dPm8',
       vi.fn().mockResolvedValue({ status: 200, headers: { get: () => null } }))).rejects.toThrow('URL completa');
