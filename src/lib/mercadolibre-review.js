@@ -17,7 +17,12 @@ export function normalizeChileMercadoLibreUrl(value) {
   if (catalog) return { url: url.origin + url.pathname, id: catalog[1].toUpperCase(), kind: 'catalog' };
   const values = [url.pathname, ...['item_id', 'itemId', 'item_id_for', 'item'].map(key => url.searchParams.get(key) || '')];
   const match = values.map(text => text.match(/(?:^|[^a-z0-9])MLC[-_]?([0-9]{6,})(?=[^0-9]|$)/i)).find(Boolean);
-  if (!match) throw new Error('El destino no contiene un ID de publicación o catálogo MLC. Copia la URL completa de la publicación desde Mercado Libre.');
+  if (!match) {
+    const userProduct = url.pathname.match(/\/up\/(MLCU[0-9]{6,})(?=\/|$)/i);
+    if (userProduct) throw new Error('El enlace abre un User Product (' + userProduct[1].toUpperCase() + '), no una publicación de vendedor. Abre una oferta concreta y copia el enlace que contenga MLC seguido de números.');
+    const destination = url.origin + url.pathname;
+    throw new Error('El enlace corto conduce a ' + destination.slice(0, 240) + ', pero no incluye un ID MLC de publicación o catálogo. Abre esa dirección en el navegador y copia el enlace de una oferta concreta.');
+  }
   return { url: url.origin + url.pathname, id: 'MLC' + match[1], kind: 'item' };
 }
 
