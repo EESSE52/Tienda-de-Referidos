@@ -258,6 +258,17 @@
           <div id="product-list" class="preview"><p class="subtle">Conecta el administrador para consultar productos.</p></div>
         </section>
 
+        <section class="card" style="margin-bottom:20px" id="price-review-panel" hidden>
+          <h2>Revisión manual del precio</h2>
+          <p class="subtle">El precio solo se guardará después de tu confirmación. No cambiará la publicación, el enlace de referido ni el estado del producto.</p>
+          <div id="price-review-details" class="preview" aria-live="polite"></div>
+          <div class="button-row">
+            <button type="button" id="price-confirm-btn" disabled>Confirmar nuevo precio</button>
+            <button type="button" id="price-cancel-btn" class="secondary">Cancelar revisión</button>
+          </div>
+          <div id="price-review-status" class="status" aria-live="polite"></div>
+        </section>
+
         <section class="card" style="margin-bottom:20px">
           <h2 id="product-form-title">Crear producto</h2>
           <form id="product-form">
@@ -680,6 +691,14 @@
               form.scrollIntoView({behavior:'smooth'});
             });
             div.appendChild(edit);
+            if (/^MLC[0-9]{6,}$/i.test(String(product.id_publicacion || '').replace(/[-_]/g, ''))) {
+              const reviewButton = document.createElement('button');
+              reviewButton.type = 'button';
+              reviewButton.className = 'secondary';
+              reviewButton.textContent = 'Revisar precio';
+              reviewButton.addEventListener('click', () => reviewPrice(product.id));
+              div.appendChild(reviewButton);
+            }
             if (product.activo) {
               const disable = document.createElement('button');
               disable.type = 'button';
@@ -701,6 +720,82 @@
           });
           list.appendChild(table);
         }
+
+        const reviewPanel = document.getElementById('price-review-panel');
+        const reviewDetails = document.getElementById('price-review-details');
+        const reviewStatus = document.getElementById('price-review-status');
+        const confirmPriceButton = document.getElementById('price-confirm-btn');
+        let pendingPriceReview = null;
+        const money = value => new Intl.NumberFormat('es-CL', {
+          style: 'currency', currency: 'CLP', maximumFractionDigits: 0,
+        }).format(value);
+
+        function clearPriceReview() {
+          pendingPriceReview = null;
+          reviewPanel.hidden = true;
+          confirmPriceButton.disabled = true;
+          reviewDetails.replaceChildren();
+        }
+
+        async function reviewPrice(id) {
+          clearPriceReview();
+          reviewPanel.hidden = false;
+          message(reviewStatus, 'Consultando precio en Mercado Libre...');
+          try {
+            const response = await api('/api/admin/products/' + encodeURIComponent(id) + '/price-review');
+            const result = response.revision;
+            pendingPriceReview = result.cambio ? result : null;
+            for (const [label, value] of [
+              ['Producto', result.nombre],
+              ['Publicación', result.id_publicacion],
+              ['Precio registrado', money(result.precio_actual)],
+              ['Precio consultado', money(result.precio_consultado)],
+              ['Diferencia', money(result.diferencia)],
+              ['Variación', result.porcentaje + '%'],
+            ]) {
+              const p = document.createElement('p');
+              const strong = document.createElement('strong');
+              strong.textContent = label + ': ';
+              p.append(strong, document.createTextNode(String(value)));
+              reviewDetails.appendChild(p);
+            }
+            confirmPriceButton.disabled = !result.cambio;
+            message(reviewStatus, result.cambio
+              ? 'Comprueba el precio en Mercado Libre antes de confirmar.'
+              : 'Sin cambios: el precio registrado coincide con el consultado.');
+            reviewPanel.scrollIntoView({ behavior: 'smooth' });
+          } catch (error) {
+            message(reviewStatus, error.message, true);
+          }
+        }
+        document.getElementById('price-cancel-btn').addEventListener('click', clearPriceReview);
+        confirmPriceButton.addEventListener('click', async () => {
+          const revision = pendingPriceReview;
+          if (!revision) return;
+          if (!confirm('¿Confirmas actualizar el precio de ' + revision.nombre
+            + ' de ' + money(revision.precio_actual) + ' a ' + money(revision.precio_consultado) + '?')) return;
+          confirmPriceButton.disabled = true;
+          try {
+            const response = await api('/api/admin/products/' + encodeURIComponent(revision.producto_id) + '/price-review', {
+              method: 'POST',
+              headers: {'Content-Type': 'application/json'},
+              body: JSON.stringify({
+                confirmar: true,
+                precio_actual: revision.precio_actual,
+                precio_consultado: revision.precio_consultado,
+                id_publicacion: revision.id_publicacion,
+              }),
+            });
+            await refresh();
+            pendingPriceReview = null;
+            message(reviewStatus, response.actualizado
+              ? 'Precio actualizado y agregado al historial.'
+              : 'El precio ya estaba actualizado.');
+          } catch (error) {
+            pendingPriceReview = null;
+            message(reviewStatus, error.message + ' Realiza una nueva revisión.', true);
+          }
+        });
 
         async function refresh() {
           const body = await api('/api/admin/products');
