@@ -258,10 +258,11 @@
               <label>Enlace de afiliado<input name="enlace_referido" type="url" required placeholder="https://..." /></label>
               <label>ID publicación Mercado Libre<input name="id_publicacion" /></label>
               <label>Imagen (URL)<input name="imagen" type="url" placeholder="https://..." /></label>
-              <label>Gramos totales<input name="gramos_total" type="number" min="0" step="any" /></label>
-              <label>Porciones<input name="porciones" type="number" min="0" step="any" /></label>
-              <label>Tipo o formato<input name="tipo" /></label>
-              <label>Sabor<input name="sabor" /></label>
+            </div>
+            <h3>Atributos para comparar</h3>
+            <p class="subtle">Los campos dependen de la categoría elegida. Los valores numéricos permiten calcular el precio por unidad.</p>
+            <div class="admin-fields" id="dynamic-product-fields"></div>
+            <div class="admin-fields">
               <label><input name="activo" type="checkbox" checked /> Producto activo</label>
             </div>
             <div class="button-row">
@@ -580,9 +581,52 @@
           return td;
         }
 
+        const dynamicFields = document.getElementById('dynamic-product-fields');
+
+        function activeCategory() {
+          return categories.find((category) => category.id === form.elements.lista_id.value);
+        }
+
+        function renderProductFields(values = {}) {
+          dynamicFields.replaceChildren();
+          const category = activeCategory();
+          if (!category) return;
+          for (const field of category.campos || []) {
+            if (!/^[a-z][a-z0-9_]*$/.test(field.clave)) continue;
+            const label = document.createElement('label');
+            label.textContent = field.etiqueta + (field.unidad ? ' (' + field.unidad + ')' : '');
+            let control;
+            if (field.tipo === 'seleccion' && Array.isArray(field.opciones)) {
+              control = document.createElement('select');
+              const empty = document.createElement('option');
+              empty.value = '';
+              empty.textContent = 'Sin especificar';
+              control.appendChild(empty);
+              for (const value of field.opciones) {
+                const option = document.createElement('option');
+                option.value = String(value);
+                option.textContent = String(value);
+                control.appendChild(option);
+              }
+            } else {
+              control = document.createElement('input');
+              control.type = field.tipo === 'numero' ? 'number' : 'text';
+              if (field.tipo === 'numero') {
+                control.min = '0';
+                control.step = 'any';
+              }
+            }
+            control.dataset.attributeKey = field.clave;
+            control.value = values[field.clave] ?? '';
+            label.appendChild(control);
+            dynamicFields.appendChild(label);
+          }
+        }
+
         function resetForm() {
           editingId = null;
           form.reset();
+          renderProductFields();
           document.getElementById('product-form-title').textContent = 'Crear producto';
         }
 
@@ -619,9 +663,7 @@
               for (const name of ['lista_id','nombre','marca','precio','enlace_referido','id_publicacion','imagen']) {
                 form.elements[name].value = product[name] ?? '';
               }
-              for (const name of ['gramos_total','porciones','tipo','sabor']) {
-                form.elements[name].value = product.atributos?.[name] ?? '';
-              }
+              renderProductFields(product.atributos || {});
               form.elements.activo.checked = !!product.activo;
               document.getElementById('product-form-title').textContent = 'Editar: ' + product.nombre;
               form.scrollIntoView({behavior:'smooth'});
@@ -670,6 +712,7 @@
         });
         document.getElementById('refresh-products').addEventListener('click', () => refresh().catch(error => message(adminStatus, error.message, true)));
         document.getElementById('reset-product-form').addEventListener('click', resetForm);
+        form.elements.lista_id.addEventListener('change', () => renderProductFields());
 
         form.addEventListener('submit', async (event) => {
           event.preventDefault();
@@ -678,14 +721,16 @@
             const body = Object.fromEntries(data.entries());
             body.precio = Number(body.precio);
             body.activo = form.elements.activo.checked;
-            body.atributos = {};
-            for (const key of ['gramos_total','porciones']) {
-              if (body[key] !== '') body.atributos[key] = Number(body[key]);
-              delete body[key];
-            }
-            for (const key of ['tipo','sabor']) {
-              if (body[key]) body.atributos[key] = body[key];
-              delete body[key];
+            body.atributos = editingId
+              ? { ...(currentProducts.find(product => product.id === editingId)?.atributos || {}) }
+              : {};
+            for (const control of dynamicFields.querySelectorAll('[data-attribute-key]')) {
+              const key = control.dataset.attributeKey;
+              if (control.value === '') {
+                delete body.atributos[key];
+              } else {
+                body.atributos[key] = control.type === 'number' ? Number(control.value) : control.value;
+              }
             }
             await api(editingId ? '/api/admin/products/' + encodeURIComponent(editingId) : '/api/admin/products', {
               method: editingId ? 'PUT' : 'POST',
@@ -751,6 +796,7 @@
             select.appendChild(option);
           }
           if (categories.some(category => category.id === selectedId)) select.value = selectedId;
+          if (!editingId) renderProductFields();
 
           const table = document.createElement('table');
           const head = document.createElement('tr');
