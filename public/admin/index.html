@@ -323,7 +323,7 @@
           <div class="upload-box">
             <strong>Arrastra tu archivo aquí</strong>
             <input id="csv-input" class="input-file" type="file" accept=".csv,text/csv" />
-            <div class="subtle" style="margin-top:12px;">Formato recomendado: CSV. Columnas sugeridas: lista_id, nombre, marca, precio, id_publicacion, enlace_referido, imagen, gramos_total, sabor, tipo, activo.</div>
+            <div class="subtle" style="margin-top:12px;">Formato recomendado: CSV. Usa los nombres exactos de los campos de cada categoría (por ejemplo, gramos_total, porciones o cualquier campo personalizado). Los productos importados sin columna activo quedarán inactivos para revisión.</div>
           </div>
 
           <div class="button-row">
@@ -495,7 +495,7 @@
           return;
         }
 
-        const columns = ['lista_id', 'nombre', 'marca', 'precio', 'id_publicacion', 'enlace_referido', 'imagen', 'gramos_total', 'sabor', 'tipo', 'activo'];
+        const columns = [...new Set(rows.flatMap(row => Object.keys(row)))];
         const table = document.createElement('table');
         const head = document.createElement('thead');
         const body = document.createElement('tbody');
@@ -540,7 +540,7 @@
             return;
           }
 
-          state.rows = rows.map(normalizeRow);
+          state.rows = rows;
           const validation = state.rows.map((row) => validateRow(row));
           state.validRows = state.rows.filter((_, index) => validation[index].valid);
 
@@ -574,7 +574,17 @@
           if (!response.ok) throw new Error(payload.error || 'La importación falló.');
 
           importBtn.disabled = true;
-          setStatus(`Importación completada: ${payload.imported} de ${payload.total} filas guardadas.`, 'success');
+          setStatus(`Importación completada: ${payload.imported} de ${payload.total} filas guardadas. ${payload.errors?.length || 0} filas rechazadas.`, payload.errors?.length ? 'error' : 'success');
+          if (payload.errors?.length) {
+            const errors = document.createElement('ul');
+            for (const detail of payload.errors.slice(0, 25)) {
+              const entry = document.createElement('li');
+              entry.textContent = 'Fila ' + detail.row + ': ' + detail.message;
+              errors.appendChild(entry);
+            }
+            previewContainer.prepend(errors);
+          }
+          document.getElementById('refresh-products').click();
           summaryValidNode.textContent = String(payload.imported);
         } catch (error) {
           setStatus(error instanceof Error ? error.message : 'No se pudo guardar la importación.', 'error');
