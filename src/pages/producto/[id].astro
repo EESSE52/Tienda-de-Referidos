@@ -82,7 +82,11 @@ const metricDisplay = (metrica: { etiqueta?: string; decimales?: number; plantil
         </div>
 
         <div class="mt-6 flex flex-wrap gap-3">
-          <a href={producto.enlace_referido} target="_blank" rel="sponsored nofollow noopener" class="rounded-xl bg-emerald-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-emerald-500">Ver oferta</a>
+          {/^https:\/\//i.test(String(producto.enlace_referido || '')) ? (
+            <a href={producto.enlace_referido} target="_blank" rel="sponsored nofollow noopener" class="rounded-xl bg-emerald-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-emerald-500">Ver oferta</a>
+          ) : (
+            <span class="rounded-xl bg-slate-200 px-5 py-3 text-sm font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-300">Oferta pendiente de enlace de afiliado</span>
+          )}
           <a href={lista ? `/lista/${lista.slug}` : '/'} class="rounded-xl border border-slate-300 px-5 py-3 text-sm font-semibold text-slate-700 transition hover:border-slate-500 dark:border-slate-700 dark:text-slate-200">Volver a la lista</a>
         </div>
         <p class="mt-4 text-sm text-slate-600 dark:text-slate-300">{AVISO_AFILIADOS_BREVE}</p>
