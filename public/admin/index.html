@@ -238,6 +238,19 @@
             <div class="button-row"><button type="submit">Agregar campo y cálculo</button></div>
           </form>
           <div id="metric-status" class="status" aria-live="polite"></div>
+          <h3>Configurar campos existentes de una categoría</h3>
+          <p class="subtle">Para productos como gomitas, crea una categoría copiando Creatina y configura ahí sus campos. Puedes quitar la obligatoriedad de gramos y añadir «Gomitas» como presentación sin cambiar la categoría original.</p>
+          <form id="category-field-form">
+            <div class="admin-fields">
+              <label>Categoría<select name="category_id" required></select></label>
+              <label>Campo<select name="clave" required></select></label>
+              <label><input name="requerido" type="checkbox" /> Campo obligatorio</label>
+              <label>Opciones de selección, una por línea<textarea name="opciones" rows="4" style="width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:8px" placeholder="Polvo&#10;Gomitas"></textarea></label>
+            </div>
+            <div class="button-row"><button type="submit">Guardar configuración del campo</button></div>
+          </form>
+          <div id="category-field-status" class="status" aria-live="polite"></div>
+
         </section>
 
         <section class="card" style="margin-bottom:20px">
