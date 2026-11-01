@@ -72,7 +72,7 @@ export function createManualMercadoLibreCandidate(input) {
   }
   return {
     name, brand, price, image, id_publicacion: id, url_publicacion: url.href, enlace_referido: affiliate,
-    attributes: {}, manual_price: true, afiliado_verificado: false,
+    attributes: input?.attributes && typeof input.attributes === 'object' && !Array.isArray(input.attributes) ? { ...input.attributes } : {}, manual_price: true, afiliado_verificado: false,
   };
 }
 
