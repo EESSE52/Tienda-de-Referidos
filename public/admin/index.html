@@ -1249,6 +1249,84 @@
           } catch (error) { message(status, error.message, true); }
         });
 
+        let bulkCatalogItems = [];
+        let bulkCategoryId = '';
+        const bulkUrls = document.getElementById('ml-bulk-urls');
+        const bulkCategory = document.getElementById('ml-bulk-category');
+        const bulkStatus = document.getElementById('ml-bulk-status');
+        const bulkResults = document.getElementById('ml-bulk-results');
+        const bulkSearchButton = document.getElementById('ml-bulk-search');
+        const bulkExportButton = document.getElementById('ml-bulk-export');
+        const resetBulk = () => {
+          bulkCatalogItems = [];
+          bulkCategoryId = '';
+          bulkExportButton.disabled = true;
+          bulkResults.replaceChildren();
+        };
+        bulkUrls.addEventListener('input', resetBulk);
+        bulkCategory.addEventListener('change', resetBulk);
+        bulkSearchButton.addEventListener('click', async () => {
+          resetBulk();
+          if (!adminToken) return message(bulkStatus, 'Primero conecta el administrador.', true);
+          const chosen = categories.find(category => category.id === bulkCategory.value);
+          if (!chosen) return message(bulkStatus, 'Selecciona una categoría.', true);
+          const urls = [...new Set(bulkUrls.value.split(/\r?\n/).map(value => value.trim()).filter(Boolean))];
+          if (urls.length === 0 || urls.length > 10) return message(bulkStatus, 'Introduce entre 1 y 10 enlaces (uno por línea).', true);
+          bulkSearchButton.disabled = true;
+          bulkCategoryId = chosen.id;
+          const seenIds = new Set();
+          let failed = 0;
+          try {
+            for (const [index, url] of urls.entries()) {
+              message(bulkStatus, 'Consultando publicación ' + (index + 1) + ' de ' + urls.length + '...');
+              const row = document.createElement('p');
+              bulkResults.appendChild(row);
+              try {
+                const item = await api('/api/mercadolibre?url=' + encodeURIComponent(url));
+                if (!item.name || !Number.isSafeInteger(Number(item.price)) || Number(item.price) <= 0
+                  || !/^MLC[0-9]{6,}$/.test(item.id_publicacion || '')) {
+                  throw new Error('Publicación sin datos completos.');
+                }
+                if (seenIds.has(item.id_publicacion)) throw new Error('ID repetido en este lote.');
+                if (currentProducts.some(product => String(product.id_publicacion || '').replace(/[-_]/g, '') === item.id_publicacion)) {
+                  throw new Error('Esta publicación ya existe en el catálogo; utiliza Revisar precio.');
+                }
+                seenIds.add(item.id_publicacion);
+                bulkCatalogItems.push(item);
+                row.textContent = item.name + ' · ' + item.id_publicacion + ' · '
+                  + new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP', maximumFractionDigits: 0 }).format(item.price);
+              } catch (error) {
+                failed++;
+                row.textContent = 'No incluido: ' + url + ' — ' + error.message;
+              }
+            }
+            bulkExportButton.disabled = bulkCatalogItems.length === 0;
+            message(bulkStatus, bulkCatalogItems.length + ' publicaciones preparadas. '
+              + failed + ' rechazadas. Revisa nombres, tamaños, precios y enlaces de afiliados antes de importar.');
+          } finally {
+            bulkSearchButton.disabled = false;
+          }
+        });
+        bulkExportButton.addEventListener('click', async () => {
+          const chosen = categories.find(category => category.id === bulkCategoryId);
+          if (!chosen || !bulkCatalogItems.length) return message(bulkStatus, 'Consulta los enlaces antes de exportar.', true);
+          try {
+            const { buildMercadoLibreReviewCsv } = await import('/admin/bulk-csv.js');
+            const csv = buildMercadoLibreReviewCsv(chosen, bulkCatalogItems);
+            const objectUrl = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+            const link = document.createElement('a');
+            link.href = objectUrl;
+            link.download = 'mercadolibre-' + chosen.id + '-revisar.csv';
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
+            message(bulkStatus, 'CSV descargado. Ábrelo en Excel, completa los atributos y verifica los enlaces de afiliado antes de importarlo.');
+          } catch (error) {
+            message(bulkStatus, error.message, true);
+          }
+        });
+
         let previewedMercadoLibre = null;
         const mlStatus = document.getElementById('ml-preview-status');
         const mlDetails = document.getElementById('ml-preview-details');
