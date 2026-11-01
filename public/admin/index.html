@@ -263,7 +263,7 @@
             <button type="button" class="secondary" id="ml-bulk-export" disabled>Descargar CSV revisado</button>
           </div>
           <h3>Ingreso manual cuando la API no responde</h3>
-          <p class="subtle">Abre la publicación en tu navegador, comprueba el precio en CLP y completa los datos. Se incluirá en el CSV como producto inactivo, sin afirmar que el precio o la afiliación hayan sido verificados automáticamente.</p>
+          <p class="subtle">Abre la publicación en tu navegador, copia su URL COMPLETA (no el enlace corto meli.la), comprueba el precio en CLP y completa nombre, precio y dirección. Se incluirá en el CSV como producto inactivo, sin afirmar que el precio o la afiliación hayan sido verificados automáticamente.</p>
           <div class="admin-fields">
             <label>URL completa del producto<input id="ml-manual-url" type="url" placeholder="https://www.mercadolibre.cl/.../up/MLCU...#wid=MLC..." /></label>
             <label>Nombre del producto<input id="ml-manual-name" maxlength="200" /></label>
@@ -1277,7 +1277,8 @@
           manualDownloadButton.disabled = true;
           bulkResults.replaceChildren();
         };
-        bulkUrls.addEventListener('input', resetBulk);
+        // Escribir enlaces para una consulta no debe borrar productos agregados manualmente.
+        bulkUrls.addEventListener('input', () => {});
         bulkCategory.addEventListener('change', resetBulk);
         bulkSearchButton.addEventListener('click', async () => {
           resetBulk();
