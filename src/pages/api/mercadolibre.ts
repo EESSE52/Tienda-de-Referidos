@@ -16,7 +16,7 @@ export const GET: APIRoute = async (context) => {
   }
 
   try {
-    const source = normalizeChileMercadoLibreUrl(productUrl);
+    const source = await resolveChileMercadoLibreUrl(productUrl);
     const item = await fetchMercadoLibreItem(source.id);
     return jsonResponse({ ...item, id_publicacion: source.id, url_publicacion: source.url, afiliado_verificado: false });
   } catch (error) {
