@@ -77,6 +77,54 @@ export async function updateAdminCategory(env, id, payload) {
   return category;
 }
 
+
+/**
+ * Añade un campo numérico y su métrica precio / campo.
+ * Nunca modifica ni elimina métricas existentes.
+ */
+export async function addCategoryMetric(env, id, payload) {
+  if (!isObject(payload)) throw new AdminCategoryError('Se requiere un objeto JSON.');
+  const catalog = await readCatalog(env);
+  const previous = catalog.listas.find((item) => item.id === id);
+  if (!previous) throw new AdminCategoryError('Categoría no encontrada.', 404);
+  const clave = text(payload.clave);
+  const etiqueta = text(payload.etiqueta);
+  const unidad = text(payload.unidad);
+  if (!validSlug(clave) && !/^[a-z][a-z0-9_]*$/.test(clave)) {
+    throw new AdminCategoryError('La clave debe usar letras minúsculas, números o guion bajo.');
+  }
+  if (!/^[a-z][a-z0-9_]*$/.test(clave)) {
+    throw new AdminCategoryError('Usa letras minúsculas, números y guion bajo para la clave.');
+  }
+  if (etiqueta.length < 2 || etiqueta.length > 90 || unidad.length > 20) {
+    throw new AdminCategoryError('Etiqueta o unidad inválida.');
+  }
+  const campos = structuredClone(previous.campos ?? []);
+  const metricas = structuredClone(previous.metricas ?? []);
+  const metricaClave = 'precio_por_' + clave;
+  if (campos.some((campo) => campo.clave === clave) ||
+      metricas.some((metrica) => metrica.clave === metricaClave)) {
+    throw new AdminCategoryError('Ya existe ese campo o esa métrica.', 409);
+  }
+  if (campos.length >= 30 || metricas.length >= 30) {
+    throw new AdminCategoryError('Máximo 30 campos y métricas por categoría.');
+  }
+  campos.push({
+    clave, etiqueta, tipo: 'numero', unidad: unidad || null,
+    mejor: 'mayor', en_tabla: true, filtrable: true, requerido: false,
+  });
+  metricas.push({
+    clave: metricaClave,
+    etiqueta: 'Precio por ' + etiqueta.toLowerCase(),
+    plantilla: { tipo: 'precio_dividido_por', campo: clave },
+    formula: { tipo: 'precio_dividido_por', campo: clave },
+    mejor: 'menor', decimales: 2,
+  });
+  const category = { ...previous, campos, metricas };
+  await saveRecord(env, 'catalog_lists', category);
+  return category;
+}
+
 export function categoryErrorResponse(error, jsonResponse) {
   if (error instanceof AdminCategoryError) return jsonResponse({ error: error.message }, error.status);
   console.error('Error de categorías D1:', error);
