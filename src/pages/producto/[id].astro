@@ -20,7 +20,10 @@ const metricRows = lista?.metricas.map((metrica) => ({
 })) ?? [];
 const priceIsOld = productHasOldPrice(producto.fecha_precio);
 const displaySeller = producto.vendedor_nombre || producto.vendedor || '—';
-const attributeEntries = Object.entries(producto.atributos ?? {}).filter(([, value]) => value !== undefined && value !== null && value !== '');
+const attributeEntries = Object.entries(producto.atributos ?? {}).filter(([, value]) => value !== undefined && value !== null && value !== '').map(([key, value]) => ({
+  key, value,
+  field: lista?.campos.find((campo) => campo.clave === key),
+}));
 const metricDisplay = (metrica: { etiqueta?: string; decimales?: number; plantilla?: { tipo?: string }; formula?: { tipo?: string } }, value: number | null) => {
   if (value === null || value === undefined || !Number.isFinite(value)) return 'No disponible';
   const label = String(metrica?.etiqueta || '').toLowerCase();
@@ -53,7 +56,7 @@ const metricDisplay = (metrica: { etiqueta?: string; decimales?: number; plantil
         <p class="mt-2 text-lg text-slate-600 dark:text-slate-300">{producto.marca || 'Marca no indicada'}</p>
 
         <figure class="mt-6 overflow-hidden rounded-2xl border border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-800">
-          <img src={getPublicProductImage(producto)} alt={`Imagen referencial de ${producto.nombre}`} loading="lazy" width="1200" height="800" class="h-auto w-full object-cover" />
+          <img src={getPublicProductImage(producto)} alt={`Imagen referencial de ${producto.nombre}`} loading="lazy" width="1200" height="800" class="aspect-[4/3] h-auto w-full object-contain p-4" />
         </figure>
 
         <div class="mt-6 rounded-2xl bg-slate-50 p-5 dark:bg-slate-800/90">
@@ -127,10 +130,10 @@ const metricDisplay = (metrica: { etiqueta?: string; decimales?: number; plantil
         <h2 class="text-xl font-bold text-slate-900 dark:text-white">Atributos</h2>
         {attributeEntries.length > 0 ? (
           <div class="mt-4 grid gap-3 sm:grid-cols-2">
-            {attributeEntries.map(([key, value]) => (
+            {attributeEntries.map(({ key, value, field }) => (
               <div class="rounded-2xl bg-slate-50 p-3 text-sm dark:bg-slate-800">
-                <p class="text-slate-500 dark:text-slate-300">{key}</p>
-                <p class="mt-1 font-medium text-slate-900 dark:text-white">{String(value)}</p>
+                <p class="text-slate-500 dark:text-slate-300">{field?.etiqueta || key}</p>
+                <p class="mt-1 font-medium text-slate-900 dark:text-white">{String(value)} {field?.unidad || ""}</p>
               </div>
             ))}
           </div>
