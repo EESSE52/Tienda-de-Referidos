@@ -241,6 +241,17 @@
         </section>
 
         <section class="card" style="margin-bottom:20px">
+          <h2>Consultar publicación de Mercado Libre Chile</h2>
+          <p class="subtle">Pega la URL de una publicación MLC. Consulta una vista previa, sin guardar ni publicar nada. Un enlace de publicación no necesariamente genera comisiones.</p>
+          <div class="admin-fields">
+            <label>URL de publicación HTTPS<input id="ml-preview-url" type="url" placeholder="https://articulo.mercadolibre.cl/MLC-1234567890" /></label>
+          </div>
+          <div class="button-row"><button id="ml-preview-btn" type="button">Consultar publicación</button><button id="ml-copy-btn" class="secondary" type="button" disabled>Pasar al formulario (inactivo)</button></div>
+          <div id="ml-preview-status" class="status" aria-live="polite"></div>
+          <div id="ml-preview-details" class="preview" aria-live="polite"></div>
+        </section>
+
+        <section class="card" style="margin-bottom:20px">
           <h2>Productos guardados en D1</h2>
           <p class="subtle">Los cambios se reflejan en el comparador local después de recargar la página. Desactivar oculta el producto sin eliminar su registro.</p>
           <div class="button-row"><button id="refresh-products" class="secondary" type="button">Actualizar listado</button></div>
@@ -889,6 +900,55 @@
             await refreshCategories();
             message(status, 'Campo y fórmula guardados correctamente.');
           } catch (error) { message(status, error.message, true); }
+        });
+
+        let previewedMercadoLibre = null;
+        const mlStatus = document.getElementById('ml-preview-status');
+        const mlDetails = document.getElementById('ml-preview-details');
+        const mlCopy = document.getElementById('ml-copy-btn');
+        document.getElementById('ml-preview-btn').addEventListener('click', async () => {
+          previewedMercadoLibre = null;
+          mlCopy.disabled = true;
+          mlDetails.replaceChildren();
+          const url = document.getElementById('ml-preview-url').value.trim();
+          try {
+            const item = await api('/api/mercadolibre?url=' + encodeURIComponent(url));
+            if (!item.name || !Number.isFinite(Number(item.price)) || Number(item.price) <= 0) {
+              throw new Error('La publicación no tiene nombre y precio válidos. Compruébalos directamente en Mercado Libre.');
+            }
+            previewedMercadoLibre = item;
+            for (const [label, value] of [
+              ['Nombre', item.name], ['Marca', item.brand],
+              ['Precio consultado', new Intl.NumberFormat('es-CL', {style:'currency',currency:'CLP',maximumFractionDigits:0}).format(item.price)],
+              ['Publicación', item.id_publicacion], ['Vendedor', item.seller],
+              ['Afiliación', 'No verificada: requiere enlace de referido válido'],
+            ]) {
+              const p = document.createElement('p');
+              const strong = document.createElement('strong');
+              strong.textContent = label + ': ';
+              p.appendChild(strong);
+              p.appendChild(document.createTextNode(String(value || '—')));
+              mlDetails.appendChild(p);
+            }
+            mlCopy.disabled = false;
+            message(mlStatus, 'Consulta completada. Revisa la información antes de copiarla al formulario.');
+          } catch (error) {
+            message(mlStatus, error.message, true);
+          }
+        });
+        mlCopy.addEventListener('click', () => {
+          if (!previewedMercadoLibre) return;
+          resetForm();
+          const item = previewedMercadoLibre;
+          for (const [key, value] of Object.entries({
+            nombre: item.name, marca: item.brand, precio: item.price,
+            id_publicacion: item.id_publicacion, imagen: item.image,
+            enlace_referido: item.url_publicacion,
+          })) form.elements[key].value = value ?? '';
+          renderProductFields(item.attributes || {});
+          form.elements.activo.checked = false;
+          message(productStatus, 'Datos copiados al formulario, sin guardar. Publicación inactiva: verifica el enlace de afiliado antes de activar.');
+          form.scrollIntoView({ behavior: 'smooth' });
         });
 
         // La importación CSV existente usa la misma credencial en memoria.
