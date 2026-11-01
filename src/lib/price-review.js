@@ -12,10 +12,10 @@ function getItemId(product) {
   return id;
 }
 
-function readPrice(value) {
+function readPrice(value, origin = 'Mercado Libre') {
   const num = Number(value);
   if (!Number.isFinite(num) || num <= 0 || !Number.isSafeInteger(num)) {
-    throw new PriceReviewError('Mercado Libre no entregó un precio CLP válido.');
+    throw new PriceReviewError(origin === 'registro' ? 'El precio registrado es inválido; revísalo en el administrador.' : 'Mercado Libre no entregó un precio CLP válido para esta publicación. Verifica que la publicación sea real, esté vigente y muestre un precio. No se guardó ningún cambio.');
   }
   return num;
 }
@@ -24,7 +24,7 @@ async function findProduct(env, id) {
   const catalog = await readCatalog(env);
   const product = catalog.productos.find(item => item.id === id);
   if (!product) throw new PriceReviewError('Producto no encontrado.', 404);
-  const current = readPrice(product.precio);
+  const current = readPrice(product.precio, 'registro');
   return { product, current, itemId: getItemId(product) };
 }
 
