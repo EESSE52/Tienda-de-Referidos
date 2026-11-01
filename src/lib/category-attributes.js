@@ -3,10 +3,10 @@
  * Mantiene atributos históricos no declarados para no perder información al editar.
  */
 export function normalizeCategoryAttributes(category, incoming = {}, previous = {}, enforceRequired = false) {
-  if (!category || !Array.isArray(category.campos)) throw new Error('Categoría inválida.');
+  if (!category || typeof category !== 'object') throw new Error('Categoría inválida.');
   if (!incoming || typeof incoming !== 'object' || Array.isArray(incoming)) throw new Error('Atributos inválidos.');
   const output = { ...(previous && typeof previous === 'object' && !Array.isArray(previous) ? previous : {}) };
-  for (const field of category.campos) {
+  for (const field of category.campos ?? []) {
     const key = field.clave;
     if (!/^[a-z][a-z0-9_]*$/.test(key)) continue;
     if (!Object.prototype.hasOwnProperty.call(incoming, key)) continue;
