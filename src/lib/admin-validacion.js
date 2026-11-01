@@ -61,6 +61,16 @@ function parsePrice(value) {
   return Number.isFinite(numeric) ? numeric : null;
 }
 
+function validateApprovedImage(url) {
+  if (!url) return;
+  if (url.length > 2048) throw new Error('La URL de imagen es demasiado larga.');
+  let parsed;
+  try { parsed = new URL(url); } catch { throw new Error('La imagen autorizada necesita una URL HTTPS válida.'); }
+  if (parsed.protocol !== 'https:' || parsed.username || parsed.password || !parsed.hostname || parsed.port) {
+    throw new Error('La imagen autorizada necesita una URL HTTPS válida y pública.');
+  }
+}
+
 function coerceBoolean(value, fallback = false) {
   if (value === undefined || value === null || value === '') {
     return fallback;
@@ -168,6 +178,15 @@ export function validateProductPayload(payload, productos = [], existingId = nul
   if (!Number.isFinite(product.precio) || product.precio <= 0) {
     throw new Error('El precio debe ser un número mayor a 0.');
   }
+
+  validateApprovedImage(product.imagen_propia);
+  const existing = productos.find(item => item.id === existingId);
+  if (product.imagen_propia && (!existing || existing.imagen_propia !== product.imagen_propia)) {
+    if (payload.imagen_autorizada_confirmada !== true) {
+      throw new Error('Confirma que tienes autorización para usar esta imagen.');
+    }
+  }
+  if (product.imagen_propia) product.imagen_fuente = 'autorizada';
 
   const normalizedName = product.nombre.toLowerCase();
   const normalizedLink = link.toLowerCase();
