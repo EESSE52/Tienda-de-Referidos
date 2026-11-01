@@ -13,8 +13,23 @@ describe('enlaces cortos oficiales meli.la', () => {
     expect(result).toEqual({
       url: 'https://articulo.mercadolibre.cl/MLC-1234567890',
       id: 'MLC1234567890',
+      kind: 'item',
     });
     expect(request).toHaveBeenCalledWith('https://meli.la/1f9dPm8', expect.objectContaining({ redirect: 'manual' }));
+  });
+  it('reconoce enlace corto que abre una ficha de catálogo /p/', async () => {
+    const request = vi.fn().mockResolvedValue(redirect('https://www.mercadolibre.cl/creatina-ejemplo/p/MLC987654321'));
+    const result = await resolveChileMercadoLibreUrl('https://meli.la/2ATCSzi', request);
+    expect(result).toEqual({
+      url: 'https://www.mercadolibre.cl/creatina-ejemplo/p/MLC987654321',
+      id: 'MLC987654321',
+      kind: 'catalog',
+    });
+  });
+  it('reconoce IDs de publicaciones suministrados en parámetros oficiales', async () => {
+    const request = vi.fn().mockResolvedValue(redirect('https://www.mercadolibre.cl/producto?item_id=MLC1234567890'));
+    const value = await resolveChileMercadoLibreUrl('https://meli.la/17HcPoF', request);
+    expect(value).toMatchObject({ id: 'MLC1234567890', kind: 'item' });
   });
   it('admite una segunda redirección dentro de la lista permitida', async () => {
     const request = vi.fn()
