@@ -1159,6 +1159,7 @@
             mlBulkCategory.appendChild(option);
           }
           if (categories.some(category => category.id === chosenBulkCategory)) mlBulkCategory.value = chosenBulkCategory;
+          renderManualAttributes();
           const csvTemplateSelect = document.getElementById('csv-template-category');
           const chosenCsvCategory = csvTemplateSelect.value;
           csvTemplateSelect.replaceChildren();
@@ -1277,6 +1278,63 @@
         let bulkCategoryId = '';
         const bulkUrls = document.getElementById('ml-bulk-urls');
         const bulkCategory = document.getElementById('ml-bulk-category');
+        const manualAttributes = document.getElementById('ml-manual-attributes');
+        function renderManualAttributes() {
+          manualAttributes.replaceChildren();
+          const category = categories.find(item => item.id === document.getElementById('ml-bulk-category').value);
+          for (const field of category?.campos || []) {
+            if (!/^[a-z][a-z0-9_]*$/.test(String(field.clave || ''))) continue;
+            const label = document.createElement('label');
+            label.textContent = (field.etiqueta || field.clave) + (field.unidad ? ' (' + field.unidad + ')' : '') + (field.requerido ? ' *' : '');
+            let control;
+            if (field.tipo === 'seleccion' && Array.isArray(field.opciones)) {
+              control = document.createElement('select');
+              const empty = document.createElement('option');
+              empty.value = '';
+              empty.textContent = 'Seleccionar';
+              control.appendChild(empty);
+              for (const value of field.opciones) {
+                const option = document.createElement('option');
+                option.value = String(value);
+                option.textContent = String(value);
+                control.appendChild(option);
+              }
+            } else {
+              control = document.createElement('input');
+              control.type = field.tipo === 'numero' ? 'number' : 'text';
+              if (field.tipo === 'numero') {
+                control.min = '0';
+                control.step = 'any';
+              }
+            }
+            control.dataset.manualAttribute = field.clave;
+            control.required = field.requerido === true;
+            label.appendChild(control);
+            manualAttributes.appendChild(label);
+          }
+        }
+        function collectManualAttributes(category) {
+          const fields = new Map((category.campos || []).map(field => [field.clave, field]));
+          const values = {};
+          for (const control of manualAttributes.querySelectorAll('[data-manual-attribute]')) {
+            const field = fields.get(control.dataset.manualAttribute);
+            if (!field) continue;
+            const raw = control.value.trim();
+            if (!raw) {
+              if (field.requerido) throw new Error('Completa el campo obligatorio: ' + (field.etiqueta || field.clave));
+              continue;
+            }
+            if (field.tipo === 'numero') {
+              const value = Number(raw);
+              if (!Number.isFinite(value) || value < 0) throw new Error('Número inválido en ' + (field.etiqueta || field.clave));
+              values[field.clave] = value;
+            } else {
+              values[field.clave] = raw;
+            }
+          }
+          return values;
+        }
+
         const bulkStatus = document.getElementById('ml-bulk-status');
         const bulkResults = document.getElementById('ml-bulk-results');
         const bulkSearchButton = document.getElementById('ml-bulk-search');
@@ -1304,7 +1362,7 @@
           bulkResults.replaceChildren();
         };
         // Escribir enlaces no borra los productos ingresados manualmente.
-        bulkCategory.addEventListener('change', resetBulk);
+        bulkCategory.addEventListener('change', () => { resetBulk(); renderManualAttributes(); });
         bulkSearchButton.addEventListener('click', async () => {
           resetBulk();
           if (!adminToken) return message(bulkStatus, 'Primero conecta el administrador.', true);
