@@ -727,7 +727,7 @@
             for (const control of dynamicFields.querySelectorAll('[data-attribute-key]')) {
               const key = control.dataset.attributeKey;
               if (control.value === '') {
-                delete body.atributos[key];
+                body.atributos[key] = '';
               } else {
                 body.atributos[key] = control.type === 'number' ? Number(control.value) : control.value;
               }
