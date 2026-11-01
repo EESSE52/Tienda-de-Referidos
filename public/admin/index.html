@@ -258,6 +258,14 @@
           <div id="product-list" class="preview"><p class="subtle">Conecta el administrador para consultar productos.</p></div>
         </section>
 
+        <section class="card" style="margin-bottom:20px" id="price-history-panel" hidden>
+          <h2>Historial de precios</h2>
+          <p class="subtle">Registros guardados en D1. No se consultan precios externos al abrir este historial.</p>
+          <div id="price-history-content" class="preview" aria-live="polite"></div>
+          <div class="button-row"><button type="button" class="secondary" id="close-price-history">Cerrar historial</button></div>
+          <div id="price-history-status" class="status" aria-live="polite"></div>
+        </section>
+
         <section class="card" style="margin-bottom:20px" id="price-review-panel" hidden>
           <h2>Revisión manual del precio</h2>
           <p class="subtle">El precio solo se guardará después de tu confirmación. No cambiará la publicación, el enlace de referido ni el estado del producto.</p>
@@ -691,6 +699,12 @@
               form.scrollIntoView({behavior:'smooth'});
             });
             div.appendChild(edit);
+            const historyButton = document.createElement('button');
+            historyButton.type = 'button';
+            historyButton.className = 'secondary';
+            historyButton.textContent = 'Historial';
+            historyButton.addEventListener('click', () => showPriceHistory(product.id));
+            div.appendChild(historyButton);
             if (/^MLC[0-9]{6,}$/i.test(String(product.id_publicacion || '').replace(/[-_]/g, ''))) {
               const reviewButton = document.createElement('button');
               reviewButton.type = 'button';
@@ -719,6 +733,62 @@
             table.appendChild(row);
           });
           list.appendChild(table);
+        }
+
+        const historyPanel = document.getElementById('price-history-panel');
+        const historyContent = document.getElementById('price-history-content');
+        const historyStatus = document.getElementById('price-history-status');
+        document.getElementById('close-price-history').addEventListener('click', () => {
+          historyPanel.hidden = true;
+          historyContent.replaceChildren();
+        });
+
+        async function showPriceHistory(id) {
+          historyPanel.hidden = false;
+          historyContent.replaceChildren();
+          message(historyStatus, 'Consultando el historial local...');
+          try {
+            const result = await api('/api/admin/products/' + encodeURIComponent(id) + '/price-history');
+            const h3 = document.createElement('h3');
+            h3.textContent = result.nombre;
+            historyContent.appendChild(h3);
+            const details = document.createElement('p');
+            details.textContent = 'Precio registrado: ' + new Intl.NumberFormat('es-CL', {
+              style: 'currency', currency: 'CLP', maximumFractionDigits: 0,
+            }).format(result.precio_actual) + ' · Registros: ' + result.count;
+            historyContent.appendChild(details);
+            if (!result.history.length) {
+              const empty = document.createElement('p');
+              empty.textContent = 'Aún no hay registros históricos para este producto.';
+              historyContent.appendChild(empty);
+            } else {
+              const table = document.createElement('table');
+              const headings = document.createElement('tr');
+              for (const heading of ['Fecha', 'Precio CLP']) {
+                const th = document.createElement('th');
+                th.textContent = heading;
+                headings.appendChild(th);
+              }
+              table.appendChild(headings);
+              for (const entry of result.history) {
+                const row = document.createElement('tr');
+                cell(row, entry.fecha);
+                cell(row, new Intl.NumberFormat('es-CL', {
+                  style: 'currency', currency: 'CLP', maximumFractionDigits: 0,
+                }).format(entry.precio));
+                table.appendChild(row);
+              }
+              historyContent.appendChild(table);
+              const range = document.createElement('p');
+              range.textContent = 'Mínimo registrado: ' + result.lowest.toLocaleString('es-CL')
+                + ' CLP · Máximo registrado: ' + result.highest.toLocaleString('es-CL') + ' CLP';
+              historyContent.appendChild(range);
+            }
+            message(historyStatus, 'Historial consultado. No se modificaron registros.');
+            historyPanel.scrollIntoView({ behavior: 'smooth' });
+          } catch (error) {
+            message(historyStatus, error.message, true);
+          }
         }
 
         const reviewPanel = document.getElementById('price-review-panel');
