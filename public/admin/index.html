@@ -484,8 +484,8 @@
         const issues = [];
         if (!row.lista_id) issues.push('lista_id');
         if (!row.nombre) issues.push('nombre');
-        if (!Number.isFinite(row.precio) || row.precio <= 0) issues.push('precio');
-        if (!row.enlace_referido && !row.id_publicacion) issues.push('enlace_referido');
+        if (!Number.isFinite(parsePrice(row.precio ?? row.precio_clp)) || parsePrice(row.precio ?? row.precio_clp) <= 0) issues.push('precio');
+        if (!row.enlace_referido && !row.url_publicacion && !row.link) issues.push('enlace_referido');
         return { valid: issues.length === 0, issues };
       }
 
