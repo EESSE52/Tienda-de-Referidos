@@ -1125,6 +1125,16 @@
             metricSelect.appendChild(opt);
           }
           if (categories.some(category => category.id === chosenMetricCategory)) metricSelect.value = chosenMetricCategory;
+          const mlBulkCategory = document.getElementById('ml-bulk-category');
+          const chosenBulkCategory = mlBulkCategory.value;
+          mlBulkCategory.replaceChildren();
+          for (const category of categories) {
+            const option = document.createElement('option');
+            option.value = category.id;
+            option.textContent = category.nombre;
+            mlBulkCategory.appendChild(option);
+          }
+          if (categories.some(category => category.id === chosenBulkCategory)) mlBulkCategory.value = chosenBulkCategory;
           const csvTemplateSelect = document.getElementById('csv-template-category');
           const chosenCsvCategory = csvTemplateSelect.value;
           csvTemplateSelect.replaceChildren();
