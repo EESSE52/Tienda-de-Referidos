@@ -326,6 +326,10 @@
             <div class="subtle" style="margin-top:12px;">Formato recomendado: CSV. Usa los nombres exactos de los campos de cada categoría (por ejemplo, gramos_total, porciones o cualquier campo personalizado). Los productos importados sin columna activo quedarán inactivos para revisión.</div>
           </div>
 
+          <div class="admin-fields"><label>Plantilla para categoría<select id="csv-template-category"><option value="">Conecta el administrador</option></select></label></div>
+          <div class="button-row">
+            <button id="category-template-download" type="button" class="secondary">Descargar plantilla de categoría</button>
+          </div>
           <div class="button-row">
             <button id="preview-btn" type="button">Previsualizar</button>
             <button id="import-btn" type="button" class="secondary" disabled>Guardar productos</button>
@@ -1078,6 +1082,16 @@
             metricSelect.appendChild(opt);
           }
           if (categories.some(category => category.id === chosenMetricCategory)) metricSelect.value = chosenMetricCategory;
+          const csvTemplateSelect = document.getElementById('csv-template-category');
+          const chosenCsvCategory = csvTemplateSelect.value;
+          csvTemplateSelect.replaceChildren();
+          for (const category of categories) {
+            const option = document.createElement('option');
+            option.value = category.id;
+            option.textContent = category.nombre;
+            csvTemplateSelect.appendChild(option);
+          }
+          if (categories.some(category => category.id === chosenCsvCategory)) csvTemplateSelect.value = chosenCsvCategory;
           const selectedId = select.value;
           select.replaceChildren();
           for (const category of categories) {
