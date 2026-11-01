@@ -24,6 +24,7 @@ async function findProduct(env, id) {
   const catalog = await readCatalog(env);
   const product = catalog.productos.find(item => item.id === id);
   if (!product) throw new PriceReviewError('Producto no encontrado.', 404);
+  if (product.es_prueba === true) throw new PriceReviewError('No se revisan precios externos de productos de prueba.');
   const current = readPrice(product.precio, 'registro');
   return { product, current, itemId: getItemId(product) };
 }
