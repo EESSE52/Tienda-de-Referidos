@@ -30,7 +30,7 @@ const displayMetric = (metric: any, value: number | null): string => {
 <Layout title="Comparador" description="Comparación de 2 a 4 productos con resaltado del mejor valor por fila.">
   <section class="mb-6 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
     <h1 class="text-3xl font-black">Comparador</h1>
-    <p class="mt-2 text-slate-600 dark:text-slate-300">Selecciona entre 2 y 4 productos para comparar sus métricas.</p>
+    <p class="mt-2 text-slate-600 dark:text-slate-300">Compara de 2 a 4 productos. En el teléfono puedes deslizar la tabla horizontalmente mientras los nombres de las métricas permanecen visibles.</p>
     {productos.length >= 2 && (
       <div class="mt-4 flex flex-wrap gap-3 text-sm">
         <span class="rounded-full bg-emerald-100 px-3 py-1 font-medium text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200">{productos.length} productos</span>
@@ -51,21 +51,25 @@ const displayMetric = (metric: any, value: number | null): string => {
     </div>
   ) : (
     <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
-      <div class="overflow-x-auto">
+      <div class="overflow-x-auto" role="region" aria-label="Tabla comparativa; desliza horizontalmente para ver más productos" tabindex="0">
         <table class="min-w-full text-left">
           <thead class="bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-100">
             <tr>
-              <th class="px-4 py-3 font-semibold">Métrica</th>
+              <th scope="col" class="sticky left-0 z-20 min-w-[140px] bg-slate-100 px-4 py-3 font-semibold dark:bg-slate-800">Métrica</th>
               {productos.map((producto) => (
-                <th class="px-4 py-3 font-semibold min-w-[180px]">
+                <th scope="col" class="px-4 py-3 font-semibold min-w-[180px]">
                   <a href={`/producto/${producto.id}`} class="text-emerald-600 hover:underline dark:text-emerald-400">{producto.nombre}</a>
+                  <div class="mt-2 text-xs font-normal text-slate-500 dark:text-slate-300">{producto.marca || "Marca no indicada"}</div>
+                  {/^https:\/\//i.test(String(producto.enlace_referido || "")) && (
+                    <a href={producto.enlace_referido} target="_blank" rel="sponsored nofollow noopener" class="mt-2 inline-block rounded-lg bg-emerald-600 px-3 py-2 text-xs font-semibold text-white hover:bg-emerald-500">Ver oferta</a>
+                  )}
                 </th>
               ))}
             </tr>
           </thead>
           <tbody>
             <tr class="border-t border-slate-200 dark:border-slate-800">
-              <td class="px-4 py-3 font-medium">Precio</td>
+              <th scope="row" class="sticky left-0 z-10 bg-white px-4 py-3 font-medium dark:bg-slate-900">Precio</th>
               {productos.map((producto) => (
                 <td class="px-4 py-3 font-bold">
                   <div>{currencyCLP(producto.precio)}</div>
@@ -91,7 +95,7 @@ const displayMetric = (metric: any, value: number | null): string => {
               const bestValue = compatible ? getBestMetricValue(def.mejor, values) : null;
               return (
                 <tr class="border-t border-slate-200 dark:border-slate-800">
-                  <td class="px-4 py-3 font-medium">{def.etiqueta}</td>
+                  <th scope="row" class="sticky left-0 z-10 bg-white px-4 py-3 font-medium dark:bg-slate-900">{def.etiqueta}</th>
                   {values.map((value, index) => (
                     <td class={`px-4 py-3 ${value !== null && bestValue !== null && value === bestValue ? 'bg-emerald-100 text-emerald-900 dark:bg-emerald-950 dark:text-emerald-200' : ''}`}>
                       {displayMetric(def, value)}
