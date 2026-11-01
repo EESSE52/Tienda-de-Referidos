@@ -1,0 +1,34 @@
+import { validateProductPayload } from './admin-validacion.js';
+
+/**
+ * Valida cada fila contra el catálogo existente y las filas aceptadas
+ * previamente. No escribe nada; las filas rechazadas no se importan.
+ */
+export function validateImportBatch(rows, catalog, normalize) {
+  const accepted = [];
+  const errors = [];
+  const currentProducts = Array.isArray(catalog?.productos) ? catalog.productos : [];
+  const categories = Array.isArray(catalog?.listas) ? catalog.listas : [];
+  for (const [index, row] of rows.entries()) {
+    try {
+      if (!row || typeof row !== 'object' || Array.isArray(row)) {
+        throw new Error('La fila debe contener columnas válidas.');
+      }
+      const candidate = normalize(row);
+      if (!categories.some((category) => category.id === candidate.lista_id || category.slug === candidate.lista_id)) {
+        throw new Error('La categoría indicada no existe.');
+      }
+      const validated = validateProductPayload(candidate, [...currentProducts, ...accepted], null);
+      if ([...currentProducts, ...accepted].some((product) => product.id === validated.id)) {
+        throw new Error('Ya existe un producto con ese identificador.');
+      }
+      accepted.push(validated);
+    } catch (error) {
+      errors.push({
+        row: index + 2,
+        message: error instanceof Error ? error.message : 'Fila inválida.',
+      });
+    }
+  }
+  return { accepted, errors };
+}
