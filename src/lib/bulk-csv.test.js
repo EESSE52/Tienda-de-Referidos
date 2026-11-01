@@ -70,6 +70,32 @@ describe('descarga CSV de revisión Mercado Libre', () => {
     expect(html).toContain("manualDownloadButton.addEventListener('click', () => bulkExportButton.click())");
     expect(html).toContain("message(manualStatus, 'Producto agregado correctamente.");
   });
+  it('conserva enlace meli.la separado de la publicación, incluyendo CSV', () => {
+    const url = 'https://www.mercadolibre.cl/creatina/up/MLCU3220313328#wid=MLC2908577036';
+    const affiliate_url = 'https://meli.la/2ATCSzi?tracking=abc';
+    const candidate = createManualMercadoLibreCandidate({
+      url, affiliate_url, name: 'Gomitas', price: 19990,
+    });
+    expect(candidate.url_publicacion).toBe(url);
+    expect(candidate.enlace_referido).toBe(affiliate_url);
+    const csv = buildMercadoLibreReviewCsv(category, [candidate]);
+    expect(csv).toContain('"enlace_referido","url_publicacion"');
+    expect(csv).toContain('"https://meli.la/2ATCSzi?tracking=abc"');
+    expect(csv).toContain('"https://www.mercadolibre.cl/creatina/up/MLCU3220313328#wid=MLC2908577036"');
+  });
+  it('permite preparar producto inactivo sin inventar enlace de afiliación', () => {
+    const candidate = createManualMercadoLibreCandidate({
+      url: 'https://articulo.mercadolibre.cl/MLC-2908577036',
+      name: 'Creatina', price: 19990,
+    });
+    expect(candidate.enlace_referido).toBe('');
+    const csv = buildMercadoLibreReviewCsv(category, [candidate]);
+    expect(csv).toContain('""');
+  });
+  it('rechaza afiliados ajenos a los dominios oficiales', () => {
+    const data = { url: 'https://articulo.mercadolibre.cl/MLC-2908577036', name: 'Creatina', price: 19990 };
+    expect(() => createManualMercadoLibreCandidate({ ...data, affiliate_url: 'https://evil.example/producto' })).toThrow('afiliado');
+  });
   it('limita el lote y exige una categoría válida', () => {
     expect(() => buildMercadoLibreReviewCsv(category, [])).toThrow();
     expect(() => buildMercadoLibreReviewCsv(category, Array(11).fill(product))).toThrow();
