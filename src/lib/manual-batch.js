@@ -15,9 +15,11 @@ export function prepareManualBatch(rows, catalog) {
       if (!candidate || typeof candidate !== 'object' || Array.isArray(candidate)) throw new Error('Producto inválido.');
       const id = String(candidate.id_publicacion || '').toUpperCase();
       if (!/^MLC[0-9]{6,}$/.test(id)) throw new Error('ID de publicación MLC inválido.');
-      const source = normalizeChileMercadoLibreUrl(candidate.enlace_referido || candidate.url_publicacion || '');
+      const source = normalizeChileMercadoLibreUrl(candidate.url_publicacion || candidate.enlace_referido || '');
       if (source.kind !== 'item' || source.id !== id) throw new Error('La URL no corresponde al ID MLC de la publicación.');
       if (seen.has(id)) throw new Error('Publicación duplicada: ya existe en el catálogo o está repetida en este lote.');
+      const affiliate = String(candidate.enlace_referido || '').trim();
+      if (affiliate && !isSafeAffiliateUrl(affiliate)) throw new Error('Enlace de afiliado no válido (usa HTTPS de meli.la o Mercado Libre Chile).');
       seen.add(id);
       eligible.push({
         ...candidate,
@@ -35,4 +37,12 @@ export function prepareManualBatch(rows, catalog) {
   // No permitir guardados parciales: el usuario debe resolver todos los errores.
   return { accepted: errors.length || result.errors.length ? [] : result.accepted,
     errors: [...errors, ...result.errors], total: rows.length };
+}
+
+function isSafeAffiliateUrl(value) {
+  try {
+    const link = new URL(value);
+    return link.protocol === 'https:' && !link.username && !link.password && !link.port && link.href.length <= 2048 &&
+      ['meli.la', 'mercadolibre.cl', 'www.mercadolibre.cl', 'articulo.mercadolibre.cl'].includes(link.hostname.toLowerCase());
+  } catch { return false; }
 }
