@@ -81,6 +81,20 @@ describe('revisión manual de precios Mercado Libre', () => {
     expect(saveRecord).not.toHaveBeenCalled();
   });
 
+  it('no consulta Mercado Libre ni actualiza precios para productos marcados de prueba', async () => {
+    vi.mocked(readCatalog).mockResolvedValue({
+      listas: [], productos: [{ ...product, es_prueba: true }],
+    });
+    await expect(previewPriceChange({}, product.id, fetchItem))
+      .rejects.toThrow('prueba');
+    await expect(confirmPriceChange({}, product.id, {
+      confirmar: true, precio_actual: 19990, precio_consultado: 17990,
+      id_publicacion: 'MLC1234567890',
+    }, fetchItem)).rejects.toThrow('prueba');
+    expect(fetchItem).not.toHaveBeenCalled();
+    expect(saveRecord).not.toHaveBeenCalled();
+  });
+
   it('no agrega historial cuando el precio no cambió', async () => {
     fetchItem.mockResolvedValue({ price: 19990 });
     const result = await confirmPriceChange({}, product.id, {
