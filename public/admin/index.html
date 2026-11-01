@@ -255,6 +255,7 @@
           <h2>Productos guardados en D1</h2>
           <p class="subtle">Los cambios se reflejan en el comparador local después de recargar la página. Desactivar oculta el producto sin eliminar su registro.</p>
           <div class="button-row"><button id="refresh-products" class="secondary" type="button">Actualizar listado</button></div>
+          <div class="admin-fields"><label>Filtro<select id="product-origin-filter"><option value="todos">Todos</option><option value="prueba">Pruebas</option><option value="sin_verificar">Sin confirmar</option><option value="consultado">Precio consultado</option></select></label></div>
           <div id="product-list" class="preview"><p class="subtle">Conecta el administrador para consultar productos.</p></div>
         </section>
 
@@ -294,6 +295,7 @@
             <div class="admin-fields" id="dynamic-product-fields"></div>
             <div class="admin-fields">
               <label><input name="activo" type="checkbox" checked /> Producto activo</label>
+              <label><input name="es_prueba" type="checkbox" /> Producto de prueba (sin revisión externa)</label>
             </div>
             <div class="button-row">
               <button type="submit">Guardar producto</button>
@@ -583,6 +585,9 @@
         const adminStatus = document.getElementById('admin-status');
         const list = document.getElementById('product-list');
         const tokenInput = document.getElementById('admin-token');
+        const originFilter = document.getElementById('product-origin-filter');
+        originFilter.addEventListener('change', () => renderProducts());
+        const originStatus = p => p.es_prueba === true ? 'prueba' : p.precio_fuente === 'api' ? 'consultado' : 'sin_verificar';
 
         function message(node, text, error = false) {
           node.textContent = text;
@@ -676,7 +681,7 @@
             head.appendChild(th);
           });
           table.appendChild(head);
-          currentProducts.forEach((product) => {
+          currentProducts.filter(p => originFilter.value === 'todos' || originStatus(p) === originFilter.value).forEach((product) => {
             const row = document.createElement('tr');
             cell(row, product.nombre);
             cell(row, product.lista_id);
