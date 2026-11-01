@@ -88,6 +88,7 @@ export function normaliseProductPayload(payload = {}, existing = null) {
   const vendedor = cleanText(payload.vendedor ?? existing?.vendedor ?? '');
   const vendedorNombre = cleanText(payload.vendedor_nombre ?? existing?.vendedor_nombre ?? (vendedor || marca || ''));
   const activo = payload.activo === undefined ? (existing ? existing.activo : true) : coerceBoolean(payload.activo, true);
+  const esPrueba = coerceBoolean(payload.es_prueba ?? existing?.es_prueba ?? false, false);
   const notas = cleanText(payload.notas ?? existing?.notas ?? '');
   const atributos = payload.atributos && typeof payload.atributos === 'object' ? payload.atributos : (existing?.atributos ?? {});
   const finalId = String(payload.id ?? existing?.id ?? `${slugify(nombre || 'producto')}-${Date.now()}`).trim();
@@ -129,6 +130,7 @@ export function normaliseProductPayload(payload = {}, existing = null) {
     tienda_oficial: coerceBoolean(payload.tienda_oficial ?? existing?.tienda_oficial ?? false, false),
     garantia: cleanText(payload.garantia ?? existing?.garantia ?? '') || null,
     activo,
+    es_prueba: esPrueba,
     imagen: cleanText(payload.imagen ?? existing?.imagen ?? ''),
     imagen_propia: imagenPropia,
     imagen_candidata: imagenCandidata,
