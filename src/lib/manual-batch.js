@@ -1,5 +1,6 @@
 import { validateImportBatch } from './admin-import.js';
 import { normalizeImportRow } from './normalize-import-row.js';
+import { normalizeChileMercadoLibreUrl } from './mercadolibre-review.js';
 
 export function prepareManualBatch(rows, catalog) {
   if (!Array.isArray(rows) || !rows.length || rows.length > 10) {
@@ -14,6 +15,8 @@ export function prepareManualBatch(rows, catalog) {
       if (!candidate || typeof candidate !== 'object' || Array.isArray(candidate)) throw new Error('Producto inválido.');
       const id = String(candidate.id_publicacion || '').toUpperCase();
       if (!/^MLC[0-9]{6,}$/.test(id)) throw new Error('ID de publicación MLC inválido.');
+      const source = normalizeChileMercadoLibreUrl(candidate.enlace_referido || candidate.url_publicacion || '');
+      if (source.kind !== 'item' || source.id !== id) throw new Error('La URL no corresponde al ID MLC de la publicación.');
       if (seen.has(id)) throw new Error('La publicación ya existe o está repetida en el lote.');
       seen.add(id);
       eligible.push({
