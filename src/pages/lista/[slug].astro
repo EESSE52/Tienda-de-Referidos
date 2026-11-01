@@ -14,7 +14,6 @@ if (!lista) {
 
 const productos = catalog.getProductosByListaId(lista.id);
 const filterFields = lista.campos.filter((campo) => campo.filtrable);
-const comparisonUrl = productos.length >= 2 ? `/comparador?ids=${productos.slice(0, Math.min(4, productos.length)).map((producto) => producto.id).join(',')}` : '/comparador';
 const defaultSortField = lista.orden_defecto?.campo || 'precio';
 const defaultSortDirection = lista.orden_defecto?.direccion || 'menor';
 
@@ -55,7 +54,7 @@ const formatMetricValueForDisplay = (metrica: any, valor: number | null) => {
     <h1 class="mt-2 text-3xl font-black">{lista.nombre}</h1>
     <p class="mt-3 max-w-2xl text-slate-600 dark:text-slate-300">{lista.descripcion}</p>
     <div class="mt-5 flex flex-wrap gap-3">
-      <a href={comparisonUrl} class="rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-500">Comparar 2–4 productos</a>
+      <a href="#productos" class="rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-500">Elegir productos para comparar</a>
     </div>
     <p class="mt-4 text-sm text-slate-600 dark:text-slate-300">{AVISO_AFILIADOS_BREVE}</p>
   </section>
@@ -97,7 +96,7 @@ const formatMetricValueForDisplay = (metrica: any, valor: number | null) => {
     </div>
   </section>
 
-  <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
+  <div id="productos" class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
     <div class="overflow-x-auto">
       <table class="min-w-full table-auto text-left">
         <thead class="bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-100">
@@ -118,7 +117,7 @@ const formatMetricValueForDisplay = (metrica: any, valor: number | null) => {
           {productos.map((producto) => (
             <tr class="border-t border-slate-200 text-sm dark:border-slate-800" data-row data-product-id={producto.id} data-price-value={producto.precio}>
               <td class="px-4 py-3">
-                <input type="checkbox" class="compare-toggle h-4 w-4 rounded border-slate-400" value={producto.id} data-product-id={producto.id} />
+                <input type="checkbox" class="compare-toggle h-5 w-5 rounded border-slate-400" value={producto.id} data-product-id={producto.id} aria-label={`Comparar ${producto.nombre}`} />
               </td>
               <td class="px-4 py-3">
                 <a href={`/producto/${producto.id}`} class="font-semibold text-emerald-600 hover:underline dark:text-emerald-400">{producto.nombre}</a>
@@ -149,6 +148,19 @@ const formatMetricValueForDisplay = (metrica: any, valor: number | null) => {
     </div>
   </div>
 
+  <div id="compare-tray" hidden class="fixed inset-x-0 bottom-0 z-40 border-t border-emerald-200 bg-white/95 p-3 shadow-2xl backdrop-blur dark:border-slate-700 dark:bg-slate-950/95" aria-live="polite">
+    <div class="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3">
+      <div class="min-w-0 flex-1">
+        <p id="compare-count" class="text-sm font-bold text-slate-900 dark:text-white">0 de 4 productos seleccionados</p>
+        <div id="compare-chips" class="mt-2 flex flex-wrap gap-2"></div>
+        <p id="compare-hint" class="mt-1 text-xs text-slate-600 dark:text-slate-300">Selecciona al menos 2 productos.</p>
+      </div>
+      <div class="flex flex-wrap gap-2">
+        <button id="compare-clear" type="button" class="rounded-xl border border-slate-300 px-3 py-3 text-sm font-semibold dark:border-slate-700">Limpiar</button>
+        <a id="compare-link" href="/comparador" aria-disabled="true" tabindex="-1" class="pointer-events-none rounded-xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white opacity-50">Comparar productos</a>
+      </div>
+    </div>
+  </div>
   <script is:inline>
     const selected = new Set();
     const toggles = document.querySelectorAll('.compare-toggle');
@@ -213,32 +225,62 @@ const formatMetricValueForDisplay = (metrica: any, valor: number | null) => {
       }
     };
 
-    const rebuildCompareLink = () => {
-      const ids = [...selected].slice(0, 4);
-      const button = document.querySelector('#compare-link');
-      if (!button) return;
-      button.href = ids.length >= 2 ? `/comparador?ids=${ids.join(',')}` : '/comparador';
-      if (ids.length < 2) {
-        button.classList.add('opacity-60');
-      } else {
-        button.classList.remove('opacity-60');
+    const compareTray = document.getElementById('compare-tray');
+    const compareLink = document.getElementById('compare-link');
+    const compareCount = document.getElementById('compare-count');
+    const compareHint = document.getElementById('compare-hint');
+    const compareChips = document.getElementById('compare-chips');
+    const compareClear = document.getElementById('compare-clear');
+    const syncCompare = () => {
+      const ids = [...selected];
+      compareTray.hidden = ids.length === 0;
+      document.body.style.paddingBottom = ids.length ? '150px' : '';
+      compareCount.textContent = ids.length + ' de 4 productos seleccionados';
+      compareHint.textContent = ids.length >= 2 ? 'Ya puedes comparar los productos seleccionados.' : 'Selecciona al menos 2 productos.';
+      compareLink.href = ids.length >= 2 ? '/comparador?ids=' + ids.map(encodeURIComponent).join(',') : '/comparador';
+      compareLink.setAttribute('aria-disabled', String(ids.length < 2));
+      compareLink.tabIndex = ids.length >= 2 ? 0 : -1;
+      compareLink.classList.toggle('pointer-events-none', ids.length < 2);
+      compareLink.classList.toggle('opacity-50', ids.length < 2);
+      compareChips.replaceChildren();
+      for (const id of ids) {
+        const product = [...toggles].find(toggle => toggle.value === id);
+        const name = product?.closest('[data-row]')?.querySelector('td:nth-child(2) a')?.textContent?.trim() || id;
+        const chip = document.createElement('button');
+        chip.type = 'button';
+        chip.className = 'rounded-full border border-emerald-300 px-3 py-1 text-xs font-medium dark:border-emerald-700';
+        chip.textContent = 'Quitar: ' + name;
+        chip.setAttribute('aria-label', 'Quitar ' + name + ' de la comparación');
+        chip.addEventListener('click', () => {
+          selected.delete(id);
+          if (product) product.checked = false;
+          syncCompare();
+        });
+        compareChips.appendChild(chip);
       }
     };
-
-    toggles.forEach((toggle) => {
+    toggles.forEach(toggle => {
       toggle.addEventListener('change', () => {
-        const id = toggle.value;
         if (toggle.checked) {
           if (selected.size >= 4) {
             toggle.checked = false;
+            compareHint.textContent = 'Puedes comparar un máximo de 4 productos.';
             return;
           }
-          selected.add(id);
+          selected.add(toggle.value);
         } else {
-          selected.delete(id);
+          selected.delete(toggle.value);
         }
-        rebuildCompareLink();
+        syncCompare();
       });
+    });
+    compareClear.addEventListener('click', () => {
+      selected.clear();
+      toggles.forEach(toggle => { toggle.checked = false; });
+      syncCompare();
+    });
+    compareLink.addEventListener('click', event => {
+      if (selected.size < 2) event.preventDefault();
     });
 
     filters.forEach((field) => {
@@ -260,10 +302,6 @@ const formatMetricValueForDisplay = (metrica: any, valor: number | null) => {
     sortField?.addEventListener('change', refreshSort);
     refreshSort();
 
-    const compareWidget = document.createElement('div');
-    compareWidget.className = 'mt-6 flex justify-end';
-    compareWidget.innerHTML = '<a id="compare-link" href="/comparador" class="inline-flex items-center rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white opacity-60 dark:bg-emerald-500 dark:text-slate-950">Comparar selección</a>';
-    document.querySelector('table')?.parentElement?.parentElement?.appendChild(compareWidget);
-    rebuildCompareLink();
+    syncCompare();
   </script>
 </Layout>
