@@ -38,6 +38,14 @@ describe('evaluateFormula', () => {
     expect(evaluateFormula({ tipo: 'precio_dividido_por', campo: 'porciones' }, product)).toBeNull();
   });
 
+  it('no calcula costo unitario con precio o cantidad negativa', () => {
+    const formula = { tipo: 'precio_dividido_por' as const, campo: 'cantidad_unidades' };
+    expect(evaluateFormula(formula, { precio: 19990, atributos: { cantidad_unidades: 60 } })).toBeCloseTo(19990 / 60);
+    expect(evaluateFormula(formula, { precio: 19990, atributos: { cantidad_unidades: -60 } })).toBeNull();
+    expect(evaluateFormula(formula, { precio: -19990, atributos: { cantidad_unidades: 60 } })).toBeNull();
+    expect(evaluateFormula(formula, { precio: 19990, atributos: {} })).toBeNull();
+  });
+
   it('devuelve null si el divisor es cero', () => {
     const product = {
       precio: 35000,
