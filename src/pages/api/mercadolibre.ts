@@ -2,7 +2,7 @@ import type { APIRoute } from 'astro';
 import { env } from 'cloudflare:workers';
 import { jsonResponse, requireAdmin } from '../../lib/cloudflare-catalog.js';
 import { fetchMercadoLibreItem } from '../../lib/mercadolibre.js';
-import { normalizeChileMercadoLibreUrl } from '../../lib/mercadolibre-review.js';
+import { resolveChileMercadoLibreUrl } from '../../lib/mercadolibre-review.js';
 
 export const GET: APIRoute = async (context) => {
   const denied = requireAdmin({ env, request: context.request });
