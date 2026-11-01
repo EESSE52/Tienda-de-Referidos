@@ -330,7 +330,8 @@
               <label>Nombre<input name="nombre" required maxlength="200" /></label>
               <label>Marca<input name="marca" maxlength="150" /></label>
               <label>Precio CLP<input name="precio" type="number" min="1" step="1" required /></label>
-              <label>Enlace de afiliado<input name="enlace_referido" type="url" required placeholder="https://..." /></label>
+              <label>Enlace de afiliado (generado desde tu cuenta)<input name="enlace_referido" type="url" placeholder="https://meli.la/..." /></label>
+              <label>URL de publicación del producto<input name="url_publicacion" type="url" placeholder="https://www.mercadolibre.cl/..." /></label>
               <label>ID publicación Mercado Libre<input name="id_publicacion" /></label>
               <label>Imagen (URL)<input name="imagen" type="url" placeholder="https://..." /></label>
             </div>
@@ -767,7 +768,7 @@
             edit.textContent = 'Editar';
             edit.addEventListener('click', () => {
               editingId = product.id;
-              for (const name of ['lista_id','nombre','marca','precio','enlace_referido','id_publicacion','imagen']) {
+              for (const name of ['lista_id','nombre','marca','precio','enlace_referido','url_publicacion','id_publicacion','imagen']) {
                 form.elements[name].value = product[name] ?? '';
               }
               renderProductFields(product.atributos || {});
@@ -1049,6 +1050,8 @@
             body.precio = Number(body.precio);
             body.activo = form.elements.activo.checked;
             body.es_prueba = form.elements.es_prueba.checked;
+            if (body.activo && !body.enlace_referido) throw new Error('Para activar el producto, pega primero el enlace de afiliado de tu cuenta.');
+            if (!body.url_publicacion && !body.enlace_referido) throw new Error('Indica la URL del producto o el enlace de afiliado.');
             body.atributos = editingId
               ? { ...(currentProducts.find(product => product.id === editingId)?.atributos || {}) }
               : {};
@@ -1517,7 +1520,8 @@
           for (const [key, value] of Object.entries({
             nombre: item.name, marca: item.brand, precio: item.price,
             id_publicacion: item.id_publicacion, imagen: item.image,
-            enlace_referido: item.url_publicacion,
+            url_publicacion: item.url_publicacion,
+            enlace_referido: '',
           })) form.elements[key].value = value ?? '';
           renderProductFields(item.attributes || {});
           form.elements.activo.checked = false;
