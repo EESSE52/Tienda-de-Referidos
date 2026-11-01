@@ -105,6 +105,7 @@ export function normaliseProductPayload(payload = {}, existing = null) {
   const estadoOferta = cleanText(payload.estado_oferta ?? existing?.estado_oferta ?? 'sin_verificar') || 'sin_verificar';
   const imagenPropia = cleanText(payload.imagen_propia ?? existing?.imagen_propia ?? '');
   const imagenCandidata = cleanText(payload.imagen_candidata ?? existing?.imagen_candidata ?? '');
+  const imagenOrigenUrl = cleanText(payload.imagen_origen_url ?? existing?.imagen_origen_url ?? '');
   const imagenFuente = cleanText(payload.imagen_fuente ?? existing?.imagen_fuente ?? '') || 'ml_api';
   const historial = Array.isArray(payload.historial_precios)
     ? payload.historial_precios
@@ -144,6 +145,7 @@ export function normaliseProductPayload(payload = {}, existing = null) {
     imagen: cleanText(payload.imagen ?? existing?.imagen ?? ''),
     imagen_propia: imagenPropia,
     imagen_candidata: imagenCandidata,
+    imagen_origen_url: imagenOrigenUrl,
     imagen_fuente: imagenFuente,
     notas,
     atributos,
@@ -180,6 +182,10 @@ export function validateProductPayload(payload, productos = [], existingId = nul
   }
 
   validateApprovedImage(product.imagen_propia);
+  validateApprovedImage(product.imagen_candidata);
+  if (product.imagen_origen_url && (product.imagen_origen_url.length > 2048 || !/^https:\/\//i.test(product.imagen_origen_url))) {
+    throw new Error('El origen de la imagen candidata debe ser una URL HTTPS válida.');
+  }
   const existing = productos.find(item => item.id === existingId);
   if (product.imagen_propia && (!existing || existing.imagen_propia !== product.imagen_propia)) {
     if (payload.imagen_autorizada_confirmada !== true) {
