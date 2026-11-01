@@ -13,10 +13,12 @@ export function normalizeChileMercadoLibreUrl(value) {
     throw new Error('Solo se permiten publicaciones de Mercado Libre Chile.');
   }
   if (url.username || url.password || url.port) throw new Error('El enlace contiene parámetros de acceso no permitidos.');
-  const match = url.pathname.match(/(?:^|[^a-z0-9])MLC[-_]?([0-9]{6,})(?=[^0-9]|$)/i);
-  if (!match) throw new Error('El enlace debe contener un ID de publicación MLC válido.');
-  // Elimina parámetros de seguimiento para conservar un enlace de referencia limpio.
-  return { url: url.origin + url.pathname, id: 'MLC' + match[1] };
+  const catalog = url.pathname.match(/\/p\/(MLC[0-9]{6,})(?=\/|$)/i);
+  if (catalog) return { url: url.origin + url.pathname, id: catalog[1].toUpperCase(), kind: 'catalog' };
+  const values = [url.pathname, ...['item_id', 'itemId', 'item_id_for', 'item'].map(key => url.searchParams.get(key) || '')];
+  const match = values.map(text => text.match(/(?:^|[^a-z0-9])MLC[-_]?([0-9]{6,})(?=[^0-9]|$)/i)).find(Boolean);
+  if (!match) throw new Error('El destino no contiene un ID de publicación o catálogo MLC. Copia la URL completa de la publicación desde Mercado Libre.');
+  return { url: url.origin + url.pathname, id: 'MLC' + match[1], kind: 'item' };
 }
 
 
