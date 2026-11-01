@@ -19,7 +19,7 @@ const unionMetrics = [...new Set(productos.flatMap((producto) => {
   return lista?.metricas.map((metrica) => metrica.clave) ?? [];
 }))];
 const displayMetric = (metric: any, value: number | null): string => {
-  if (value === null || !Number.isFinite(value)) return '—';
+  if (value === null || !Number.isFinite(value)) return 'No disponible';
   const formula = metric?.plantilla ?? metric?.formula;
   return formula?.tipo === 'precio_dividido_por'
     ? currencyCLP(value)
@@ -87,7 +87,8 @@ const displayMetric = (metric: any, value: number | null): string => {
                 if (!metric) return null;
                 return getMetricResult(producto, metric);
               });
-              const bestValue = getBestMetricValue(def.mejor, values);
+              const compatible = mixedLists.size === 1 && defs.every((item) => JSON.stringify(item.plantilla ?? item.formula) === JSON.stringify(def.plantilla ?? def.formula));
+              const bestValue = compatible ? getBestMetricValue(def.mejor, values) : null;
               return (
                 <tr class="border-t border-slate-200 dark:border-slate-800">
                   <td class="px-4 py-3 font-medium">{def.etiqueta}</td>
