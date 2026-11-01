@@ -6,7 +6,7 @@ vi.mock('./cloudflare-catalog.js', () => ({
 }));
 
 import { readCatalog, saveRecord } from './cloudflare-catalog.js';
-import { createAdminCategory, updateAdminCategory } from './admin-categories.js';
+import { createAdminCategory, updateAdminCategory, addCategoryMetric } from './admin-categories.js';
 
 const existing = {
   id: 'creatina', slug: 'creatina', nombre: 'Creatina',
@@ -53,6 +53,25 @@ describe('administración de categorías D1', () => {
       plantilla_id: 'no-existe',
     })).rejects.toThrow('plantilla');
     expect(saveRecord).not.toHaveBeenCalled();
+  });
+
+  it('añade un campo y fórmula precio dividido por ese campo', async () => {
+    const category = await addCategoryMetric({}, 'creatina', { clave: 'unidades_total', etiqueta: 'Unidades totales', unidad: 'ud' });
+    expect(category.campos).toHaveLength(2);
+    expect(category.metricas).toHaveLength(2);
+    expect(category.metricas[1].formula).toEqual({ tipo: 'precio_dividido_por', campo: 'unidades_total' });
+    expect(existing.campos).toHaveLength(1);
+    expect(existing.metricas).toHaveLength(1);
+  });
+
+  it('rechaza campos duplicados o inválidos', async () => {
+    await expect(addCategoryMetric({}, 'creatina', { clave: 'gramos_total', etiqueta: 'Gramos' })).rejects.toMatchObject({ status: 409 });
+    await expect(addCategoryMetric({}, 'creatina', { clave: 'MAL', etiqueta: 'Mal' })).rejects.toThrow('clave');
+    expect(saveRecord).not.toHaveBeenCalled();
+  });
+
+  it('rechaza agregar un campo a una categoría inexistente', async () => {
+    await expect(addCategoryMetric({}, 'otra', { clave: 'unidades', etiqueta: 'Unidades' })).rejects.toMatchObject({ status: 404 });
   });
 
   it('rechaza slug existente', async () => {
