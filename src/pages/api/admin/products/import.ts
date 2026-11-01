@@ -1,7 +1,7 @@
 import type { APIRoute } from 'astro';
 import { env } from 'cloudflare:workers';
 import { jsonResponse, readCatalog, readJsonBody, requireAdmin, saveRecord } from '../../../../lib/cloudflare-catalog.js';
-import { validateProductPayload } from '../../../../lib/admin-validacion.js';
+import { validateImportBatch } from '../../../../lib/admin-import.js';
 
 function parseNumber(value: unknown): number | null {
   if (value === null || value === undefined || value === '') return null;
@@ -75,7 +75,7 @@ function normalizeProductRow(row: Record<string, unknown>) {
   });
 
   return {
-    id: String(normalizedRow.id ?? (idPublicacion || `${listaId}-${Date.now()}`)),
+    id: String(normalizedRow.id ?? (idPublicacion || `${listaId}-${crypto.randomUUID()}`)),
     lista_id: listaId,
     nombre,
     marca,
@@ -101,33 +101,23 @@ export const POST: APIRoute = async (context) => {
       return jsonResponse({ error: 'No se recibieron filas válidas para importar.' }, 400);
     }
 
+    if (rows.length > 500) {
+      return jsonResponse({ error: 'Máximo 500 productos por importación.' }, 400);
+    }
+
     const catalog = await readCatalog(env);
-    const imported: Record<string, unknown>[] = [];
-    const errors: Array<{ row: number; message: string }> = [];
-
-    rows.forEach((row, index) => {
-      try {
-        const normalized = normalizeProductRow(row as Record<string, unknown>);
-        const validated = validateProductPayload(normalized, catalog.productos, null);
-        imported.push(validated);
-      } catch (error) {
-        errors.push({
-          row: index + 2,
-          message: error instanceof Error ? error.message : 'Fila inválida.',
-        });
-      }
-    });
-
-    for (const record of imported) {
+    const { accepted, errors } = validateImportBatch(rows, catalog, normalizeProductRow);
+    // Guardar únicamente los registros previamente validados.
+    for (const record of accepted) {
       await saveRecord(env, 'catalog_products', record);
     }
 
     return jsonResponse({
-      ok: imported.length > 0,
+      ok: accepted.length > 0,
       total: rows.length,
-      imported: imported.length,
+      imported: accepted.length,
       errors,
-      message: imported.length > 0 ? `Se importaron ${imported.length} productos.` : 'No se importó ningún producto.',
+      message: accepted.length > 0 ? `Se importaron ${accepted.length} productos.` : 'No se importó ningún producto.',
     });
   } catch (error) {
     return jsonResponse({ error: error instanceof Error ? error.message : 'No se pudo importar el archivo.' }, 400);
