@@ -2,6 +2,7 @@
 import Layout from '../layouts/Layout.astro';
 import { env } from 'cloudflare:workers';
 import { currencyCLP, getBestMetricValue, getMetricResult, loadCatalog, productHasOldPrice } from '../lib/catalog';
+import { formatMetricValue } from '../lib/metricas';
 import { AVISO_AFILIADOS_BREVE, getPrecioReferencialLabel } from '../lib/public-site';
 
 const catalog = await loadCatalog(env?.dmonkeysport_db);
@@ -11,12 +12,19 @@ const ids = (Astro.url.searchParams.get('ids') ?? '')
   .filter(Boolean)
   .slice(0, 4);
 
-const productos = ids.map((id) => catalog.getProductoById(id)).filter(Boolean) as Array<any>;
+const productos = ids.map((id) => catalog.getProductoById(id)).filter((producto) => producto?.activo === true) as Array<any>;
 const mixedLists = new Set(productos.map((producto) => producto.lista_id));
 const unionMetrics = [...new Set(productos.flatMap((producto) => {
   const lista = catalog.getListaById(producto.lista_id);
   return lista?.metricas.map((metrica) => metrica.clave) ?? [];
 }))];
+const displayMetric = (metric: any, value: number | null): string => {
+  if (value === null || !Number.isFinite(value)) return '—';
+  const formula = metric?.plantilla ?? metric?.formula;
+  return formula?.tipo === 'precio_dividido_por'
+    ? currencyCLP(value)
+    : formatMetricValue(value, Math.max(0, Math.min(6, Number(metric?.decimales ?? 2))));
+};
 ---
 
 <Layout title="Comparador" description="Comparación de 2 a 4 productos con resaltado del mejor valor por fila.">
@@ -85,7 +93,7 @@ const unionMetrics = [...new Set(productos.flatMap((producto) => {
                   <td class="px-4 py-3 font-medium">{def.etiqueta}</td>
                   {values.map((value, index) => (
                     <td class={`px-4 py-3 ${value !== null && bestValue !== null && value === bestValue ? 'bg-emerald-100 text-emerald-900 dark:bg-emerald-950 dark:text-emerald-200' : ''}`}>
-                      {value === null ? '—' : currencyCLP(value)}
+                      {displayMetric(def, value)}
                     </td>
                   ))}
                 </tr>
