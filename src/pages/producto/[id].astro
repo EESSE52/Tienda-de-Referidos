@@ -22,7 +22,7 @@ const priceIsOld = productHasOldPrice(producto.fecha_precio);
 const displaySeller = producto.vendedor_nombre || producto.vendedor || '—';
 const attributeEntries = Object.entries(producto.atributos ?? {}).filter(([, value]) => value !== undefined && value !== null && value !== '');
 const metricDisplay = (metrica: { etiqueta?: string; decimales?: number; plantilla?: { tipo?: string }; formula?: { tipo?: string } }, value: number | null) => {
-  if (value === null || value === undefined || Number.isNaN(value)) return '—';
+  if (value === null || value === undefined || !Number.isFinite(value)) return 'No disponible';
   const label = String(metrica?.etiqueta || '').toLowerCase();
   const isPriceMetric = label.includes('precio') || label.includes('costo') || label.includes('coste');
   if (isPriceMetric || metrica?.plantilla?.tipo === 'precio_dividido_por' || metrica?.formula?.tipo === 'precio_dividido_por') {
@@ -135,7 +135,7 @@ const metricDisplay = (metrica: { etiqueta?: string; decimales?: number; plantil
             ))}
           </div>
         ) : (
-          <p class="mt-4 text-slate-500 dark:text-slate-400">Todavía no hay atributos cargados para este referid.</p>
+          <p class="mt-4 text-slate-500 dark:text-slate-400">Todavía no hay atributos cargados para este producto.</p>
         )}
       </div>
     </section>
