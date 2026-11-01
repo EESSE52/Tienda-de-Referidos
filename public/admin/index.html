@@ -226,6 +226,18 @@
             </div>
           </form>
           <div id="category-status" class="status" aria-live="polite"></div>
+          <h3>Agregar campo y fórmula de comparación</h3>
+          <p class="subtle">Agrega una magnitud numérica y el cálculo automático Precio ÷ magnitud. No elimina ninguna fórmula existente.</p>
+          <form id="metric-form">
+            <div class="admin-fields">
+              <label>Categoría<select name="category_id" required></select></label>
+              <label>Clave del campo<input name="clave" required pattern="[a-z][a-z0-9_]*" placeholder="unidades_total"/></label>
+              <label>Nombre del campo<input name="etiqueta" required maxlength="90" placeholder="Cantidad de unidades"/></label>
+              <label>Unidad<input name="unidad" maxlength="20" placeholder="ud"/></label>
+            </div>
+            <div class="button-row"><button type="submit">Agregar campo y cálculo</button></div>
+          </form>
+          <div id="metric-status" class="status" aria-live="polite"></div>
         </section>
 
         <section class="card" style="margin-bottom:20px">
@@ -720,6 +732,16 @@
             templateSelect.appendChild(option);
           }
           templateSelect.value = categories.some(category => category.id === selectedTemplate) ? selectedTemplate : '';
+          const metricSelect = document.querySelector('#metric-form select[name="category_id"]');
+          const chosenMetricCategory = metricSelect.value;
+          metricSelect.replaceChildren();
+          for (const category of categories) {
+            const opt = document.createElement('option');
+            opt.value = category.id;
+            opt.textContent = category.nombre;
+            metricSelect.appendChild(opt);
+          }
+          if (categories.some(category => category.id === chosenMetricCategory)) metricSelect.value = chosenMetricCategory;
           const selectedId = select.value;
           select.replaceChildren();
           for (const category of categories) {
@@ -797,6 +819,30 @@
           } catch (error) {
             message(categoryStatus, error.message, true);
           }
+        });
+
+        document.getElementById('metric-form').addEventListener('submit', async event => {
+          event.preventDefault();
+          const metricForm = event.currentTarget;
+          const status = document.getElementById('metric-status');
+          const categoryId = metricForm.elements.category_id.value;
+          const body = {
+            clave: metricForm.elements.clave.value,
+            etiqueta: metricForm.elements.etiqueta.value,
+            unidad: metricForm.elements.unidad.value,
+          };
+          try {
+            await api('/api/admin/categories/' + encodeURIComponent(categoryId), {
+              method: 'POST',
+              headers: {'Content-Type':'application/json'},
+              body: JSON.stringify(body),
+            });
+            metricForm.elements.clave.value = '';
+            metricForm.elements.etiqueta.value = '';
+            metricForm.elements.unidad.value = '';
+            await refreshCategories();
+            message(status, 'Campo y fórmula guardados correctamente.');
+          } catch (error) { message(status, error.message, true); }
         });
 
         // La importación CSV existente usa la misma credencial en memoria.
