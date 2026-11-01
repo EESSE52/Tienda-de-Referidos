@@ -5,6 +5,7 @@ describe('revisión de publicaciones Mercado Libre Chile', () => {
   it('admite artículos chilenos, extrae MLC y elimina rastreadores', () => {
     expect(normalizeChileMercadoLibreUrl('https://articulo.mercadolibre.cl/MLC-1234567890?utm_source=test')).toEqual({
       id: 'MLC1234567890',
+      kind: 'item',
       url: 'https://articulo.mercadolibre.cl/MLC-1234567890',
     });
   });
