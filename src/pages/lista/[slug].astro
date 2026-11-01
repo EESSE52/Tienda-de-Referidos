@@ -3,7 +3,7 @@ import Layout from '../../layouts/Layout.astro';
 import { env } from 'cloudflare:workers';
 import { currencyCLP, getMetricResult, loadCatalog, productHasOldPrice } from '../../lib/catalog';
 import { formatMetricValue } from '../../lib/metricas';
-import { AVISO_AFILIADOS_BREVE, getPrecioReferencialLabel } from '../../lib/public-site';
+import { AVISO_AFILIADOS_BREVE, getPrecioReferencialLabel, getPublicProductImage } from '../../lib/public-site';
 
 const { slug } = Astro.params;
 const catalog = await loadCatalog(env?.dmonkeysport_db);
@@ -96,7 +96,46 @@ const formatMetricValueForDisplay = (metrica: any, valor: number | null) => {
     </div>
   </section>
 
-  <div id="productos" class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
+  <section id="productos" class="grid gap-4 sm:grid-cols-2 lg:hidden" aria-label="Productos en tarjetas">
+    {productos.map((producto) => (
+      <article class="product-card overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900" data-card data-product-id={producto.id}>
+        <a href={`/producto/${producto.id}`} class="block bg-slate-50 dark:bg-slate-800">
+          <img src={getPublicProductImage(producto)} alt={`Imagen referencial: ${producto.nombre}`} loading="lazy" width="480" height="320" class="h-44 w-full object-contain p-3" />
+        </a>
+        <div class="space-y-3 p-4">
+          <div>
+            <p class="text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-300">{producto.marca || 'Marca no indicada'}</p>
+            <a href={`/producto/${producto.id}`} class="mt-1 block font-bold text-slate-900 dark:text-white">{producto.nombre}</a>
+          </div>
+          <div>
+            <p class="text-2xl font-black text-emerald-700 dark:text-emerald-400">{currencyCLP(producto.precio)}</p>
+            <p class="text-xs text-slate-500 dark:text-slate-300">{getPrecioReferencialLabel(producto.fecha_precio)}</p>
+            {productHasOldPrice(producto.fecha_precio) && <p class="text-xs text-amber-700 dark:text-amber-300">Precio posiblemente desactualizado</p>}
+          </div>
+          <dl class="grid grid-cols-2 gap-2 text-xs">
+            {lista.campos.filter(campo => campo.en_tabla && producto.atributos?.[campo.clave] !== undefined && producto.atributos?.[campo.clave] !== null && producto.atributos?.[campo.clave] !== '').slice(0, 4).map(campo => (
+              <div class="rounded-lg bg-slate-50 p-2 dark:bg-slate-800">
+                <dt class="text-slate-500 dark:text-slate-300">{campo.etiqueta}</dt>
+                <dd class="mt-1 font-semibold text-slate-900 dark:text-white">{producto.atributos?.[campo.clave]} {campo.unidad || ''}</dd>
+              </div>
+            ))}
+          </dl>
+          <div class="flex items-center gap-2">
+            <label class="flex flex-1 items-center gap-2 rounded-xl border border-slate-300 px-3 py-3 text-sm font-semibold dark:border-slate-700">
+              <input class="compare-toggle h-5 w-5" type="checkbox" value={producto.id} aria-label={`Comparar ${producto.nombre}`} />
+              Comparar
+            </label>
+            {/^https:\/\//i.test(String(producto.enlace_referido || '')) ? (
+              <a href={producto.enlace_referido} target="_blank" rel="sponsored nofollow noopener" class="rounded-xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white">Ver oferta</a>
+            ) : (
+              <span class="rounded-xl bg-slate-100 px-3 py-3 text-xs text-slate-500 dark:bg-slate-800">Oferta pendiente</span>
+            )}
+          </div>
+        </div>
+      </article>
+    ))}
+  </section>
+  <div class="lg:mt-0 mt-4 hidden overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900 lg:block">
     <div class="overflow-x-auto" role="region" aria-label="Catálogo de productos; desliza para ver métricas y usa la primera columna para seleccionar" tabindex="0">
       <table class="min-w-full table-auto text-left">
         <thead class="bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-100">
@@ -164,6 +203,7 @@ const formatMetricValueForDisplay = (metrica: any, valor: number | null) => {
   <script is:inline>
     const selected = new Set();
     const toggles = document.querySelectorAll('.compare-toggle');
+    const cards = Array.from(document.querySelectorAll('[data-card]'));
     const filters = document.querySelectorAll('[data-filter-field]');
     const sortField = document.getElementById('sort-field');
     const searchInput = document.getElementById('search-input');
@@ -198,6 +238,8 @@ const formatMetricValueForDisplay = (metrica: any, valor: number | null) => {
         return (aValue - bValue) * direction;
       });
       ordered.forEach((row) => tableBody.appendChild(row));
+      const order = new Map(ordered.map((row, index) => [row.dataset.productId, index]));
+      cards.forEach(card => { card.style.order = String(order.get(card.dataset.productId) ?? 999999); });
     };
 
     const applyFilters = () => {
@@ -218,6 +260,7 @@ const formatMetricValueForDisplay = (metrica: any, valor: number | null) => {
           }
         });
         row.style.display = visible ? '' : 'none';
+        cards.filter(card => card.dataset.productId === row.dataset.productId).forEach(card => { card.hidden = !visible; });
         if (visible) visibleCount += 1;
       });
       if (emptyState) {
@@ -234,7 +277,7 @@ const formatMetricValueForDisplay = (metrica: any, valor: number | null) => {
     const syncCompare = () => {
       const ids = [...selected];
       compareTray.hidden = ids.length === 0;
-      document.body.style.paddingBottom = ids.length ? '150px' : '';
+      document.body.style.paddingBottom = ids.length ? '170px' : '';
       compareCount.textContent = ids.length + ' de 4 productos seleccionados';
       compareHint.textContent = ids.length >= 2 ? 'Ya puedes comparar los productos seleccionados.' : 'Selecciona al menos 2 productos.';
       compareLink.href = ids.length >= 2 ? '/comparador?ids=' + ids.map(encodeURIComponent).join(',') : '/comparador';
@@ -242,10 +285,11 @@ const formatMetricValueForDisplay = (metrica: any, valor: number | null) => {
       compareLink.tabIndex = ids.length >= 2 ? 0 : -1;
       compareLink.classList.toggle('pointer-events-none', ids.length < 2);
       compareLink.classList.toggle('opacity-50', ids.length < 2);
+      toggles.forEach(toggle => { toggle.checked = selected.has(toggle.value); });
       compareChips.replaceChildren();
       for (const id of ids) {
         const product = [...toggles].find(toggle => toggle.value === id);
-        const name = product?.closest('[data-row]')?.querySelector('td:nth-child(2) a')?.textContent?.trim() || id;
+        const name = document.querySelector('[data-row][data-product-id="' + CSS.escape(id) + '"] td:nth-child(2) a')?.textContent?.trim() || id;
         const chip = document.createElement('button');
         chip.type = 'button';
         chip.className = 'rounded-full border border-emerald-300 px-3 py-1 text-xs font-medium dark:border-emerald-700';
@@ -253,7 +297,7 @@ const formatMetricValueForDisplay = (metrica: any, valor: number | null) => {
         chip.setAttribute('aria-label', 'Quitar ' + name + ' de la comparación');
         chip.addEventListener('click', () => {
           selected.delete(id);
-          if (product) product.checked = false;
+          toggles.forEach(toggle => { if (toggle.value === id) toggle.checked = false; });
           syncCompare();
         });
         compareChips.appendChild(chip);
