@@ -902,6 +902,7 @@
             const body = Object.fromEntries(data.entries());
             body.precio = Number(body.precio);
             body.activo = form.elements.activo.checked;
+            body.es_prueba = form.elements.es_prueba.checked;
             body.atributos = editingId
               ? { ...(currentProducts.find(product => product.id === editingId)?.atributos || {}) }
               : {};
