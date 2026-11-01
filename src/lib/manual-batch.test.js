@@ -29,6 +29,26 @@ describe('guardado directo de lote manual', () => {
     expect(prepareManualBatch([{ ...row, enlace_referido: 'https://evil.example/MLC2908577036' }], catalog).accepted).toHaveLength(0);
     expect(prepareManualBatch([{ ...row, id_publicacion: 'MLC1234567890' }], catalog).accepted).toHaveLength(0);
   });
+  it('guarda la URL de publicación distinta del enlace corto de afiliado', () => {
+    const result = prepareManualBatch([{
+      ...row,
+      url_publicacion: url,
+      enlace_referido: 'https://meli.la/2ATCSzi',
+    }], catalog);
+    expect(result.errors).toEqual([]);
+    expect(result.accepted[0]).toMatchObject({
+      activo: false,
+      url_publicacion: url,
+      enlace_referido: 'https://meli.la/2ATCSzi',
+    });
+  });
+  it('rechaza enlaces afiliados fuera de Mercado Libre Chile en lote manual', () => {
+    const result = prepareManualBatch([{
+      ...row, url_publicacion: url, enlace_referido: 'https://sitio-falso.example/venta',
+    }], catalog);
+    expect(result.accepted).toHaveLength(0);
+    expect(result.errors[0].message).toContain('afiliado');
+  });
   it('rechaza lotes vacíos o mayores de diez', () => {
     expect(() => prepareManualBatch([], catalog)).toThrow();
     expect(() => prepareManualBatch(Array(11).fill(row), catalog)).toThrow();
