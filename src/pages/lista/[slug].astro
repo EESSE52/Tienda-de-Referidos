@@ -97,11 +97,11 @@ const formatMetricValueForDisplay = (metrica: any, valor: number | null) => {
   </section>
 
   <div id="productos" class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
-    <div class="overflow-x-auto">
+    <div class="overflow-x-auto" role="region" aria-label="Catálogo de productos; desliza para ver métricas y usa la primera columna para seleccionar" tabindex="0">
       <table class="min-w-full table-auto text-left">
         <thead class="bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-100">
           <tr>
-            <th class="px-4 py-3"><span class="sr-only">Seleccionar</span></th>
+            <th scope="col" class="sticky left-0 z-20 bg-slate-100 px-4 py-3 dark:bg-slate-800"><span class="sr-only">Seleccionar</span></th>
             <th class="px-4 py-3 font-semibold">Producto</th>
             <th class="px-4 py-3 font-semibold">Marca</th>
             <th class="px-4 py-3 font-semibold">Precio</th>
@@ -116,7 +116,7 @@ const formatMetricValueForDisplay = (metrica: any, valor: number | null) => {
         <tbody>
           {productos.map((producto) => (
             <tr class="border-t border-slate-200 text-sm dark:border-slate-800" data-row data-product-id={producto.id} data-price-value={producto.precio}>
-              <td class="px-4 py-3">
+              <td class="sticky left-0 z-10 bg-white px-4 py-3 dark:bg-slate-900">
                 <input type="checkbox" class="compare-toggle h-5 w-5 rounded border-slate-400" value={producto.id} data-product-id={producto.id} aria-label={`Comparar ${producto.nombre}`} />
               </td>
               <td class="px-4 py-3">
