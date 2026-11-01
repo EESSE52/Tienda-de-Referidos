@@ -349,7 +349,15 @@
               <label>Enlace de afiliado (generado desde tu cuenta)<input name="enlace_referido" type="url" placeholder="https://meli.la/..." /></label>
               <label>URL de publicación del producto<input name="url_publicacion" type="url" placeholder="https://www.mercadolibre.cl/..." /></label>
               <label>ID publicación Mercado Libre<input name="id_publicacion" /></label>
-              <label>Imagen (URL)<input name="imagen" type="url" placeholder="https://..." /></label>
+              <label>Imagen candidata (solo administración)<input name="imagen" type="url" placeholder="https://..." /></label>
+              <label>Imagen autorizada para publicar (URL HTTPS)<input name="imagen_propia" type="url" placeholder="https://tusitio.cl/foto-producto.webp" /></label>
+            </div>
+            <div class="upload-box">
+              <label><input name="imagen_autorizada_confirmada" type="checkbox" /> Confirmo que soy titular de la imagen o tengo permiso para publicarla en D’MonkeySport.</label>
+              <p class="subtle">La foto candidata no se muestra públicamente. No uses imágenes de Mercado Libre sin permiso. Este formulario acepta URL HTTPS; no sube archivos.</p>
+              <div id="product-image-preview" class="preview" aria-live="polite">
+                <p class="subtle">Sin imagen autorizada seleccionada. La tienda utilizará una imagen genérica.</p>
+              </div>
             </div>
             <h3>Atributos para comparar</h3>
             <p class="subtle">Los campos dependen de la categoría elegida. Los valores numéricos permiten calcular el precio por unidad.</p>
@@ -734,9 +742,42 @@
           }
         }
 
+        const imagePreview = document.getElementById('product-image-preview');
+        function showAuthorizedImagePreview() {
+          imagePreview.replaceChildren();
+          const url = form.elements.imagen_propia.value.trim();
+          if (!url) {
+            const p = document.createElement('p');
+            p.textContent = 'Sin imagen autorizada. Se mostrará una imagen genérica.';
+            imagePreview.appendChild(p);
+            return;
+          }
+          try {
+            const parsed = new URL(url);
+            if (parsed.protocol !== 'https:' || parsed.username || parsed.password || parsed.port) throw new Error();
+            const img = document.createElement('img');
+            img.src = url;
+            img.alt = 'Vista previa de la imagen autorizada';
+            img.loading = 'lazy';
+            img.style.cssText = 'display:block;max-width:240px;max-height:180px;object-fit:contain;margin-top:10px';
+            img.addEventListener('error', () => {
+              const p = document.createElement('p');
+              p.textContent = 'No se pudo mostrar la imagen. Revisa la URL y los permisos del servidor.';
+              imagePreview.replaceChildren(p);
+            });
+            imagePreview.appendChild(img);
+          } catch {
+            const p = document.createElement('p');
+            p.textContent = 'Ingresa una URL HTTPS válida.';
+            imagePreview.appendChild(p);
+          }
+        }
+        form.elements.imagen_propia.addEventListener('change', showAuthorizedImagePreview);
+
         function resetForm() {
           editingId = null;
           form.reset();
+          showAuthorizedImagePreview();
           renderProductFields();
           document.getElementById('product-form-title').textContent = 'Crear producto';
         }
@@ -784,9 +825,11 @@
             edit.textContent = 'Editar';
             edit.addEventListener('click', () => {
               editingId = product.id;
-              for (const name of ['lista_id','nombre','marca','precio','enlace_referido','url_publicacion','id_publicacion','imagen']) {
+              for (const name of ['lista_id','nombre','marca','precio','enlace_referido','url_publicacion','id_publicacion','imagen','imagen_propia']) {
                 form.elements[name].value = product[name] ?? '';
               }
+              form.elements.imagen_autorizada_confirmada.checked = false;
+              showAuthorizedImagePreview();
               renderProductFields(product.atributos || {});
               form.elements.activo.checked = !!product.activo;
               form.elements.es_prueba.checked = product.es_prueba === true;
@@ -1066,6 +1109,7 @@
             body.precio = Number(body.precio);
             body.activo = form.elements.activo.checked;
             body.es_prueba = form.elements.es_prueba.checked;
+            body.imagen_autorizada_confirmada = form.elements.imagen_autorizada_confirmada.checked;
             if (body.activo && !body.enlace_referido) throw new Error('Para activar el producto, pega primero el enlace de afiliado de tu cuenta.');
             if (!body.url_publicacion && !body.enlace_referido) throw new Error('Indica la URL del producto o el enlace de afiliado.');
             body.atributos = editingId
