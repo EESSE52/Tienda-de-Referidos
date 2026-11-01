@@ -215,6 +215,7 @@
           <form id="category-form">
             <div class="admin-fields">
               <label>Identificador (slug)<input name="slug" required pattern="[a-z0-9]+(-[a-z0-9]+)*" placeholder="ejemplo-accesorios"/></label>
+              <label>Usar una categoría como plantilla<select name="plantilla_id"><option value="">Sin plantilla (comparador básico)</option></select></label>
               <label>Nombre<input name="nombre" required maxlength="150"/></label>
               <label>Descripción<input name="descripcion" maxlength="2000"/></label>
               <label><input type="checkbox" name="activa" checked/> Categoría activa</label>
@@ -698,12 +699,27 @@
           editingCategoryId = null;
           categoryForm.reset();
           categoryForm.elements.slug.disabled = false;
+          categoryForm.elements.plantilla_id.disabled = false;
           document.getElementById('category-form-title').textContent = 'Crear categoría';
         }
 
         function renderCategories() {
           categoryList.replaceChildren();
           const select = form.elements.lista_id;
+          const templateSelect = categoryForm.elements.plantilla_id;
+          const selectedTemplate = templateSelect.value;
+          templateSelect.replaceChildren();
+          const emptyOption = document.createElement('option');
+          emptyOption.value = '';
+          emptyOption.textContent = 'Sin plantilla (comparador básico)';
+          templateSelect.appendChild(emptyOption);
+          for (const category of categories) {
+            const option = document.createElement('option');
+            option.value = category.id;
+            option.textContent = category.nombre + ' (copiar métricas y filtros)';
+            templateSelect.appendChild(option);
+          }
+          templateSelect.value = categories.some(category => category.id === selectedTemplate) ? selectedTemplate : '';
           const selectedId = select.value;
           select.replaceChildren();
           for (const category of categories) {
@@ -735,6 +751,8 @@
               editingCategoryId = category.id;
               categoryForm.elements.slug.value = category.slug;
               categoryForm.elements.slug.disabled = true;
+              categoryForm.elements.plantilla_id.value = '';
+              categoryForm.elements.plantilla_id.disabled = true;
               categoryForm.elements.nombre.value = category.nombre;
               categoryForm.elements.descripcion.value = category.descripcion || '';
               categoryForm.elements.activa.checked = category.activa !== false;
@@ -762,6 +780,7 @@
           event.preventDefault();
           const body = {
             slug: categoryForm.elements.slug.value,
+            plantilla_id: editingCategoryId ? '' : categoryForm.elements.plantilla_id.value,
             nombre: categoryForm.elements.nombre.value,
             descripcion: categoryForm.elements.descripcion.value,
             activa: categoryForm.elements.activa.checked,
