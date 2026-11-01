@@ -111,7 +111,7 @@ export async function fetchMercadoLibreItem(itemId, fetchImplementation = fetch)
     }
 
     if (errorPayload.code === 'PA_UNAUTHORIZED_RESULT_FROM_POLICIES') {
-      throw new Error('Este entorno bloquea las consultas a la API de Mercado Libre. Usa una red o configuración que permita api.mercadolibre.com.');
+      throw new Error('Mercado Libre rechazó esta consulta a su API (restricción de acceso). No se puede obtener un precio automático en este momento; usa el ingreso manual supervisado del administrador o configura acceso oficial autorizado.');
     }
 
     throw new Error(`Mercado Libre no pudo entregar la publicación (${response.status}).`);
