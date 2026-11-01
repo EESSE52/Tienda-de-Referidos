@@ -118,7 +118,7 @@ export async function fetchMercadoLibreItem(itemId, fetchImplementation = fetch,
       throw new Error('Mercado Libre respondió 429: límite de solicitudes. Reduce las consultas y vuelve a intentar más tarde.');
     }
     if (response.status === 403 && !accessToken) {
-      throw new Error('Mercado Libre respondió 403 sin token API. Configura ML_ACCESS_TOKEN con una autorización oficial y los permisos adecuados para acceder a publicaciones.');
+      throw new Error('Mercado Libre rechazó esta consulta a su API (403 sin token API). Configura ML_ACCESS_TOKEN con una autorización oficial y los permisos adecuados para acceder a publicaciones.');
     }
     if (response.status === 403 && accessToken) {
       throw new Error('Mercado Libre respondió 403 con token API. Revisa los permisos funcionales de la aplicación y la autorización del usuario; Mercado Libre podría restringir este recurso.');
