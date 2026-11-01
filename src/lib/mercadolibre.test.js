@@ -100,7 +100,7 @@ describe('Mercado Libre item lookup', () => {
         text: async () => '<html><head><meta property="og:title" content="Producto sin precio" /></head></html>',
       })
       .mockResolvedValueOnce({ ok: false, status: 404 });
-    await expect(fetchMercadoLibreItem('MLC1234567890', request)).rejects.toThrow('bloquea');
+    await expect(fetchMercadoLibreItem('MLC1234567890', request)).rejects.toThrow('Mercado Libre rechazó esta consulta a su API');
   });
 
   it('explains when the environment blocks Mercado Libre access', async () => {
