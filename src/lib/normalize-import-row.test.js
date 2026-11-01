@@ -50,6 +50,20 @@ describe('CSV con campos personalizables', () => {
     expect(result.accepted[0].es_prueba).toBe(true);
     expect(result.errors).toMatchObject([{ row: 3 }]);
   });
+  it('mantiene separados los enlaces de publicación y afiliado al importar', () => {
+    const item = normalizeImportRow({
+      ...valid, url_publicacion: 'https://www.mercadolibre.cl/creatina/up/MLCU3220313328#wid=MLC2908577036',
+      enlace_referido: 'https://meli.la/2ATCSzi',
+    }, category);
+    expect(item.enlace_referido).toBe('https://meli.la/2ATCSzi');
+    expect(item.url_publicacion).toContain('MLCU3220313328');
+  });
+  it('no crea un enlace de referido falso si su columna está explícitamente vacía', () => {
+    const item = normalizeImportRow({
+      ...valid, enlace_referido: '', url_publicacion: 'https://www.mercadolibre.cl/creatina/up/MLCU3220313328#wid=MLC2908577036',
+    }, category);
+    expect(item.enlace_referido).toBe('');
+  });
   it('no trata columnas ajenas como atributos de comparación', () => {
     const result = normalizeImportRow({ ...valid, secreto: 'no guardar' }, category);
     expect(result.atributos).not.toHaveProperty('secreto');
