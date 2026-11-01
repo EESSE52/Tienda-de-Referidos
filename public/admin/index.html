@@ -272,6 +272,12 @@
             <label>URL de imagen (opcional)<input id="ml-manual-image" type="url" /></label>
           </div>
           <div class="button-row"><button type="button" id="ml-manual-add" class="secondary">Agregar al CSV sin consultar API</button><button type="button" id="ml-manual-download" disabled>Descargar CSV con los productos preparados</button></div>
+          <div class="button-row">
+            <button type="button" id="ml-batch-preview-d1" class="secondary" disabled>Revisar lote antes de guardar en D1</button>
+            <button type="button" id="ml-batch-save-d1" disabled>Confirmar y guardar en D1</button>
+          </div>
+          <div id="ml-batch-preview-status" class="status" aria-live="polite"></div>
+          <div id="ml-batch-preview-table" class="preview" aria-live="polite"></div>
           <div id="ml-manual-status" class="status" aria-live="polite"></div>
           <div id="ml-bulk-status" class="status" aria-live="polite"></div>
           <div id="ml-bulk-results" class="preview" aria-live="polite"></div>
