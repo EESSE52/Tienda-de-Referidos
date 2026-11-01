@@ -39,3 +39,36 @@ export function buildMercadoLibreReviewCsv(category, items) {
   });
   return '\uFEFF' + columns.map(csvCell).join(',') + '\r\n' + rows.join('\r\n') + '\r\n';
 }
+
+/** Producto revisado manualmente cuando la API no está disponible. */
+export function createManualMercadoLibreCandidate(input) {
+  let url;
+  try { url = new URL(String(input?.url || '').trim()); } catch { throw new Error('Introduce la URL completa del producto.'); }
+  if (url.protocol !== 'https:' || url.username || url.password || url.port
+      || !['mercadolibre.cl', 'www.mercadolibre.cl', 'articulo.mercadolibre.cl'].includes(url.hostname.toLowerCase())) {
+    throw new Error('Solo puedes usar una publicación HTTPS de Mercado Libre Chile.');
+  }
+  const userProduct = url.pathname.match(/\/up\/MLCU[0-9]{6,}(?:\/|$)/i);
+  const wid = new URLSearchParams(url.hash.slice(1)).get('wid') || url.searchParams.get('wid') || '';
+  const inPath = url.pathname.match(/(?:^|[^a-z0-9])MLC[-_]?([0-9]{6,})(?=[^0-9]|$)/i);
+  const id = userProduct
+    ? (/^MLC[0-9]{6,}$/i.test(wid) ? wid.toUpperCase() : '')
+    : (inPath ? 'MLC' + inPath[1] : '');
+  if (!id) throw new Error('Necesitas un enlace con publicación MLC o una ficha MLCU con wid=MLC.');
+  const name = String(input?.name || '').trim();
+  const brand = String(input?.brand || '').trim();
+  const price = Number(input?.price);
+  if (!name || name.length > 200 || !Number.isSafeInteger(price) || price <= 0) {
+    throw new Error('Introduce un nombre y un precio CLP entero positivo, revisados en Mercado Libre.');
+  }
+  const image = String(input?.image || '').trim();
+  if (image) {
+    let imageUrl;
+    try { imageUrl = new URL(image); } catch { throw new Error('La URL de imagen no es válida.'); }
+    if (imageUrl.protocol !== 'https:') throw new Error('La imagen debe usar HTTPS.');
+  }
+  return {
+    name, brand, price, image, id_publicacion: id, url_publicacion: url.href,
+    attributes: {}, manual_price: true, afiliado_verificado: false,
+  };
+}
