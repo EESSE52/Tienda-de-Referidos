@@ -26,6 +26,6 @@ export async function fetchChileCatalogOffer(source, fetchImplementation = fetch
   if (!/^MLC[0-9]{6,}$/.test(String(candidate || ''))) {
     throw new Error('Esta ficha de catálogo no entrega una publicación de vendedor con precio verificable. Abre la oferta específica del vendedor y copia su enlace.');
   }
-  const item = await fetchItem(candidate, fetchImplementation, accessToken);
+  const item = accessToken ? await fetchItem(candidate, fetchImplementation, accessToken) : await fetchItem(candidate);
   return { ...item, id_publicacion: candidate, url_publicacion: source.url, id_catalogo: source.id, afiliado_verificado: false };
 }
