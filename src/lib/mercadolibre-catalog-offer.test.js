@@ -34,6 +34,6 @@ describe('ofertas de fichas de catálogo', () => {
   });
   it('informa cuando API requiere autorización y nunca consulta otro host', async () => {
     await expect(fetchChileCatalogOffer(source,
-      vi.fn().mockResolvedValue({ ok: false, status: 403 }))).rejects.toThrow('autorización');
+      vi.fn().mockResolvedValue({ ok: false, status: 403 }))).rejects.toThrow('token autorizado');
   });
 });
