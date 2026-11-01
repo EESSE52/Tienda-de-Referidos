@@ -18,7 +18,8 @@ export const GET: APIRoute = async (context) => {
 
   try {
     const source = await resolveChileMercadoLibreUrl(productUrl);
-    const accessToken = typeof env?.ML_ACCESS_TOKEN === 'string' ? env.ML_ACCESS_TOKEN.trim() : '';
+    const configuredToken = (env as unknown as Record<string, unknown>)?.ML_ACCESS_TOKEN;
+    const accessToken = typeof configuredToken === 'string' ? configuredToken.trim() : '';
     if (source.kind === 'catalog') {
       return jsonResponse(await fetchChileCatalogOffer(source, fetch, fetchMercadoLibreItem, accessToken));
     }
