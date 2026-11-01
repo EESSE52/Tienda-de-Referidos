@@ -15,7 +15,7 @@ export const POST: APIRoute = async ({ request }) => {
     }
     const catalog = await readCatalog(env);
     const { accepted, errors, total } = prepareManualBatch(body.rows, catalog);
-    if (errors.length) return jsonResponse({ ok: false, total, imported: 0, errors }, 422);
+    if (errors.length) return jsonResponse({ ok: false, total, imported: 0, errors, error: errors.map(item => 'Fila ' + item.row + ': ' + item.message).join(' | ') }, 422);
     if (body.action === 'preview') {
       return jsonResponse({ ok: true, total, imported: 0, preview: accepted.map(({ nombre, id_publicacion, precio, lista_id, activo }) => ({ nombre, id_publicacion, precio, lista_id, activo })) });
     }
