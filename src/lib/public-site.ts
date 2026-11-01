@@ -11,13 +11,21 @@ export function getGenericImageByListId(listaId: string): string {
   return '/img/generica-producto.svg';
 }
 
+export function isApprovedPublicImageUrl(value?: string | null): boolean {
+  if (!value || value.length > 2048) return false;
+  try {
+    const url = new URL(value);
+    return url.protocol === 'https:' && !!url.hostname && !url.username && !url.password && !url.port;
+  } catch { return false; }
+}
+
 export function getPublicProductImage(producto: Producto): string {
-  if (producto.imagen_propia) {
-    return producto.imagen_propia;
+  if (isApprovedPublicImageUrl(producto.imagen_propia)) {
+    return producto.imagen_propia!;
   }
 
-  if (MOSTRAR_IMAGENES_ML && producto.imagen_candidata) {
-    return producto.imagen_candidata;
+  if (MOSTRAR_IMAGENES_ML && isApprovedPublicImageUrl(producto.imagen_candidata)) {
+    return producto.imagen_candidata!;
   }
 
   return getGenericImageByListId(producto.lista_id);
