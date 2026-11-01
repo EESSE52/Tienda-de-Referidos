@@ -47,7 +47,8 @@ export function normalizeImportRow(row, category) {
   // Se validan los campos reales de la categoría; no se mezclan columnas de otra categoría.
   const atributos = normalizeCategoryAttributes({ campos: names }, incoming, {}, true);
   const idPublicacion = String(values.id_publicacion ?? '').trim();
-  const url = String(values.enlace_referido ?? values.url_publicacion ?? values.link ?? '').trim();
+  const affiliateUrl = String(values.enlace_referido ?? values.link ?? '').trim();
+  const publicationUrl = String(values.url_publicacion ?? affiliateUrl).trim();
   const id = String(values.id || idPublicacion || listaId + '-' + crypto.randomUUID()).trim();
   const unknown = Object.keys(values).filter(key => !RESERVED.has(key) && !fieldKeys.has(key) && !['gramos'].includes(key) && values[key] !== '');
   // No bloquear otras columnas exportadas, pero nunca copiarlas a atributos.
@@ -57,7 +58,7 @@ export function normalizeImportRow(row, category) {
     nombre: String(values.nombre ?? '').trim(),
     marca: String(values.marca ?? '').trim(),
     precio: priceNumber(values.precio ?? values.precio_clp),
-    id_publicacion: idPublicacion, enlace_referido: url, url_publicacion: url,
+    id_publicacion: idPublicacion, enlace_referido: affiliateUrl || publicationUrl, url_publicacion: publicationUrl,
     imagen: String(values.imagen ?? '').trim(),
     activo: bool(values.activo, false),
     es_prueba: bool(values.es_prueba, false),
