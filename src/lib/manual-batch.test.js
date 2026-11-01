@@ -49,6 +49,31 @@ describe('guardado directo de lote manual', () => {
     expect(result.accepted).toHaveLength(0);
     expect(result.errors[0].message).toContain('afiliado');
   });
+  it('conserva atributos específicos declarados para una categoría', () => {
+    const tailoredCatalog = {
+      listas: [{ id: 'creatina', slug: 'creatina', campos: [
+        { clave: 'cantidad_unidades', etiqueta: 'Cantidad de unidades', tipo: 'numero', requerido: true },
+        { clave: 'formato', etiqueta: 'Formato', tipo: 'seleccion', opciones: ['Polvo', 'Gomitas'] },
+      ] }],
+      productos: [],
+    };
+    const result = prepareManualBatch([{ ...row, atributos: {
+      cantidad_unidades: 60, formato: 'Gomitas',
+    } }], tailoredCatalog);
+    expect(result.errors).toHaveLength(0);
+    expect(result.accepted[0].atributos).toMatchObject({ cantidad_unidades: 60, formato: 'Gomitas' });
+  });
+  it('rechaza valores ausentes en atributos obligatorios sin inventarlos', () => {
+    const tailoredCatalog = {
+      listas: [{ id: 'creatina', slug: 'creatina', campos: [
+        { clave: 'gramos_total', etiqueta: 'Cantidad total', tipo: 'numero', requerido: true },
+      ] }],
+      productos: [],
+    };
+    const result = prepareManualBatch([{ ...row, atributos: { cantidad_unidades: 60 } }], tailoredCatalog);
+    expect(result.accepted).toHaveLength(0);
+    expect(result.errors[0].message).toContain('Cantidad total');
+  });
   it('rechaza lotes vacíos o mayores de diez', () => {
     expect(() => prepareManualBatch([], catalog)).toThrow();
     expect(() => prepareManualBatch(Array(11).fill(row), catalog)).toThrow();
