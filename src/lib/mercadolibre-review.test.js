@@ -9,6 +9,20 @@ describe('revisión de publicaciones Mercado Libre Chile', () => {
       url: 'https://articulo.mercadolibre.cl/MLC-1234567890',
     });
   });
+  it('extrae la publicación wid de una ficha MLCU y conserva el enlace de origen', () => {
+    const url = 'https://www.mercadolibre.cl/creatina-gomitas-x-60-und-perfect-bear/up/MLCU3220313328?pdp_filters=deal%3AMLC1422857-1&extra_comm=false&brand_comm=false#polycard_client=affiliates&wid=MLC2908577036&sid=affiliates';
+    expect(normalizeChileMercadoLibreUrl(url)).toEqual({
+      id: 'MLC2908577036', kind: 'item', url,
+    });
+  });
+  it('no toma MLCU por identificador de publicación cuando falta wid', () => {
+    expect(() => normalizeChileMercadoLibreUrl('https://www.mercadolibre.cl/creatina/up/MLCU3220313328'))
+      .toThrow('wid');
+  });
+  it('rechaza wid ajeno a MLC o manipulado', () => {
+    expect(() => normalizeChileMercadoLibreUrl('https://www.mercadolibre.cl/creatina/up/MLCU3220313328#wid=MLA123456789'))
+      .toThrow('wid');
+  });
   it('rechaza dominios imitadores, países ajenos y HTTP', () => {
     for (const url of [
       'https://www.mercadolibre.cl.ejemplo.com/MLC1234567890',
