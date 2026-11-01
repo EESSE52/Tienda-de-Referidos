@@ -1135,6 +1135,48 @@
           document.getElementById('category-form-title').textContent = 'Crear categoría';
         }
 
+        const categoryFieldForm = document.getElementById('category-field-form');
+        function renderCategoryFieldOptions() {
+          const cat = categories.find(item => item.id === categoryFieldForm.elements.category_id.value);
+          const select = categoryFieldForm.elements.clave;
+          const previous = select.value;
+          select.replaceChildren();
+          for (const field of cat?.campos || []) {
+            const option = document.createElement('option');
+            option.value = field.clave;
+            option.textContent = (field.etiqueta || field.clave) + (field.unidad ? ' (' + field.unidad + ')' : '');
+            select.appendChild(option);
+          }
+          if (cat?.campos?.some(item => item.clave === previous)) select.value = previous;
+          renderCategoryFieldValues();
+        }
+        function renderCategoryFieldValues() {
+          const cat = categories.find(item => item.id === categoryFieldForm.elements.category_id.value);
+          const field = cat?.campos?.find(item => item.clave === categoryFieldForm.elements.clave.value);
+          categoryFieldForm.elements.requerido.checked = field?.requerido === true;
+          categoryFieldForm.elements.opciones.value = field?.tipo === 'seleccion' ? (field.opciones || []).join('\n') : '';
+          categoryFieldForm.elements.opciones.disabled = field?.tipo !== 'seleccion';
+        }
+        categoryFieldForm.elements.category_id.addEventListener('change', renderCategoryFieldOptions);
+        categoryFieldForm.elements.clave.addEventListener('change', renderCategoryFieldValues);
+        categoryFieldForm.addEventListener('submit', async event => {
+          event.preventDefault();
+          const categoryId = categoryFieldForm.elements.category_id.value;
+          const cat = categories.find(item => item.id === categoryId);
+          const field = cat?.campos?.find(item => item.clave === categoryFieldForm.elements.clave.value);
+          const status = document.getElementById('category-field-status');
+          if (!field) return message(status, 'Selecciona un campo para modificar.', true);
+          const body = { clave: field.clave, requerido: categoryFieldForm.elements.requerido.checked };
+          if (field.tipo === 'seleccion') body.opciones = categoryFieldForm.elements.opciones.value.split(/\r?\n/).map(text => text.trim()).filter(Boolean);
+          try {
+            await api('/api/admin/categories/' + encodeURIComponent(categoryId), {
+              method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+            });
+            await refreshCategories();
+            message(status, 'Campo actualizado en la categoría ' + cat.nombre + '. No se modificaron las otras categorías.');
+          } catch (error) { message(status, error.message, true); }
+        });
+
         function renderCategories() {
           categoryList.replaceChildren();
           const select = form.elements.lista_id;
