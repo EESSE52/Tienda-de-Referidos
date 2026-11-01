@@ -260,7 +260,7 @@ const formatMetricValueForDisplay = (metrica: any, valor: number | null) => {
           }
         });
         row.style.display = visible ? '' : 'none';
-        cards.filter(card => card.dataset.productId === row.dataset.productId).forEach(card => { card.hidden = !visible; });
+        cards.filter(card => card.dataset.productId === row.dataset.productId).forEach(card => { card.hidden = !visible; card.classList.toggle('hidden', !visible); });
         if (visible) visibleCount += 1;
       });
       if (emptyState) {
