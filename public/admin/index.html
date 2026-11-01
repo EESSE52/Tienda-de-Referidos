@@ -1268,10 +1268,13 @@
         const bulkResults = document.getElementById('ml-bulk-results');
         const bulkSearchButton = document.getElementById('ml-bulk-search');
         const bulkExportButton = document.getElementById('ml-bulk-export');
+        const manualDownloadButton = document.getElementById('ml-manual-download');
+        const manualStatus = document.getElementById('ml-manual-status');
         const resetBulk = () => {
           bulkCatalogItems = [];
           bulkCategoryId = '';
           bulkExportButton.disabled = true;
+          manualDownloadButton.disabled = true;
           bulkResults.replaceChildren();
         };
         bulkUrls.addEventListener('input', resetBulk);
@@ -1312,6 +1315,7 @@
               }
             }
             bulkExportButton.disabled = bulkCatalogItems.length === 0;
+            manualDownloadButton.disabled = bulkCatalogItems.length === 0;
             message(bulkStatus, bulkCatalogItems.length + ' publicaciones preparadas. '
               + failed + ' rechazadas. Revisa nombres, tamaños, precios y enlaces de afiliados antes de importar.');
           } finally {
@@ -1346,11 +1350,14 @@
               + candidate.id_publicacion + ' · CLP ' + candidate.price.toLocaleString('es-CL');
             bulkResults.appendChild(item);
             bulkExportButton.disabled = false;
-            message(bulkStatus, bulkCatalogItems.length + ' productos preparados para CSV. Revisa los datos antes de importarlos.');
+            manualDownloadButton.disabled = false;
+            message(manualStatus, 'Producto agregado correctamente. Total: ' + bulkCatalogItems.length + '. Pulsa «Descargar CSV con los productos preparados».');
+            message(bulkStatus, bulkCatalogItems.length + ' productos preparados para CSV.');
           } catch (error) {
-            message(bulkStatus, error.message, true);
+            message(manualStatus, 'No se pudo agregar: ' + error.message, true);
           }
         });
+        manualDownloadButton.addEventListener('click', () => bulkExportButton.click());
         bulkExportButton.addEventListener('click', async () => {
           const chosen = categories.find(category => category.id === bulkCategoryId);
           if (!chosen || !bulkCatalogItems.length) return message(bulkStatus, 'Consulta los enlaces antes de exportar.', true);
