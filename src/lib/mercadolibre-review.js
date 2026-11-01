@@ -13,6 +13,17 @@ export function normalizeChileMercadoLibreUrl(value) {
     throw new Error('Solo se permiten publicaciones de Mercado Libre Chile.');
   }
   if (url.username || url.password || url.port) throw new Error('El enlace contiene parámetros de acceso no permitidos.');
+  // Las fichas /up/MLCU suelen incluir el ID de la oferta en #wid=MLC...
+  // El fragmento solo se usa como dato: nunca es una dirección a consultar.
+  const userProduct = url.pathname.match(/\/up\/(MLCU[0-9]{6,})(?=\/|$)/i);
+  if (userProduct) {
+    const fragment = new URLSearchParams(url.hash.slice(1));
+    const offered = fragment.get('wid') || url.searchParams.get('wid') || '';
+    if (/^MLC[0-9]{6,}$/i.test(offered)) {
+      return { url: url.href, id: offered.toUpperCase(), kind: 'item' };
+    }
+    throw new Error('La ficha User Product (' + userProduct[1].toUpperCase() + ') no incluye una oferta de vendedor wid=MLC válida. Abre una oferta concreta para copiar su enlace.');
+  }
   const catalog = url.pathname.match(/\/p\/(MLC[0-9]{6,})(?=\/|$)/i);
   if (catalog) return { url: url.origin + url.pathname, id: catalog[1].toUpperCase(), kind: 'catalog' };
   const values = [url.pathname, ...['item_id', 'itemId', 'item_id_for', 'item'].map(key => url.searchParams.get(key) || '')];
