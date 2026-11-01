@@ -30,7 +30,7 @@ export function normalizeCategoryAttributes(category, incoming = {}, previous = 
       output[key] = String(value).trim().slice(0, 500);
     }
   }
-  for (const field of category.campos) {
+  for (const field of category.campos ?? []) {
     if (enforceRequired && field.requerido && (output[field.clave] === undefined || output[field.clave] === '')) {
       throw new Error('Falta el campo obligatorio: ' + field.etiqueta);
     }
