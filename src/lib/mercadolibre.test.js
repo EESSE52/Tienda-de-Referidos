@@ -81,6 +81,28 @@ describe('Mercado Libre item lookup', () => {
       });
   });
 
+  it('rechaza respuestas API sin precio o con moneda distinta de CLP', async () => {
+    for (const item of [
+      { title: 'Sin precio', price: null },
+      { title: 'Precio cero', price: 0 },
+      { title: 'Moneda extranjera', price: 19990, currency_id: 'ARS' },
+    ]) {
+      const request = vi.fn().mockResolvedValue({ ok: true, json: async () => item });
+      await expect(fetchMercadoLibreItem('MLC1234567890', request)).rejects.toThrow('precio');
+    }
+  });
+
+  it('no acepta precio vacío de páginas de respaldo', async () => {
+    const request = vi.fn()
+      .mockResolvedValueOnce({ ok: false, status: 403, json: async () => ({ code: 'PA_UNAUTHORIZED_RESULT_FROM_POLICIES' }) })
+      .mockResolvedValueOnce({
+        ok: true,
+        text: async () => '<html><head><meta property="og:title" content="Producto sin precio" /></head></html>',
+      })
+      .mockResolvedValueOnce({ ok: false, status: 404 });
+    await expect(fetchMercadoLibreItem('MLC1234567890', request)).rejects.toThrow('bloquea');
+  });
+
   it('explains when the environment blocks Mercado Libre access', async () => {
     const fetchImplementation = vi.fn().mockResolvedValue({
       ok: false,
