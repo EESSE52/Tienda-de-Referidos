@@ -16,6 +16,7 @@
     "python:extract": "python3 python-extractor/cli.py",
     "python:app": "python3 python-extractor/main.py",
     "worker:dev": "npm run build && wrangler dev --config dist/server/wrangler.json --port 8787 --persist-to .wrangler/state",
+    "oauth:prepare-preview": "npm run build && node scripts/prepare-oauth-preview.mjs",
     "worker:deploy": "npm run build && wrangler deploy --config dist/server/wrangler.json",
     "prebuild": "node scripts/preserve-dev-vars.mjs backup",
     "postbuild": "node scripts/preserve-dev-vars.mjs restore"
