@@ -254,6 +254,15 @@
         </section>
 
         <section class="card" style="margin-bottom:20px">
+          <h2>Conexión OAuth de Mercado Libre (solo pruebas)</h2>
+          <p class="subtle">Esta función está desactivada por defecto y requiere un Worker HTTPS de pruebas con configuración segura. No funciona en localhost ni en dmonkeysport.com. Solo comprueba el retorno: todavía no guarda tokens ni renueva accesos.</p>
+          <div class="button-row">
+            <button id="ml-oauth-test-start" type="button" class="secondary">Iniciar comprobación OAuth en pruebas</button>
+          </div>
+          <div id="ml-oauth-test-status" class="status" aria-live="polite"></div>
+        </section>
+
+        <section class="card" style="margin-bottom:20px">
           <h2>Consultar publicación de Mercado Libre Chile</h2>
           <p class="subtle">Pega una URL de publicación MLC o un enlace corto meli.la. Consulta una vista previa, sin guardar ni publicar nada. Un enlace de publicación no necesariamente genera comisiones.</p>
           <div class="admin-fields">
@@ -702,6 +711,20 @@
           row.appendChild(td);
           return td;
         }
+
+        document.getElementById('ml-oauth-test-start').addEventListener('click', async () => {
+          const status = document.getElementById('ml-oauth-test-status');
+          try {
+            const result = await api('/api/admin/mercadolibre/oauth/start', { method: 'POST' });
+            if (!result.authorization_url) throw new Error('Mercado Libre no devolvió una URL de autorización.');
+            const link = new URL(result.authorization_url);
+            if (link.origin !== 'https://auth.mercadolibre.cl') throw new Error('El destino de autorización no es válido.');
+            message(status, 'Abriendo autorización oficial de Mercado Libre. No compartas códigos ni tokens.');
+            window.location.assign(link.href);
+          } catch (error) {
+            message(status, error.message, true);
+          }
+        });
 
         const dynamicFields = document.getElementById('dynamic-product-fields');
 
