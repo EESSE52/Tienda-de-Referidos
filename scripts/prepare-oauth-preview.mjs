@@ -24,12 +24,21 @@ if (!existsSync(input)) {
   delete config.env;
   delete config.previews;
   delete config.unsafe;
-  // No copiar variables productivas del Worker generado.
+  // Conserva las variables del panel de Cloudflare; no copia vars del Worker de producción.
   delete config.vars;
+  config.keep_vars = true;
+  // KV separado: nunca heredar namespaces de la tienda principal.
+  const kvId = (process.env.ML_OAUTH_KV_NAMESPACE_ID || '').trim();
+  if (kvId) {
+    if (!/^[a-f0-9]{32}$/i.test(kvId)) throw new Error('El identificador KV debe contener 32 caracteres hexadecimales.');
+    config.kv_namespaces = [{ binding: 'ML_OAUTH_TOKENS', id: kvId }];
+  }
   // Sin secretos: esta preparación no inicia OAuth ni publica nada.
   writeFileSync(output, JSON.stringify(config, null, 2) + '\n');
   console.log('Configuración de pruebas preparada en dist/server/wrangler.oauth-preview.json.');
   console.log('Worker de pruebas: ' + config.name);
-  console.log('Sin D1, KV, R2 ni rutas vinculadas a producción.');
+  console.log('Sin D1, R2 ni rutas vinculadas a producción.');
+  console.log(kvId ? 'KV exclusivo de OAuth configurado (binding ML_OAUTH_TOKENS).' : 'Sin KV: el intercambio de tokens permanece deshabilitado.');
+  console.log('keep_vars=true: conservar las variables existentes del dashboard.');
   console.log('No se realizó ningún despliegue. No contiene credenciales.');
 }
