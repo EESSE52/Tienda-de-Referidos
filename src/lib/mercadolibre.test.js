@@ -62,6 +62,14 @@ describe('Mercado Libre item lookup', () => {
     await expect(fetchMercadoLibreItem('MLC1234567890', blocked(403), 'token')).rejects.toThrow('permisos');
   });
 
+  it('no intenta obtener HTML alternativo si el proveedor deniega el acceso con OAuth', async () => {
+    const request = vi.fn().mockResolvedValue({ ok: false, status: 403,
+      json: async () => ({ code: 'PA_UNAUTHORIZED_RESULT_FROM_POLICIES' }) });
+    await expect(fetchMercadoLibreItem('MLC1234567890', request, 'APP_USR-test'))
+      .rejects.toThrow('403');
+    expect(request).toHaveBeenCalledTimes(1);
+  });
+
   it('falls back to the public product page when the API is blocked', async () => {
     const fetchImplementation = vi.fn()
       .mockResolvedValueOnce({
