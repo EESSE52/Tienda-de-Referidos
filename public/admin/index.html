@@ -723,7 +723,12 @@
             const raw = document.getElementById('ml-preview-url').value.trim();
             let id = '';
             if (raw) {
-              const match = raw.match(/\\bMLC[-_]?(\\d{6,})\\b/i);
+              const publicationUrl = new URL(raw);
+              const fragment = new URLSearchParams(publicationUrl.hash.slice(1));
+              const offered = fragment.get('wid') || publicationUrl.searchParams.get('wid') || '';
+              const match = /^MLC[0-9]{6,}$/i.test(offered)
+                ? offered.match(/^MLC([0-9]{6,})$/i)
+                : publicationUrl.pathname.match(/\\bMLC[-_]?(\\d{6,})\\b/i);
               if (!match) throw new Error('Para diagnosticar una publicación, pega su URL completa con ID MLC en Consultar publicación.');
               id = 'MLC' + match[1];
             }
@@ -1813,7 +1818,8 @@
           const item = previewedMercadoLibre;
           for (const [key, value] of Object.entries({
             nombre: item.name, marca: item.brand, precio: item.price,
-            id_publicacion: item.id_publicacion, imagen_candidata: item.image,
+            id_publicacion: item.id_publicacion, id_catalogo: item.id_catalogo,
+            imagen_candidata: item.image,
             imagen_origen_url: item.url_publicacion,
             url_publicacion: item.url_publicacion,
             enlace_referido: '',
