@@ -106,9 +106,11 @@ export async function fetchMercadoLibreItem(itemId, fetchImplementation = fetch,
       errorPayload = {};
     }
 
-    const fallback = await fallbackMercadoLibrePage(normalizedId, fetchImplementation);
-    if (fallback) {
-      return fallback;
+    // Con OAuth activo no recurrir al scraping como respuesta a un 401/403:
+    // es importante mostrar el bloqueo real del proveedor, sin ocultarlo.
+    if (!accessToken) {
+      const fallback = await fallbackMercadoLibrePage(normalizedId, fetchImplementation);
+      if (fallback) return fallback;
     }
 
     if (response.status === 401) {
