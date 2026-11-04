@@ -4,6 +4,8 @@ import { jsonResponse, requireAdmin } from '../../lib/cloudflare-catalog.js';
 import { fetchMercadoLibreItem } from '../../lib/mercadolibre.js';
 import { fetchChileCatalogOffer } from '../../lib/mercadolibre-catalog-offer.js';
 import { resolveChileMercadoLibreUrl } from '../../lib/mercadolibre-review.js';
+import { oauthStorageReady, readMlTokens } from '../../lib/mercadolibre-token-store.js';
+import { oauthTestSettings } from '../../lib/mercadolibre-oauth-test.js';
 
 export const GET: APIRoute = async (context) => {
   const denied = requireAdmin({ env, request: context.request });
@@ -19,7 +21,14 @@ export const GET: APIRoute = async (context) => {
   try {
     const source = await resolveChileMercadoLibreUrl(productUrl);
     const configuredToken = (env as unknown as Record<string, unknown>)?.ML_ACCESS_TOKEN;
-    const accessToken = typeof configuredToken === 'string' ? configuredToken.trim() : '';
+    let accessToken = typeof configuredToken === 'string' ? configuredToken.trim() : '';
+    const vars = env as unknown as Record<string, unknown>;
+    if (oauthTestSettings(vars, context.request.url).ready && oauthStorageReady(vars)) {
+      const stored = await readMlTokens(vars);
+      if (!stored) throw new Error('Primero conecta Mercado Libre desde la sección OAuth del administrador.');
+      if (stored.expires_at <= Date.now()) throw new Error('El token Mercado Libre expiró. Utiliza «Renovar token» desde el administrador de pruebas.');
+      accessToken = stored.access_token;
+    }
     if (source.kind === 'catalog') {
       return jsonResponse(await fetchChileCatalogOffer(source, fetch, fetchMercadoLibreItem, accessToken));
     }
