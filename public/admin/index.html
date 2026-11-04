@@ -259,6 +259,7 @@
           <div class="button-row">
             <button id="ml-oauth-test-start" type="button" class="secondary">Conectar Mercado Libre (OAuth)</button>
             <button id="ml-oauth-token-status" type="button" class="secondary">Comprobar token</button>
+            <button id="ml-oauth-diagnose" type="button" class="secondary">Diagnosticar API 403</button>
             <button id="ml-oauth-refresh-token" type="button" class="secondary">Renovar token caducado</button>
           </div>
           <div id="ml-oauth-test-status" class="status" aria-live="polite"></div>
@@ -714,6 +715,28 @@
           return td;
         }
 
+        document.getElementById('ml-oauth-diagnose').addEventListener('click', async () => {
+          const status = document.getElementById('ml-oauth-test-status');
+          const btn = document.getElementById('ml-oauth-diagnose');
+          btn.disabled = true;
+          try {
+            const raw = document.getElementById('ml-preview-url').value.trim();
+            let id = '';
+            if (raw) {
+              const match = raw.match(/\\bMLC[-_]?(\\d{6,})\\b/i);
+              if (!match) throw new Error('Para diagnosticar una publicación, pega su URL completa con ID MLC en Consultar publicación.');
+              id = 'MLC' + match[1];
+            }
+            const result = await api('/api/admin/mercadolibre/oauth/diagnose' + (id ? '?item=' + encodeURIComponent(id) : ''));
+            message(status, 'Identidad /users/me: HTTP ' + (result.identity.status ?? 'sin respuesta') +
+              (result.item ? ' · Publicación /items: HTTP ' + (result.item.status ?? 'sin respuesta') : '') +
+              '. ' + result.conclusion, !result.identity.ok || result.item?.status === 403);
+          } catch (error) {
+            message(status, error.message, true);
+          } finally {
+            btn.disabled = false;
+          }
+        });
         document.getElementById('ml-oauth-token-status').addEventListener('click', async () => {
           const status = document.getElementById('ml-oauth-test-status');
           try {
