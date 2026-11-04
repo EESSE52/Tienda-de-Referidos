@@ -255,9 +255,11 @@
 
         <section class="card" style="margin-bottom:20px">
           <h2>Conexión OAuth de Mercado Libre (solo pruebas)</h2>
-          <p class="subtle">Esta función está desactivada por defecto y requiere un Worker HTTPS de pruebas con configuración segura. No funciona en localhost ni en dmonkeysport.com. Solo comprueba el retorno: todavía no guarda tokens ni renueva accesos.</p>
+          <p class="subtle">Funciona únicamente en el Worker HTTPS de pruebas configurado. Cuando exista un KV exclusivo y los secretos privados, la autorización guarda tokens cifrados. La renovación requiere pulsar el botón: evita ejecuciones simultáneas. No funciona en localhost ni en dmonkeysport.com.</p>
           <div class="button-row">
-            <button id="ml-oauth-test-start" type="button" class="secondary">Iniciar comprobación OAuth en pruebas</button>
+            <button id="ml-oauth-test-start" type="button" class="secondary">Conectar Mercado Libre (OAuth)</button>
+            <button id="ml-oauth-token-status" type="button" class="secondary">Comprobar token</button>
+            <button id="ml-oauth-refresh-token" type="button" class="secondary">Renovar token caducado</button>
           </div>
           <div id="ml-oauth-test-status" class="status" aria-live="polite"></div>
         </section>
@@ -712,6 +714,32 @@
           return td;
         }
 
+        document.getElementById('ml-oauth-token-status').addEventListener('click', async () => {
+          const status = document.getElementById('ml-oauth-test-status');
+          try {
+            const info = await api('/api/admin/mercadolibre/oauth/status');
+            if (!info.oauth_pruebas) throw new Error(info.mensaje || 'OAuth de pruebas no habilitado.');
+            if (!info.tokens?.configured) return message(status, 'OAuth válido, pero falta configurar el KV exclusivo y los secretos del servidor.', true);
+            if (!info.tokens?.authorized) return message(status, 'Sin cuenta autorizada. Utiliza Conectar Mercado Libre (OAuth).');
+            const until = new Date(info.tokens.expires_at).toLocaleString('es-CL');
+            message(status, info.tokens.expired ? 'Token expirado. Renueva desde esta pantalla. Fecha: ' + until : 'Token OAuth vigente hasta: ' + until);
+          } catch (error) {
+            message(status, error.message, true);
+          }
+        });
+        document.getElementById('ml-oauth-refresh-token').addEventListener('click', async () => {
+          const status = document.getElementById('ml-oauth-test-status');
+          const button = document.getElementById('ml-oauth-refresh-token');
+          button.disabled = true;
+          try {
+            const result = await api('/api/admin/mercadolibre/oauth/refresh', { method: 'POST' });
+            message(status, result.message || 'Token actualizado.');
+          } catch (error) {
+            message(status, error.message, true);
+          } finally {
+            button.disabled = false;
+          }
+        });
         document.getElementById('ml-oauth-test-start').addEventListener('click', async () => {
           const status = document.getElementById('ml-oauth-test-status');
           try {
