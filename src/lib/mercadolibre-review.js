@@ -25,7 +25,16 @@ export function normalizeChileMercadoLibreUrl(value) {
     throw new Error('La ficha User Product (' + userProduct[1].toUpperCase() + ') no incluye una oferta de vendedor wid=MLC válida. Abre una oferta concreta para copiar su enlace.');
   }
   const catalog = url.pathname.match(/\/p\/(MLC[0-9]{6,})(?=\/|$)/i);
-  if (catalog) return { url: url.origin + url.pathname, id: catalog[1].toUpperCase(), kind: 'catalog' };
+  if (catalog) {
+    // En fichas /p/, wid=MLC... identifica una oferta real de vendedor.
+    // Es prioritario frente al ID del catálogo y evita depender de buy_box_winner.
+    const fragment = new URLSearchParams(url.hash.slice(1));
+    const offered = fragment.get('wid') || url.searchParams.get('wid') || '';
+    if (/^MLC[0-9]{6,}$/i.test(offered)) {
+      return { url: url.href, id: offered.toUpperCase(), kind: 'item', catalogId: catalog[1].toUpperCase() };
+    }
+    return { url: url.origin + url.pathname, id: catalog[1].toUpperCase(), kind: 'catalog' };
+  }
   const values = [url.pathname, ...['item_id', 'itemId', 'item_id_for', 'item'].map(key => url.searchParams.get(key) || '')];
   const match = values.map(text => text.match(/(?:^|[^a-z0-9])MLC[-_]?([0-9]{6,})(?=[^0-9]|$)/i)).find(Boolean);
   if (!match) {
