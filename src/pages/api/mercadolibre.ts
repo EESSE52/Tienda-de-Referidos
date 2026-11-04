@@ -33,7 +33,7 @@ export const GET: APIRoute = async (context) => {
       return jsonResponse(await fetchChileCatalogOffer(source, fetch, fetchMercadoLibreItem, accessToken));
     }
     const item = await fetchMercadoLibreItem(source.id, fetch, accessToken);
-    return jsonResponse({ ...item, id_publicacion: source.id, url_publicacion: source.url, afiliado_verificado: false });
+    return jsonResponse({ ...item, id_publicacion: source.id, url_publicacion: source.url, ...(source.catalogId ? { id_catalogo: source.catalogId } : {}), afiliado_verificado: false });
   } catch (error) {
     return jsonResponse({
       error: error instanceof Error ? error.message : 'No se pudo obtener la publicación de Mercado Libre.',
