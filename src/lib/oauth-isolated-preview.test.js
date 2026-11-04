@@ -11,11 +11,17 @@ describe('preparación de OAuth aislado de producción', () => {
     expect(script).toContain("config.name = 'tienda-de-referidos-oauth-pruebas'");
     expect(script).toContain('wrangler.oauth-preview.json');
     expect(script).not.toContain('wrangler deploy');
+    expect(script).toContain('config.keep_vars = true');
   });
   it('elimina los enlaces con bases y rutas productivas', () => {
     for (const item of ['d1_databases', 'kv_namespaces', 'r2_buckets', 'routes', 'route', 'vars']) {
       expect(script).toContain('delete config.' + item + ';');
     }
+  });
+  it('solo añade almacenamiento KV con un identificador introducido explícitamente', () => {
+    expect(script).toContain('ML_OAUTH_KV_NAMESPACE_ID');
+    expect(script).toContain("binding: 'ML_OAUTH_TOKENS'");
+    expect(script).toContain("if (!/^[a-f0-9]{32}$/i.test(kvId))");
   });
   it('requiere autorización del administrador para inicio y estado', () => {
     expect(startRoute).toContain('requireAdmin({ env, request })');
