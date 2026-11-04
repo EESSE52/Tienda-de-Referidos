@@ -15,6 +15,21 @@ describe('revisión de publicaciones Mercado Libre Chile', () => {
       id: 'MLC2908577036', kind: 'item', url,
     });
   });
+  it('prioriza la oferta wid de una ficha /p/ y conserva los dos IDs', () => {
+    const url = 'https://www.mercadolibre.cl/auriculares-redmi-buds-6-play-inalambricos-xiaomi-negro/p/MLC39962085?pdp_filters=deal%3AMLC1422857-1&extra_comm=false&brand_comm=false#polycard_client=affiliates&wid=MLC2794500346&sid=affiliates';
+    expect(normalizeChileMercadoLibreUrl(url)).toEqual({
+      id: 'MLC2794500346', catalogId: 'MLC39962085', kind: 'item', url,
+    });
+  });
+  it('conserva la ruta de catálogo cuando no se incluye una oferta wid válida', () => {
+    expect(normalizeChileMercadoLibreUrl('https://www.mercadolibre.cl/producto/p/MLC39962085')).toEqual({
+      id: 'MLC39962085', kind: 'catalog',
+      url: 'https://www.mercadolibre.cl/producto/p/MLC39962085',
+    });
+    expect(normalizeChileMercadoLibreUrl('https://www.mercadolibre.cl/producto/p/MLC39962085#wid=MLA123456789')).toMatchObject({
+      id: 'MLC39962085', kind: 'catalog',
+    });
+  });
   it('no toma MLCU por identificador de publicación cuando falta wid', () => {
     expect(() => normalizeChileMercadoLibreUrl('https://www.mercadolibre.cl/creatina/up/MLCU3220313328'))
       .toThrow('wid');
