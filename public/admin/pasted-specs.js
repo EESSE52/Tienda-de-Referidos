@@ -23,6 +23,25 @@ const ALIASES = {
   clase_suplemento: ['clase de suplemento'],
   nombre_comercial: ['nombre comercial'],
 };
+// Reconoce etiquetas OCR sin dos puntos cuando aparecen al comienzo de una línea.
+const OCR_LABELS = [...new Set(['marca', 'peso neto', 'cantidad de porciones', 'unidades por envase', 'peso de la porción', 'sabor', 'ingredientes', 'contiene lactosa', ...Object.values(ALIASES).flat()])]
+  .sort((a, b) => b.length - a.length);
+function splitOcrLine(line) {
+  const simplified = key(line);
+  for (const label of OCR_LABELS) {
+    const prefix = key(label);
+    if (simplified.startsWith(prefix + ' ')) {
+      // La etiqueta contiene la misma secuencia de palabras, con o sin tildes.
+      const count = prefix.split(' ').length;
+      const words = line.trim().split(/\s+/);
+      const title = words.slice(0, count).join(' ');
+      const value = words.slice(count).join(' ').replace(/^[:\\-]+\\s*/, '');
+      if (value) return [title, value];
+    }
+  }
+  const spaced = line.match(/^(.{2,70}?)\\s{2,}(.{1,200})$/);
+  return spaced ? [spaced[1], spaced[2]] : null;
+}
 export function extractPastedPairs(text) {
   if (typeof text !== 'string' || text.length > 30000) throw new Error('Pega un texto de hasta 30.000 caracteres.');
   const pairs = [];
@@ -37,6 +56,10 @@ export function extractPastedPairs(text) {
     } else {
       const colon = raw.match(/^\s*(?:[-*]\s*)?([^:|]{2,100}):\s*(.{1,500})\s*$/);
       if (colon) [, label, value] = colon;
+      else {
+        const ocr = splitOcrLine(raw);
+        if (ocr) [label, value] = ocr;
+      }
     }
     label = plain(label);
     value = plain(value);
