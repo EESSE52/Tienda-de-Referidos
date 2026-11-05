@@ -47,13 +47,18 @@ export function extractPastedPairs(text) {
 }
 function toNumber(value, field) {
   const raw = plain(value).replace(/\s/g, '');
-  const match = raw.match(/^(\d+(?:[.,]\d+)?)\s*(kg|g|gr|gramos|unidades|uds)?$/i);
+  const match = raw.match(/^(\d+(?:[.,]\d+)?)\s*(kg|g|gr|gramos|ml|l|unidades|uds)?$/i);
   if (!match) return null;
   const numeric = Number(match[1].replace(',', '.'));
   if (!Number.isFinite(numeric) || numeric < 0) return null;
-  if (field === 'gramos_total') {
+  if (['gramos_total', 'peso_porcion'].includes(field)) {
     if (!match[2] || /^(g|gr|gramos)$/i.test(match[2])) return numeric;
     if (/^kg$/i.test(match[2])) return numeric * 1000;
+    return null;
+  }
+  if (field === 'volumen_porcion') {
+    if (!match[2] || /^ml$/i.test(match[2])) return numeric;
+    if (/^l$/i.test(match[2])) return numeric * 1000;
     return null;
   }
   if (match[2] && !/^(unidades|uds)$/i.test(match[2])) return null;
