@@ -297,8 +297,14 @@
             <label>Precio CLP observado<input id="ml-manual-price" type="number" min="1" step="1" /></label>
             <label>URL de imagen (opcional)<input id="ml-manual-image" type="url" /></label>
           </div>
+          <h3>Pegar características copiadas de Mercado Libre</h3>
+          <p class="subtle">Pega texto «Etiqueta: valor» o tablas Markdown. Se interpretará localmente, sin API. Comprueba la categoría antes de analizar. Ningún dato se guarda automáticamente.</p>
+          <textarea id="ml-pasted-specs" rows="9" maxlength="30000" style="width:100%;box-sizing:border-box;border:1px solid #cbd5e1;border-radius:8px;padding:12px" placeholder="Marca: Ostrovit&#10;Peso neto: 500 g&#10;Cantidad de porciones: 200&#10;Sabor: Sandía"></textarea>
+          <div class="button-row"><button type="button" class="secondary" id="ml-pasted-analyze">Analizar características</button><button type="button" class="secondary" id="ml-pasted-apply" disabled>Aplicar campos reconocidos</button></div>
+          <div id="ml-pasted-status" class="status" aria-live="polite"></div>
+          <div id="ml-pasted-preview" class="preview" aria-live="polite"></div>
           <h3>Características para comparar</h3>
-          <p class="subtle">Completa los campos de la categoría seleccionada. Para 60 gomitas, usa 60 en «Cantidad de unidades»; no ingreses 60 gramos salvo que la etiqueta indique ese contenido. Los campos con * son obligatorios.</p>
+          <p class="subtle">Revisa los datos antes de agregarlos al CSV. Peso neto, porciones y unidades por envase son medidas diferentes. Los campos con * son obligatorios.</p>
           <div class="admin-fields" id="ml-manual-attributes"></div>
           <div class="button-row"><button type="button" id="ml-manual-add" class="secondary">Agregar al CSV sin consultar API</button><button type="button" id="ml-manual-download" disabled>Descargar CSV con los productos preparados</button></div>
           <div class="button-row">
@@ -1548,6 +1554,70 @@
             manualAttributes.appendChild(label);
           }
         }
+        let pastedSpecPreview = null;
+        const pastedStatus = document.getElementById('ml-pasted-status');
+        const pastedPreview = document.getElementById('ml-pasted-preview');
+        const pastedApply = document.getElementById('ml-pasted-apply');
+        const pastedText = document.getElementById('ml-pasted-specs');
+        function clearPastedPreview() {
+          pastedSpecPreview = null;
+          pastedApply.disabled = true;
+          pastedPreview.replaceChildren();
+          pastedStatus.textContent = '';
+        }
+        bulkCategory.addEventListener('change', clearPastedPreview);
+        pastedText.addEventListener('input', clearPastedPreview);
+        document.getElementById('ml-pasted-analyze').addEventListener('click', async () => {
+          try {
+            const category = categories.find(item => item.id === bulkCategory.value);
+            if (!category) throw new Error('Selecciona una categoría antes de analizar.');
+            const { previewPastedSpecifications } = await import('/admin/pasted-specs.js');
+            pastedSpecPreview = previewPastedSpecifications(pastedText.value, category);
+            pastedPreview.replaceChildren();
+            const heading = document.createElement('p');
+            heading.textContent = pastedSpecPreview.matched.length + ' coincidencias · ' + pastedSpecPreview.unmatched.length + ' características sin campo en esta categoría.';
+            pastedPreview.appendChild(heading);
+            const table = document.createElement('table');
+            const header = document.createElement('tr');
+            ['Característica copiada', 'Valor', 'Campo reconocido'].forEach(value => {
+              const th = document.createElement('th');
+              th.textContent = value;
+              header.appendChild(th);
+            });
+            table.appendChild(header);
+            for (const pair of [...pastedSpecPreview.matched, ...pastedSpecPreview.unmatched]) {
+              const tr = document.createElement('tr');
+              for (const value of [pair.label, pair.value, pair.target || 'Sin campo compatible (solo revisión)']) {
+                const td = document.createElement('td');
+                td.textContent = String(value);
+                tr.appendChild(td);
+              }
+              table.appendChild(tr);
+            }
+            pastedPreview.appendChild(table);
+            for (const warning of pastedSpecPreview.warnings) {
+              const note = document.createElement('p');
+              note.textContent = 'Revisar: ' + warning;
+              pastedPreview.appendChild(note);
+            }
+            pastedApply.disabled = pastedSpecPreview.matched.length === 0;
+            message(pastedStatus, 'Vista previa preparada. Revisa coincidencias y pulsa Aplicar campos reconocidos; no se ha guardado nada.');
+          } catch (error) {
+            clearPastedPreview();
+            message(pastedStatus, error.message, true);
+          }
+        });
+        pastedApply.addEventListener('click', () => {
+          if (!pastedSpecPreview) return;
+          if (pastedSpecPreview.brand) document.getElementById('ml-manual-brand').value = pastedSpecPreview.brand;
+          let applied = 0;
+          for (const control of manualAttributes.querySelectorAll('[data-manual-attribute]')) {
+            if (!Object.prototype.hasOwnProperty.call(pastedSpecPreview.mapped, control.dataset.manualAttribute)) continue;
+            control.value = String(pastedSpecPreview.mapped[control.dataset.manualAttribute]);
+            applied++;
+          }
+          message(pastedStatus, applied + ' campos de categoría y marca (cuando corresponde) aplicados. Confirma nombre, precio y enlaces manualmente; ningún dato se ha guardado.');
+        });
         function collectManualAttributes(category) {
           const fields = new Map((category.campos || []).map(field => [field.clave, field]));
           const values = {};
