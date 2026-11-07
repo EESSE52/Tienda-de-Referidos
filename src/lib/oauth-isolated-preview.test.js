@@ -31,6 +31,14 @@ describe('preparación de OAuth aislado de producción', () => {
     expect(admin).toContain('id="ml-oauth-test-start"');
     expect(admin).toContain("api('/api/admin/mercadolibre/oauth/start', { method: 'POST' })");
     expect(admin).toContain("api('/api/admin/mercadolibre/oauth/status')");
-    expect(admin).toContain('status.oauth_pruebas === true');
+    // La conexión al catálogo D1 no depende del estado OAuth.
+    expect(admin).toContain("await refresh();");
+    expect(admin).toContain("await refreshCategories();");
+    expect(admin).toContain("message(adminStatus, 'Conectado a D1. Productos: '");
+    expect(admin).toContain("No fue posible conectar al catálogo:");
+    // OAuth se consulta solo mediante su endpoint protegido y se rechaza
+    // explícitamente cuando el Worker de pruebas no está habilitado.
+    expect(admin).toContain("if (!info.oauth_pruebas) throw new Error(");
+    expect(admin).toContain("if (!result.authorization_url) throw new Error(");
   });
 });
