@@ -21,7 +21,7 @@ describe('ficha de producto legible', () => {
     expect(detail).toContain('rel="sponsored nofollow noopener"');
     expect(detail).toContain('Oferta no disponible para compra desde aquí');
     expect(detail).toContain('Disponibilidad sin verificar');
-    expect(detail).toContain('imagen genérica');
+    expect(detail).toContain('Imagen genérica de la categoría');
   });
   it('evita recortar imágenes de productos', () => {
     expect(detail).toContain('object-contain p-4');
