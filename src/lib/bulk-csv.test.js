@@ -43,6 +43,16 @@ describe('descarga CSV de revisión Mercado Libre', () => {
     expect(() => buildMercadoLibreReviewCsv(category, [{ ...product, url_publicacion: 'https://evil.com/MLC1234567890' }])).toThrow();
     expect(() => buildMercadoLibreReviewCsv(category, [{ ...product, id_publicacion: 'MLA1234567890' }])).toThrow();
   });
+  it('prioriza wid de la oferta en fichas /p/ de catálogo Mercado Libre', () => {
+    const url = 'https://www.mercadolibre.cl/creatine-foodtech/p/MLC28720010#polycard_client=affiliates&wid=MLC1859621269&sid=affiliates';
+    const candidate = createManualMercadoLibreCandidate({
+      url, name: 'Creatina Foodtech 1 kg', brand: 'Foodtech', price: '34990',
+      attributes: { gramos_total: 1000, porciones: 200 },
+    });
+    expect(candidate.id_publicacion).toBe('MLC1859621269');
+    expect(candidate.url_publicacion).toBe(url);
+    expect(buildMercadoLibreReviewCsv(category, [candidate])).toContain('"MLC1859621269"');
+  });
   it('permite ingreso manual desde ficha MLCU con wid real y lo exporta inactivo', () => {
     const url = 'https://www.mercadolibre.cl/creatina-gomitas-x-60-und-perfect-bear/up/MLCU3220313328?pdp_filters=deal%3AMLC1422857-1&extra_comm=false&brand_comm=false#polycard_client=affiliates&wid=MLC2908577036&sid=affiliates';
     const candidate = createManualMercadoLibreCandidate({
