@@ -21,7 +21,7 @@ describe('OCR de fotografías en catálogo manual', () => {
     expect(createWorker.mock.calls[0][0]).toEqual(['spa','eng']);
     expect(recognize).toHaveBeenCalledWith(file());
     expect(terminate).toHaveBeenCalledOnce();
-    expect(result).toEqual({text:'Marca Ostrovit\nPeso neto 500 g',confidence:93.2});
+    expect(result).toEqual({text:'Marca Ostrovit\nPeso neto 500 g',confidence:93.2,method:'original'});
   });
   it('termina el worker aunque falle reconocimiento', async () => {
     const terminate = vi.fn().mockResolvedValue();
@@ -29,6 +29,47 @@ describe('OCR de fotografías en catálogo manual', () => {
       createWorker:vi.fn().mockResolvedValue({recognize:vi.fn().mockRejectedValue(new Error('lectura fallida')),terminate}),
     }})).rejects.toThrow('lectura fallida');
     expect(terminate).toHaveBeenCalledOnce();
+  });
+  it('reintenta con original cuando el contraste tiene poca confianza y cierra el worker', async () => {
+    const original = {type:'image/png',size:1024};
+    const canvas = {width:1400,height:800};
+    const terminate = vi.fn().mockResolvedValue();
+    const recognize = vi.fn().mockResolvedValueOnce({data:{text:'Texto confuso',confidence:43}})
+      .mockResolvedValueOnce({data:{text:'Marca Ostrovit',confidence:88}});
+    const createWorker = vi.fn().mockResolvedValue({recognize,terminate});
+    const bitmap = {width:700,height:400,close:vi.fn()};
+    const ctx = {
+      fillRect:vi.fn(),translate:vi.fn(),rotate:vi.fn(),drawImage:vi.fn(),
+      getImageData:vi.fn().mockReturnValue({data:new Uint8ClampedArray(canvas.width*canvas.height*4)}),
+      putImageData:vi.fn(),
+    };
+    const result = await recognizeProductPhoto(original,()=>{},{
+      engine:{createWorker},
+      createImageBitmap:vi.fn().mockResolvedValue(bitmap),
+      createCanvas:()=>({...canvas,getContext:()=>ctx}),
+    });
+    expect(recognize).toHaveBeenCalledTimes(2);
+    expect(result).toMatchObject({text:'Marca Ostrovit',confidence:88,method:'original'});
+    expect(terminate).toHaveBeenCalledOnce();
+    expect(bitmap.close).toHaveBeenCalledOnce();
+  });
+  it('aplica rotación y contraste sin acceder a red ni inventar campos', async () => {
+    const {prepareOcrImage}= await import('../../public/admin/photo-ocr.js');
+    const bitmap={width:400,height:200,close:vi.fn()};
+    const canvas={width:0,height:0};
+    const ctx={
+      fillRect:vi.fn(),translate:vi.fn(),rotate:vi.fn(),drawImage:vi.fn(),
+      getImageData:vi.fn(),putImageData:vi.fn(),
+    };
+    canvas.getContext=()=>ctx;
+    const output=await prepareOcrImage(file(),{rotation:90,enhance:false},{
+      createImageBitmap:vi.fn().mockResolvedValue(bitmap),
+      createCanvas:()=>canvas,
+    });
+    expect(output.width).toBe(200);
+    expect(output.height).toBe(400);
+    expect(ctx.rotate).toHaveBeenCalledWith(Math.PI/2);
+    expect(bitmap.close).toHaveBeenCalledOnce();
   });
   it('interpreta el texto de OCR sin dos puntos usando los campos de categoría', () => {
     const result = previewPastedSpecifications(
