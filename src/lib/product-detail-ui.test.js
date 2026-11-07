@@ -9,6 +9,20 @@ describe('ficha de producto legible', () => {
     expect(detail).toContain('field?.etiqueta || key');
     expect(detail).toContain('field?.unidad || ""');
   });
+  it('destaca costos unitarios con precisión sin confundirlos con el precio total', () => {
+    expect(detail).toContain('mainCostMetrics');
+    expect(detail).toContain('metricDisplay(metrica, metrica.valor)');
+    expect(detail).toContain('currencyCLPUnit(value)');
+    expect(detail).toContain('Costos unitarios del producto');
+    expect(detail).toContain('Precio referencial registrado');
+  });
+  it('protege la compra en ofertas inactivas y explica la falta de verificación', () => {
+    expect(detail).toContain('hasAffiliateLink && isPublicOffer');
+    expect(detail).toContain('rel="sponsored nofollow noopener"');
+    expect(detail).toContain('Oferta no disponible para compra desde aquí');
+    expect(detail).toContain('Disponibilidad sin verificar');
+    expect(detail).toContain('imagen genérica');
+  });
   it('evita recortar imágenes de productos', () => {
     expect(detail).toContain('object-contain p-4');
     expect(detail).toContain('getPublicProductImage(producto)');
