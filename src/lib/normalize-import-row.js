@@ -3,7 +3,7 @@ import { normalizeCategoryAttributes } from './category-attributes.js';
 const RESERVED = new Set([
   'id','lista_id','lista','nombre','marca','precio','precio_clp','precio_original',
   'id_publicacion','enlace_referido','url_publicacion','link','imagen','activo',
-  'es_prueba','atributos','vendedor','formato',
+  'es_prueba','atributos','vendedor','formato','grupo_ofertas','id_catalogo','vendedor_nombre','vendedor_id',
 ]);
 const LEGACY = ['gramos_total', 'porciones', 'cantidad_unidades', 'sabor', 'tipo', 'libre_gluten', 'objetivo'];
 const NUMBER_KEYS = new Set(['gramos_total', 'porciones', 'cantidad_unidades']);
@@ -56,6 +56,11 @@ export function normalizeImportRow(row, category) {
   return {
     id, lista_id: listaId,
     nombre: String(values.nombre ?? '').trim(),
+    grupo_ofertas: String(values.grupo_ofertas ?? '').trim(),
+    id_catalogo: String(values.id_catalogo ?? '').trim(),
+    vendedor: String(values.vendedor ?? '').trim(),
+    vendedor_nombre: String(values.vendedor_nombre ?? values.vendedor ?? '').trim(),
+    vendedor_id: String(values.vendedor_id ?? '').trim(),
     marca: String(values.marca ?? '').trim(),
     precio: priceNumber(values.precio ?? values.precio_clp),
     id_publicacion: idPublicacion, enlace_referido: values.enlace_referido === undefined && values.link === undefined ? publicationUrl : affiliateUrl, url_publicacion: publicationUrl,
