@@ -18,6 +18,18 @@ const ALIASES = {
   vegano: ['es vegano','vegano'],
   peso_porcion: ['peso de la porcion','tamano de la porcion'],
   volumen_porcion: ['volumen de la porcion'],
+  lactosa: ['contiene lactosa','tiene lactosa'],
+  libre_lactosa: ['sin lactosa','libre de lactosa'],
+  apto_vegano: ['apto para veganos','vegano','es vegano'],
+  formato_venta: ['formato de venta'],
+  unidades_envase: ['unidades por envase'],
+  peso_neto: ['peso neto','contenido neto'],
+  contenido_neto: ['contenido neto','peso neto'],
+  proteina_porcion: ['proteinas por porcion','proteina por porcion'],
+  carbohidratos_porcion: ['carbohidratos por porcion'],
+  azucar_porcion: ['azucares por porcion','azucar por porcion'],
+  sodio_porcion: ['sodio por porcion'],
+  calorias_porcion: ['calorias por porcion','energia por porcion'],
   ingredientes: ['ingredientes'],
   suplemento_principal: ['suplemento principal'],
   clase_suplemento: ['clase de suplemento'],
@@ -84,6 +96,11 @@ function toNumber(value, field) {
     if (/^l$/i.test(match[2])) return numeric * 1000;
     return null;
   }
+  if (['peso_neto','contenido_neto'].includes(field)) {
+    if (!match[2] || /^(g|gr|gramos)$/i.test(match[2])) return numeric;
+    if (/^kg$/i.test(match[2])) return numeric * 1000;
+    return null;
+  }
   if (match[2] && !/^(unidades|uds)$/i.test(match[2])) return null;
   return numeric;
 }
@@ -109,7 +126,7 @@ export function previewPastedSpecifications(text, category) {
     const label = key(pair.label);
     if (label === 'marca') {
       if (brand && key(brand) !== key(pair.value)) warnings.push('Se encontraron marcas diferentes: revisa el texto.');
-      brand = pair.value.slice(0, 150);
+      if (!brand) brand = pair.value.slice(0, 150);
       matched.push({ ...pair, target: 'Marca', value: brand });
       continue;
     }
