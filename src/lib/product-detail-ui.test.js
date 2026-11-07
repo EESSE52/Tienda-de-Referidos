@@ -37,6 +37,11 @@ describe('ficha de producto legible', () => {
     expect(detail).toContain("Astro.url.searchParams.get('demo') === '1'");
     expect(detail).toContain("producto.id === 'MLC1859621269'");
     expect(detail).toContain("id: 'DEMO-NO-REAL-002'");
+    expect(detail).toContain('!realOffers.some(offer => offer.id === producto.id)');
+    expect(detail).toContain('[producto, ...realOffers]');
+    expect(detail).toContain('const sameProductOffers = demoOffer');
+    expect(detail).toContain(': realOffers;');
+    expect(detail).toContain("offer.id !== 'DEMO-NO-REAL-002' && offer.activo === true");
     expect(detail).toContain("enlace_referido: ''");
     expect(detail).toContain("MODO DEMOSTRACIÓN LOCAL — DATOS FICTICIOS");
     expect(detail).toContain('FICTICIO · NO COMPRABLE');
