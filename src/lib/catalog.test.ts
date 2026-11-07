@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { getBestMetricValue, getListaById, loadCatalog } from './catalog';
+import { currencyCLPUnit, getBestMetricValue, getListaById, loadCatalog } from './catalog';
 
 describe('getBestMetricValue', () => {
   it('devuelve el mejor valor menor para métricas de costo', () => {
@@ -40,5 +40,17 @@ describe('loadCatalog', () => {
 
     expect(catalog.listas.length).toBeGreaterThan(0);
     expect(catalog.getListaById('proteina')?.nombre).toBe('Proteína');
+  });
+});
+
+
+describe('moneda CLP para precios unitarios', () => {
+  it('muestra centavos reales sin redondear el costo por gramo', () => {
+    expect(currencyCLPUnit(34990 / 1000)).toContain('34,99');
+    expect(currencyCLPUnit(34990 / 200)).toContain('174,95');
+  });
+  it('mantiene valores enteros legibles y los valores ausentes sin inventar', () => {
+    expect(currencyCLPUnit(175)).toContain('175');
+    expect(currencyCLPUnit(null)).toBe('—');
   });
 });
