@@ -33,3 +33,19 @@ export function getOfferSavings(offers: Producto[]): number | null {
   const prices = offers.map(offer => Number(offer.precio)).filter(price => Number.isFinite(price) && price > 0);
   return prices.length >= 2 ? Math.max(...prices) - Math.min(...prices) : null;
 }
+
+/** Una ficha por producto físico en las listas; la ficha muestra sus vendedores. */
+export function getGroupedListingProducts(products: Producto[]): Producto[] {
+  const groups = new Map<string, Producto[]>();
+  for (const product of products) {
+    if (!product.activo || product.es_prueba === true) continue;
+    const key = getOfferGroupId(product);
+    const identity = key ? product.lista_id + ':' + key : product.lista_id + ':single:' + product.id;
+    const group = groups.get(identity) ?? [];
+    group.push(product);
+    groups.set(identity, group);
+  }
+  return [...groups.values()].map(group => group.sort((a, b) =>
+    Number(a.precio) - Number(b.precio) || String(a.id).localeCompare(String(b.id))
+  )[0]);
+}
