@@ -4,7 +4,7 @@ import { loadCatalog } from '../lib/catalog';
 
 export const GET: APIRoute = async () => {
   const site = 'https://dmonkeysport.com';
-  const catalog = await loadCatalog(env?.dmonkeysport_db);
+  const catalog = await loadCatalog(env?.CATALOG_DB);
   const listasActivas = catalog.listas.filter((lista) => lista.activa !== false);
   const productosActivos = catalog.productos.filter((producto) => producto.activo);
   const urls = [
