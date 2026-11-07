@@ -7,7 +7,7 @@ import { dateLabel } from '../../lib/format';
 import { AVISO_AFILIADOS_BREVE, getPrecioReferencialLabel, getPublicProductImage } from '../../lib/public-site';
 
 const { id } = Astro.params;
-const catalog = await loadCatalog(env?.dmonkeysport_db);
+const catalog = await loadCatalog(env?.CATALOG_DB);
 const producto = catalog.getProductoById(String(id));
 if (!producto) {
   throw new Error('Producto no encontrado');
