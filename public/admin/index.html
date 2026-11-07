@@ -373,6 +373,9 @@
               <label>Categoría<select name="lista_id" required><option value="creatina">Creatina</option><option value="proteina">Proteína</option></select></label>
               <label>Nombre<input name="nombre" required maxlength="200" /></label>
               <label>Marca<input name="marca" maxlength="150" /></label>
+              <label>Vendedor / tienda<input name="vendedor_nombre" maxlength="150" placeholder="Nombre visible del vendedor" /></label>
+              <label>Grupo de ofertas (mismo producto exacto)<input name="grupo_ofertas" maxlength="80" pattern="[a-zA-Z0-9][a-zA-Z0-9_-]{2,79}" placeholder="foodtech-creatina-1kg-sin-sabor" /></label>
+              <label>ID catálogo Mercado Libre (opcional)<input name="id_catalogo" maxlength="80" placeholder="MLC..." /></label>
               <label>Precio CLP<input name="precio" type="number" min="1" step="1" required /></label>
               <label>Enlace de afiliado (generado desde tu cuenta)<input name="enlace_referido" type="url" placeholder="https://meli.la/..." /></label>
               <label>URL de publicación del producto<input name="url_publicacion" type="url" placeholder="https://www.mercadolibre.cl/..." /></label>
@@ -381,6 +384,7 @@
               <label>Origen de la imagen candidata (URL de publicación)<input name="imagen_origen_url" type="url" placeholder="https://www.mercadolibre.cl/..." /></label>
               <label>Imagen autorizada para publicar (URL HTTPS)<input name="imagen_propia" type="url" placeholder="https://tusitio.cl/foto-producto.webp" /></label>
             </div>
+            <p class="subtle">Para comparar vendedores del mismo artículo, asigna a cada publicación un ID distinto y el mismo <strong>Grupo de ofertas</strong>. Solo agrupa envases idénticos en marca, peso, sabor y formato. El ID de catálogo también puede vincular publicaciones sin grupo manual.</p>
             <div class="upload-box">
               <label><input name="imagen_autorizada_confirmada" type="checkbox" /> Confirmo que soy titular de la imagen o tengo permiso para publicarla en D’MonkeySport.</label>
               <p class="subtle">La foto candidata no se muestra públicamente. No uses imágenes de Mercado Libre sin permiso. Este formulario acepta URL HTTPS; no sube archivos.</p>
@@ -953,7 +957,7 @@
             edit.textContent = 'Editar';
             edit.addEventListener('click', () => {
               editingId = product.id;
-              for (const name of ['lista_id','nombre','marca','precio','enlace_referido','url_publicacion','id_publicacion','imagen_candidata','imagen_origen_url','imagen_propia']) {
+              for (const name of ['lista_id','nombre','marca','vendedor_nombre','grupo_ofertas','id_catalogo','precio','enlace_referido','url_publicacion','id_publicacion','imagen_candidata','imagen_origen_url','imagen_propia']) {
                 form.elements[name].value = product[name] ?? '';
               }
               form.elements.imagen_autorizada_confirmada.checked = false;
