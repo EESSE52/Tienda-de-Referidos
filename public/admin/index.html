@@ -1222,19 +1222,10 @@
             await refreshCategories();
             message(adminStatus, 'Conectado a D1. Productos: ' + currentProducts.length);
           } catch (error) {
-            // El Worker aislado de OAuth no tiene D1 deliberadamente.
-            try {
-              const status = await api('/api/admin/mercadolibre/oauth/status');
-              if (status.oauth_pruebas === true) {
-                message(adminStatus, 'Conexión administrativa validada. Entorno OAuth de pruebas sin acceso a D1.');
-              } else {
-                adminToken = '';
-                message(adminStatus, status.mensaje || error.message, true);
-              }
-            } catch {
-              adminToken = '';
-              message(adminStatus, error.message, true);
-            }
+            // Un fallo de D1/autenticación NO debe reemplazarse por un aviso de OAuth.
+            // La prueba OAuth es independiente del acceso normal al catálogo.
+            adminToken = '';
+            message(adminStatus, 'No fue posible conectar al catálogo: ' + (error instanceof Error ? error.message : String(error)), true);
           }
         });
         document.getElementById('refresh-products').addEventListener('click', () => refresh().catch(error => message(adminStatus, error.message, true)));
