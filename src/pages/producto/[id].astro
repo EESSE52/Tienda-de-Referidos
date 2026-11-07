@@ -25,7 +25,7 @@ const mainCostMetrics = metricRows.filter((metrica) => {
   const formula = metrica.plantilla ?? metrica.formula;
   return formula?.tipo === 'precio_dividido_por' && metrica.valor !== null && Number.isFinite(metrica.valor);
 }).slice(0, 3);
-const imageIsGeneric = !producto.imagen_propia;
+const imageIsGeneric = getPublicProductImage(producto).startsWith('/img/generica-');
 const offerStatusLabel = producto.estado_oferta === 'disponible'
   ? 'Oferta registrada como disponible'
   : producto.estado_oferta === 'no_disponible'
