@@ -6,7 +6,7 @@ import { formatMetricValue } from '../../lib/metricas';
 import { AVISO_AFILIADOS_BREVE, getPrecioReferencialLabel, getPublicProductImage } from '../../lib/public-site';
 
 const { slug } = Astro.params;
-const catalog = await loadCatalog(env?.dmonkeysport_db);
+const catalog = await loadCatalog(env?.CATALOG_DB);
 const lista = catalog.getListaBySlug(String(slug));
 if (!lista) {
   throw new Error('Lista no encontrada');
