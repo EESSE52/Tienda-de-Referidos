@@ -59,7 +59,7 @@ export async function readJsonBody(request) {
 }
 
 function getDatabase(env) {
-  const db = env?.dmonkeysport_db;
+  const db = env?.CATALOG_DB;
 
   if (!db || typeof db.prepare !== 'function') {
     throw new Error('La base D1 dmonkeysport_db no está disponible.');
