@@ -42,16 +42,14 @@ function splitOcrLine(line) {
   const simplified = key(line);
   for (const label of OCR_LABELS) {
     const prefix = key(label);
-    if (simplified.startsWith(prefix + ' ')) {
-      // La etiqueta contiene la misma secuencia de palabras, con o sin tildes.
-      const count = prefix.split(' ').length;
-      const words = line.trim().split(/\s+/);
-      const title = words.slice(0, count).join(' ');
-      const value = words.slice(count).join(' ').replace(/^[:\\-]+\\s*/, '');
-      if (value) return [title, value];
-    }
+    if (!simplified.startsWith(prefix + ' ')) continue;
+    const count = prefix.split(' ').length;
+    const words = line.trim().split(/\s+/);
+    const title = words.slice(0, count).join(' ');
+    const value = words.slice(count).join(' ').replace(/^[:\-]+\s*/, '');
+    if (value) return [title, value];
   }
-  const spaced = line.match(/^(.{2,70}?)\\s{2,}(.{1,200})$/);
+  const spaced = line.match(/^(.{2,70}?)\s{2,}(.{1,200})$/);
   return spaced ? [spaced[1], spaced[2]] : null;
 }
 export function extractPastedPairs(text) {
