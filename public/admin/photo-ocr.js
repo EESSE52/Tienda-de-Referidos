@@ -36,7 +36,61 @@ export async function loadOcrEngine(doc = document) {
   return loader;
 }
 
-export async function recognizeProductPhoto(file, onProgress = () => {}, dependencies = {}) {
+/** Mejora opcional de contraste, escala y rotación (Canvas local del navegador). */
+export async function prepareOcrImage(file, options = {}, dependencies = {}) {
+  const rotation = Number(options.rotation || 0);
+  const enhancement = options.enhance !== false;
+  if (!enhancement && !rotation) return file;
+  const createBitmap = dependencies.createImageBitmap || globalThis.createImageBitmap;
+  const makeCanvas = dependencies.createCanvas || (() => document.createElement('canvas'));
+  if (typeof createBitmap !== 'function') return file;
+  const bitmap = await createBitmap(file, { imageOrientation: 'from-image' });
+  try {
+    const baseScale = enhancement ? 2 : 1;
+    const scale = Math.min(baseScale, 2800 / Math.max(bitmap.width, bitmap.height));
+    const sourceWidth = Math.max(1, Math.round(bitmap.width * scale));
+    const sourceHeight = Math.max(1, Math.round(bitmap.height * scale));
+    const sideways = Math.abs(rotation % 180) === 90;
+    const canvas = makeCanvas();
+    canvas.width = sideways ? sourceHeight : sourceWidth;
+    canvas.height = sideways ? sourceWidth : sourceHeight;
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    if (!ctx) return file;
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.translate(canvas.width / 2, canvas.height / 2);
+    ctx.rotate(rotation * Math.PI / 180);
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+    ctx.drawImage(bitmap, -sourceWidth / 2, -sourceHeight / 2, sourceWidth, sourceHeight);
+    if (enhancement) {
+      const pixels = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      const values = new Uint8Array(256);
+      const histogram = new Uint32Array(256);
+      for (let i = 0; i < pixels.data.length; i += 4) {
+        const gray = Math.round(.299 * pixels.data[i] + .587 * pixels.data[i + 1] + .114 * pixels.data[i + 2]);
+        histogram[gray]++;
+      }
+      const total = canvas.width * canvas.height;
+      let low = 0, high = 255, sum = 0;
+      for (; low < 255; low++) { sum += histogram[low]; if (sum >= total * .01) break; }
+      sum = 0;
+      for (; high > low; high--) { sum += histogram[high]; if (sum >= total * .01) break; }
+      const range = Math.max(25, high - low);
+      for (let n = 0; n < 256; n++) values[n] = Math.max(0, Math.min(255, Math.round((n - low) * 255 / range)));
+      for (let i = 0; i < pixels.data.length; i += 4) {
+        const gray = Math.round(.299 * pixels.data[i] + .587 * pixels.data[i + 1] + .114 * pixels.data[i + 2]);
+        pixels.data[i] = pixels.data[i + 1] = pixels.data[i + 2] = values[gray];
+      }
+      ctx.putImageData(pixels, 0, 0);
+    }
+    return canvas;
+  } finally {
+    bitmap.close?.();
+  }
+}
+
+export async function recognizeProductPhoto(file, onProgress = () => {}, dependencies = {}, options = {}) {
   validateOcrPhoto(file);
   const engine = dependencies.engine || await loadOcrEngine();
   const worker = await engine.createWorker(['spa', 'eng'], 1, {
@@ -46,8 +100,22 @@ export async function recognizeProductPhoto(file, onProgress = () => {}, depende
     },
   });
   try {
-    const output = await worker.recognize(file);
-    return { text: String(output?.data?.text || '').slice(0, 30000), confidence: Number(output?.data?.confidence) || 0 };
+    const enhanced = await prepareOcrImage(file, options, dependencies);
+    const first = await worker.recognize(enhanced);
+    const text = String(first?.data?.text || '');
+    let chosen = first;
+    let method = enhanced === file ? 'original' : 'contraste';
+    const confidence = Number(first?.data?.confidence) || 0;
+    // Segunda lectura solo para imágenes de baja confianza: evita duplicar tiempo siempre.
+    if (enhanced !== file && confidence < 65 && options.retry !== false) {
+      onProgress('Revisando lectura con imagen original', 0);
+      const original = await worker.recognize(file);
+      if ((Number(original?.data?.confidence) || 0) > confidence && String(original?.data?.text || '').trim()) {
+        chosen = original;
+        method = 'original';
+      }
+    }
+    return { text: String(chosen?.data?.text || '').slice(0, 30000), confidence: Number(chosen?.data?.confidence) || 0, method };
   } finally {
     await worker.terminate();
   }
