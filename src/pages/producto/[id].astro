@@ -1,7 +1,7 @@
 ---
 import Layout from '../../layouts/Layout.astro';
 import { env } from 'cloudflare:workers';
-import { currencyCLP, getMetricResult, loadCatalog, productHasOldPrice } from '../../lib/catalog';
+import { currencyCLP, currencyCLPUnit, getMetricResult, loadCatalog, productHasOldPrice } from '../../lib/catalog';
 import { formatMetricValue } from '../../lib/metricas';
 import { dateLabel } from '../../lib/format';
 import { AVISO_AFILIADOS_BREVE, getPrecioReferencialLabel, getPublicProductImage } from '../../lib/public-site';
@@ -29,7 +29,7 @@ const metricDisplay = (metrica: { etiqueta?: string; decimales?: number; plantil
   const label = String(metrica?.etiqueta || '').toLowerCase();
   const isPriceMetric = label.includes('precio') || label.includes('costo') || label.includes('coste');
   if (isPriceMetric || metrica?.plantilla?.tipo === 'precio_dividido_por' || metrica?.formula?.tipo === 'precio_dividido_por') {
-    return currencyCLP(value);
+    return currencyCLPUnit(value);
   }
   return `${formatMetricValue(value, metrica?.decimales ?? 2)}`;
 };
