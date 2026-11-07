@@ -301,6 +301,8 @@
           <p class="subtle">Selecciona una foto clara de la etiqueta o de las especificaciones (JPG, PNG o WEBP, hasta 10 MB). La imagen se procesa en tu navegador; no se envía a la API de D’MonkeySport ni se guarda en D1. Para funcionar, el OCR descarga su motor y diccionarios desde una CDN al pulsar Leer fotografía.</p>
           <div class="admin-fields">
             <label>Fotografía de etiqueta o características<input id="ml-ocr-image" type="file" accept="image/jpeg,image/png,image/webp" /></label>
+            <label>Orientación de la etiqueta<select id="ml-ocr-rotation"><option value="0">Normal (0°)</option><option value="90">Girar 90°</option><option value="180">Girar 180°</option><option value="270">Girar 270°</option></select></label>
+            <label><input id="ml-ocr-enhance" type="checkbox" checked /> Mejorar nitidez y contraste antes de leer</label>
           </div>
           <div class="button-row"><button id="ml-ocr-read" class="secondary" type="button">Leer fotografía</button></div>
           <img id="ml-ocr-preview" alt="Vista previa local de la fotografía seleccionada" hidden style="display:block;max-width:360px;max-height:260px;object-fit:contain;margin-top:12px;border-radius:8px" />
@@ -1594,14 +1596,16 @@
           try {
             const { recognizeProductPhoto } = await import('/admin/photo-ocr.js');
             message(ocrStatus, 'Cargando OCR en tu navegador (español e inglés)…');
+            const rotation = Number(document.getElementById('ml-ocr-rotation').value);
+            const enhance = document.getElementById('ml-ocr-enhance').checked;
             const result = await recognizeProductPhoto(file, (step, percent) => {
               message(ocrStatus, 'OCR: ' + step + ' (' + percent + '%)');
-            });
+            }, {}, { rotation, enhance });
             if (!result.text.trim()) throw new Error('No se detectó texto legible. Prueba una imagen más nítida o escribe las características.');
             const textField = document.getElementById('ml-pasted-specs');
             textField.value = result.text;
             textField.dispatchEvent(new Event('input', { bubbles: true }));
-            message(ocrStatus, 'Texto detectado (confianza OCR aproximada: ' + Math.round(result.confidence) + '%). Revisa/corrige el texto y pulsa Analizar características. Ningún dato se ha guardado.');
+            message(ocrStatus, 'Texto detectado (confianza OCR aproximada: ' + Math.round(result.confidence) + '%, lectura ' + result.method + '). Revisa/corrige el texto y pulsa Analizar características. Ningún dato se ha guardado.');
             textField.focus();
           } catch (error) {
             message(ocrStatus, error.message, true);
