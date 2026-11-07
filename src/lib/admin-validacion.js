@@ -90,6 +90,7 @@ export function normaliseProductPayload(payload = {}, existing = null) {
   const nombre = cleanText(payload.nombre ?? existing?.nombre ?? '');
   const marca = cleanText(payload.marca ?? existing?.marca ?? '');
   const idCatalogo = cleanText(payload.id_catalogo ?? existing?.id_catalogo ?? '');
+  const grupoOfertas = cleanText(payload.grupo_ofertas ?? existing?.grupo_ofertas ?? '');
   const idPublicacion = cleanText(payload.id_publicacion ?? existing?.id_publicacion ?? '');
   const enlaceReferido = cleanText(payload.enlace_referido ?? payload.url_publicacion ?? existing?.enlace_referido ?? '');
   const urlPublicacion = cleanText(payload.url_publicacion ?? existing?.url_publicacion ?? payload.enlace_referido ?? '');
@@ -118,6 +119,7 @@ export function normaliseProductPayload(payload = {}, existing = null) {
     marca,
     formato: cleanText(payload.formato ?? existing?.formato ?? ''),
     id_catalogo: idCatalogo,
+    grupo_ofertas: grupoOfertas,
     id_publicacion: idPublicacion,
     enlace_referido: enlaceReferido,
     url_publicacion: urlPublicacion,
@@ -194,6 +196,10 @@ export function validateProductPayload(payload, productos = [], existingId = nul
   }
   if (product.imagen_propia) product.imagen_fuente = 'autorizada';
 
+  if (product.grupo_ofertas && !/^[a-zA-Z0-9][a-zA-Z0-9_-]{2,79}$/.test(product.grupo_ofertas)) {
+    throw new Error('El grupo de ofertas debe tener 3 a 80 caracteres (letras, números, guion o guion bajo).');
+  }
+
   const normalizedName = product.nombre.toLowerCase();
   const normalizedLink = link.toLowerCase();
 
@@ -202,7 +208,19 @@ export function validateProductPayload(payload, productos = [], existingId = nul
     if (item.lista_id !== product.lista_id) return false;
     const itemName = String(item.nombre ?? '').toLowerCase();
     const itemLink = String(item.enlace_referido || item.url_publicacion || '').toLowerCase();
-    return itemName === normalizedName || itemLink === normalizedLink;
+    const candidatePublication = String(product.id_publicacion || '').trim().toUpperCase();
+    const existingPublication = String(item.id_publicacion || '').trim().toUpperCase();
+    if (candidatePublication && existingPublication && candidatePublication === existingPublication) return true;
+    if (itemLink && normalizedLink && itemLink === normalizedLink) return true;
+    // Mismo nombre permitido únicamente con agrupación explícita y dos
+    // publicaciones distintas. Nunca se unen variantes por el texto del nombre.
+    const groupA = product.grupo_ofertas
+      ? 'manual:' + product.grupo_ofertas.toLowerCase()
+      : product.id_catalogo ? 'catalog:' + product.id_catalogo.toUpperCase() : '';
+    const groupB = item.grupo_ofertas
+      ? 'manual:' + String(item.grupo_ofertas).toLowerCase()
+      : item.id_catalogo ? 'catalog:' + String(item.id_catalogo).toUpperCase() : '';
+    return itemName === normalizedName && !(groupA && groupA === groupB && candidatePublication && existingPublication);
   });
 
   if (duplicate) {
