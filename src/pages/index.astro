@@ -4,7 +4,7 @@ import { env } from 'cloudflare:workers';
 import { currencyCLP, loadCatalog } from '../lib/catalog';
 import { AVISO_AFILIADOS_BREVE } from '../lib/public-site';
 
-const catalog = await loadCatalog(env?.dmonkeysport_db);
+const catalog = await loadCatalog(env?.CATALOG_DB);
 const listaCards = catalog.listas.filter((lista) => lista.activa !== false).map((lista) => ({
   ...lista,
   productos: catalog.getProductosByListaId(lista.id),
