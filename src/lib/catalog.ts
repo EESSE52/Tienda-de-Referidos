@@ -150,6 +150,17 @@ export function currencyCLP(value: number | null | undefined): string {
   }).format(value);
 }
 
+/** Importes unitarios: mantiene centavos CLP cuando el cálculo los requiere.
+ * El precio de venta completo sigue mostrándose sin decimales con currencyCLP.
+ */
+export function currencyCLPUnit(value: number | null | undefined): string {
+  if (value === null || value === undefined || !Number.isFinite(value)) return '—';
+  return new Intl.NumberFormat('es-CL', {
+    style: 'currency', currency: 'CLP',
+    minimumFractionDigits: 0, maximumFractionDigits: 2,
+  }).format(value);
+}
+
 export function formatNumber(value: number | null | undefined, decimals = 2): string {
   if (value === null || value === undefined || Number.isNaN(value)) return '—';
   return formatMetricValue(value, decimals);
