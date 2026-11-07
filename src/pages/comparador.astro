@@ -1,7 +1,7 @@
 ---
 import Layout from '../layouts/Layout.astro';
 import { env } from 'cloudflare:workers';
-import { currencyCLP, getBestMetricValue, getMetricResult, loadCatalog, productHasOldPrice } from '../lib/catalog';
+import { currencyCLP, currencyCLPUnit, getBestMetricValue, getMetricResult, loadCatalog, productHasOldPrice } from '../lib/catalog';
 import { formatMetricValue } from '../lib/metricas';
 import { AVISO_AFILIADOS_BREVE, getPrecioReferencialLabel } from '../lib/public-site';
 
@@ -22,7 +22,7 @@ const displayMetric = (metric: any, value: number | null): string => {
   if (value === null || !Number.isFinite(value)) return 'No disponible';
   const formula = metric?.plantilla ?? metric?.formula;
   return formula?.tipo === 'precio_dividido_por'
-    ? currencyCLP(value)
+    ? currencyCLPUnit(value)
     : formatMetricValue(value, Math.max(0, Math.min(6, Number(metric?.decimales ?? 2))));
 };
 ---
