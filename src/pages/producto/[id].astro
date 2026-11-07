@@ -19,6 +19,18 @@ const metricRows = lista?.metricas.map((metrica) => ({
   valor: getMetricResult(producto, metrica),
 })) ?? [];
 const priceIsOld = productHasOldPrice(producto.fecha_precio);
+const hasAffiliateLink = /^https:\/\//i.test(String(producto.enlace_referido || ''));
+const isPublicOffer = producto.activo === true;
+const mainCostMetrics = metricRows.filter((metrica) => {
+  const formula = metrica.plantilla ?? metrica.formula;
+  return formula?.tipo === 'precio_dividido_por' && metrica.valor !== null && Number.isFinite(metrica.valor);
+}).slice(0, 3);
+const imageIsGeneric = !producto.imagen_propia;
+const offerStatusLabel = producto.estado_oferta === 'disponible'
+  ? 'Oferta registrada como disponible'
+  : producto.estado_oferta === 'no_disponible'
+    ? 'Oferta registrada como no disponible'
+    : 'Disponibilidad sin verificar';
 const displaySeller = producto.vendedor_nombre || producto.vendedor || '—';
 const attributeEntries = Object.entries(producto.atributos ?? {}).filter(([, value]) => value !== undefined && value !== null && value !== '').map(([key, value]) => ({
   key, value,
@@ -45,28 +57,39 @@ const metricDisplay = (metrica: { etiqueta?: string; decimales?: number; plantil
       <span class="text-slate-700 dark:text-slate-200">{producto.nombre}</span>
     </div>
 
-    <div class="grid gap-8 lg:grid-cols-[1.3fr_0.7fr]">
-      <section class="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+    <div class="grid items-start gap-6 lg:grid-cols-[minmax(0,1.25fr)_minmax(300px,0.75fr)]">
+      <section class="min-w-0 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7 dark:border-slate-800 dark:bg-slate-900">
         <div class="flex flex-wrap items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-emerald-600 dark:text-emerald-400">
           <span>{lista?.nombre ?? 'Lista'}</span>
           {producto.activo ? <span class="rounded-full bg-emerald-50 px-2 py-1 text-[10px] text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">Activo</span> : <span class="rounded-full bg-slate-200 px-2 py-1 text-[10px] text-slate-700 dark:bg-slate-700 dark:text-slate-200">Inactivo</span>}
         </div>
 
-        <h1 class="mt-3 text-3xl font-black tracking-tight text-slate-900 dark:text-white">{producto.nombre}</h1>
+        <h1 class="mt-3 text-3xl font-black leading-tight tracking-tight text-slate-900 sm:text-4xl dark:text-white">{producto.nombre}</h1>
         <p class="mt-2 text-lg text-slate-600 dark:text-slate-300">{producto.marca || 'Marca no indicada'}</p>
 
-        <figure class="mt-6 overflow-hidden rounded-2xl border border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-800">
-          <img src={getPublicProductImage(producto)} alt={`Imagen referencial de ${producto.nombre}`} loading="lazy" width="1200" height="800" class="aspect-[4/3] h-auto w-full object-contain p-4" />
+        <figure class="mt-6 overflow-hidden rounded-2xl border border-slate-200 bg-gradient-to-br from-white via-emerald-50/40 to-slate-100 dark:border-slate-700 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
+          <img src={getPublicProductImage(producto)} alt={`Imagen referencial de ${producto.nombre}`} loading="lazy" width="1200" height="800" class="aspect-[4/3] h-auto w-full object-contain p-4 sm:p-8" />
+          {imageIsGeneric && <figcaption class="border-t border-slate-200 bg-white/80 px-4 py-2 text-center text-xs text-slate-500 dark:border-slate-700 dark:bg-slate-900/80 dark:text-slate-300">Imagen genérica de la categoría; no representa el envase comercial.</figcaption>}
         </figure>
 
-        <div class="mt-6 rounded-2xl bg-slate-50 p-5 dark:bg-slate-800/90">
-          <p class="text-sm font-medium text-slate-500 dark:text-slate-300">Precio actual</p>
+        <div class="mt-6 rounded-2xl border border-emerald-100 bg-emerald-50/70 p-5 sm:p-6 dark:border-emerald-900 dark:bg-emerald-950/30">
+          <p class="text-sm font-semibold text-emerald-900 dark:text-emerald-200">Precio referencial registrado</p>
           <div class="mt-2 flex flex-wrap items-end gap-3">
-            <span class="text-4xl font-black tracking-tight text-slate-900 dark:text-white">{currencyCLP(producto.precio)}</span>
+            <span class="text-4xl font-black tracking-tight text-slate-900 sm:text-5xl dark:text-white">{currencyCLP(producto.precio)}</span>
             <span class="text-sm text-slate-500 dark:text-slate-300">{dateLabel(producto.fecha_precio)}</span>
           </div>
           <p class="mt-2 text-sm text-slate-600 dark:text-slate-300">{getPrecioReferencialLabel(producto.fecha_precio)}</p>
-          <p class="mt-1 text-sm text-slate-600 dark:text-slate-300">Revisa el precio actual en Mercado Libre.</p>
+          <p class="mt-1 text-sm text-slate-600 dark:text-slate-300">Precio y disponibilidad sujetos a cambios. Compruébalos en la tienda antes de comprar.</p>
+          {mainCostMetrics.length > 0 && (
+            <div class="mt-5 grid gap-3 sm:grid-cols-3" aria-label="Costos unitarios del producto">
+              {mainCostMetrics.map((metrica) => (
+                <div class="rounded-xl border border-emerald-100 bg-white p-3 dark:border-emerald-900 dark:bg-slate-900">
+                  <p class="text-xs font-medium leading-snug text-slate-600 dark:text-slate-300">{metrica.etiqueta}</p>
+                  <p class="mt-1 text-xl font-extrabold tabular-nums text-emerald-800 dark:text-emerald-300">{metricDisplay(metrica, metrica.valor)}</p>
+                </div>
+              ))}
+            </div>
+          )}
 
           <div class="mt-4 flex flex-wrap gap-2 text-sm">
             <span class="rounded-full bg-white px-3 py-1 text-slate-700 shadow-sm dark:bg-slate-700 dark:text-slate-100">{displaySeller}</span>
@@ -84,13 +107,13 @@ const metricDisplay = (metrica: { etiqueta?: string; decimales?: number; plantil
           )}
         </div>
 
-        <div class="mt-6 flex flex-wrap gap-3">
-          {/^https:\/\//i.test(String(producto.enlace_referido || '')) ? (
-            <a href={producto.enlace_referido} target="_blank" rel="sponsored nofollow noopener" class="rounded-xl bg-emerald-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-emerald-500">Ver oferta</a>
+        <div class="mt-6 flex flex-col gap-3 sm:flex-row">
+          {hasAffiliateLink && isPublicOffer ? (
+            <a href={producto.enlace_referido} target="_blank" rel="sponsored nofollow noopener" aria-label={`Ver oferta de ${producto.nombre} en tienda externa`} class="inline-flex min-h-12 flex-1 items-center justify-center rounded-xl bg-emerald-600 px-5 py-3 text-center text-sm font-bold text-white shadow-sm transition hover:bg-emerald-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600">Ver oferta en Mercado Libre ↗</a>
           ) : (
-            <span class="rounded-xl bg-slate-200 px-5 py-3 text-sm font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-300">Oferta pendiente de enlace de afiliado</span>
+            <span class="inline-flex min-h-12 flex-1 items-center justify-center rounded-xl bg-slate-200 px-5 py-3 text-center text-sm font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-300">Oferta no disponible para compra desde aquí</span>
           )}
-          <a href={lista ? `/lista/${lista.slug}` : '/'} class="rounded-xl border border-slate-300 px-5 py-3 text-sm font-semibold text-slate-700 transition hover:border-slate-500 dark:border-slate-700 dark:text-slate-200">Volver a la lista</a>
+          <a href={lista ? `/lista/${lista.slug}` : '/'} class="inline-flex min-h-12 items-center justify-center rounded-xl border border-slate-300 px-5 py-3 text-sm font-semibold text-slate-700 transition hover:border-slate-500 dark:border-slate-700 dark:text-slate-200">← Volver a la lista</a>
         </div>
         <p class="mt-4 text-sm text-slate-600 dark:text-slate-300">{AVISO_AFILIADOS_BREVE}</p>
       </section>
@@ -101,7 +124,7 @@ const metricDisplay = (metrica: { etiqueta?: string; decimales?: number; plantil
           <div class="flex items-center justify-between gap-4"><dt class="text-slate-500 dark:text-slate-300">Marca</dt><dd class="font-medium text-slate-900 dark:text-white">{producto.marca || 'Sin marca'}</dd></div>
           <div class="flex items-center justify-between gap-4"><dt class="text-slate-500 dark:text-slate-300">Vendedor</dt><dd class="font-medium text-slate-900 dark:text-white">{displaySeller}</dd></div>
           <div class="flex items-center justify-between gap-4"><dt class="text-slate-500 dark:text-slate-300">ID</dt><dd class="font-medium text-slate-900 dark:text-white">{producto.id_publicacion || 'Sin ID'}</dd></div>
-          <div class="flex items-center justify-between gap-4"><dt class="text-slate-500 dark:text-slate-300">Estado</dt><dd class="font-medium text-slate-900 dark:text-white">{producto.estado_oferta || (producto.activo ? 'disponible' : 'no_disponible')}</dd></div>
+          <div class="flex items-center justify-between gap-4"><dt class="text-slate-500 dark:text-slate-300">Disponibilidad</dt><dd class="text-right font-medium text-slate-900 dark:text-white">{offerStatusLabel}</dd></div>
         </dl>
 
         {producto.notas && (
@@ -115,7 +138,8 @@ const metricDisplay = (metrica: { etiqueta?: string; decimales?: number; plantil
 
     <section class="mt-8 grid gap-6 lg:grid-cols-2">
       <div class="rounded-3xl border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
-        <h2 class="text-xl font-bold text-slate-900 dark:text-white">Métricas</h2>
+        <h2 class="text-xl font-bold text-slate-900 dark:text-white">Costos y métricas de comparación</h2>
+        <p class="mt-2 text-sm text-slate-600 dark:text-slate-300">Valores calculados con el precio referencial y las características registradas. No constituyen una cotización actualizada.</p>
         <div class="mt-4 grid gap-3 sm:grid-cols-2">
           {metricRows.length > 0 ? metricRows.map((metrica) => (
             <div class="rounded-2xl bg-slate-50 p-4 dark:bg-slate-800">
