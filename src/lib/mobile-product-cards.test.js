@@ -10,6 +10,12 @@ describe('tarjetas móviles del catálogo', () => {
     expect(page).toContain('getPrecioReferencialLabel(producto.fecha_precio)');
     expect(page).toContain('loading="lazy"');
   });
+  it('presenta métricas monetarias en móvil y acceso a oferta desde escritorio', () => {
+    expect(page).toContain('monetaryMetrics.slice(0, 2)');
+    expect(page).toContain('currencyCLPUnit(Number(valor))');
+    expect(page).toContain('Ver oferta ↗');
+    expect(page).toContain('productos.length > 1 && metrica.mejor');
+  });
   it('permite abrir producto y usar únicamente enlace de afiliado', () => {
     expect(page).toContain('href={producto.enlace_referido}');
     expect(page).toContain('rel="sponsored nofollow noopener"');
