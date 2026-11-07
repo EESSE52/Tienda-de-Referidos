@@ -39,6 +39,8 @@ export type Producto = {
   marca: string;
   formato?: string;
   id_catalogo?: string | null;
+  grupo_ofertas?: string | null;
+  es_prueba?: boolean;
   id_publicacion: string;
   enlace_referido: string;
   url_publicacion?: string;
