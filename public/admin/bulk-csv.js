@@ -52,9 +52,11 @@ export function createManualMercadoLibreCandidate(input) {
   const userProduct = url.pathname.match(/\/up\/MLCU[0-9]{6,}(?:\/|$)/i);
   const wid = new URLSearchParams(url.hash.slice(1)).get('wid') || url.searchParams.get('wid') || '';
   const inPath = url.pathname.match(/(?:^|[^a-z0-9])MLC[-_]?([0-9]{6,})(?=[^0-9]|$)/i);
-  const id = userProduct
-    ? (/^MLC[0-9]{6,}$/i.test(wid) ? wid.toUpperCase() : '')
-    : (inPath ? 'MLC' + inPath[1] : '');
+  // En fichas /p/MLC... el ID de la ficha puede ser diferente al de
+  // la publicación específica del vendedor (wid=MLC...). Para el CSV debe
+  // prevalecer wid cuando es un ID de publicación válido.
+  const validWid = /^MLC[0-9]{6,}$/i.test(wid) ? wid.toUpperCase() : '';
+  const id = userProduct ? validWid : (validWid || (inPath ? 'MLC' + inPath[1] : ''));
   if (!id) throw new Error('Necesitas un enlace con publicación MLC o una ficha MLCU con wid=MLC.');
   const name = String(input?.name || '').trim();
   const brand = String(input?.brand || '').trim();
