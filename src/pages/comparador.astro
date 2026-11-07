@@ -5,7 +5,7 @@ import { currencyCLP, getBestMetricValue, getMetricResult, loadCatalog, productH
 import { formatMetricValue } from '../lib/metricas';
 import { AVISO_AFILIADOS_BREVE, getPrecioReferencialLabel } from '../lib/public-site';
 
-const catalog = await loadCatalog(env?.dmonkeysport_db);
+const catalog = await loadCatalog(env?.CATALOG_DB);
 const ids = (Astro.url.searchParams.get('ids') ?? '')
   .split(',')
   .map((id) => id.trim())
