@@ -65,6 +65,19 @@ describe('ingreso manual por características pegadas', () => {
     expect(result.mapped.porciones).toBe(20);
     expect(result.warnings.length).toBeGreaterThan(0);
   });
+  it('reconoce separadores OCR de espacios y sinónimos nutricionales', () => {
+    const c = { campos:[
+      {clave:'gramos_total',etiqueta:'Gramos totales',tipo:'numero'},
+      {clave:'porciones',etiqueta:'Porciones',tipo:'numero'},
+      {clave:'libre_gluten',etiqueta:'Libre de gluten',tipo:'texto'},
+      {clave:'proteina_porcion',etiqueta:'Proteína por porción',tipo:'texto'},
+    ]};
+    const result = previewPastedSpecifications('Peso neto  500 g\nCantidad de porciones  200\nProteínas por porción: 25 g\nLibre de gluten: Sí',c);
+    expect(result.mapped.gramos_total).toBe(500);
+    expect(result.mapped.porciones).toBe(200);
+    expect(result.mapped.proteina_porcion).toBe('25 g');
+    expect(result.mapped.libre_gluten).toBe('Sí');
+  });
   it('no requiere API ni escribe automáticamente en D1', () => {
     const html=readFileSync(new URL('../../public/admin/index.html',import.meta.url),'utf8');
     expect(html).toContain('id="ml-pasted-specs"');
