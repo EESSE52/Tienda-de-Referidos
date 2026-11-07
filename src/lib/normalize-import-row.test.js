@@ -69,3 +69,20 @@ describe('CSV con campos personalizables', () => {
     expect(result.atributos).not.toHaveProperty('secreto');
   });
 });
+
+describe('importación de ofertas por vendedor', () => {
+  it('conserva grupo, catálogo y vendedor sin agregarlos a atributos', () => {
+    const item = normalizeImportRow({
+      ...valid, id_publicacion: 'MLC2222222222',
+      grupo_ofertas: 'foodtech-1kg-sin-sabor',
+      id_catalogo: 'MLC28720010',
+      vendedor_nombre: 'Tienda B', vendedor_id: '1234',
+    }, category);
+    expect(item).toMatchObject({
+      grupo_ofertas: 'foodtech-1kg-sin-sabor', id_catalogo: 'MLC28720010',
+      vendedor_nombre: 'Tienda B', vendedor_id: '1234',
+    });
+    expect(item.atributos).not.toHaveProperty('grupo_ofertas');
+    expect(item.atributos).not.toHaveProperty('vendedor_nombre');
+  });
+});
