@@ -31,6 +31,17 @@ describe('ficha de producto legible', () => {
     expect(detail).toContain('Diferencia entre precios registrados');
     expect(detail).toContain('sin costos de envío');
   });
+  it('habilita una segunda oferta ficticia solo en localhost con demo=1', () => {
+    expect(detail).toContain("Astro.url.hostname === 'localhost'");
+    expect(detail).toContain("Astro.url.hostname === '127.0.0.1'");
+    expect(detail).toContain("Astro.url.searchParams.get('demo') === '1'");
+    expect(detail).toContain("producto.id === 'MLC1859621269'");
+    expect(detail).toContain("id: 'DEMO-NO-REAL-002'");
+    expect(detail).toContain("enlace_referido: ''");
+    expect(detail).toContain("MODO DEMOSTRACIÓN LOCAL — DATOS FICTICIOS");
+    expect(detail).toContain('FICTICIO · NO COMPRABLE');
+    expect(detail).toContain('Demostración sin compra');
+  });
   it('evita recortar imágenes de productos', () => {
     expect(detail).toContain('object-contain p-4');
     expect(detail).toContain('getPublicProductImage(producto)');
