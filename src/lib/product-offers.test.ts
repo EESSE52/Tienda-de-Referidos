@@ -34,7 +34,11 @@ describe('ofertas de múltiples vendedores', () => {
       product('MLC3333333', 19990, { es_prueba: true }),
       product('MLC4444444', 18990, { lista_id: 'proteina' })];
     expect(getOffersForProduct(first, others).map(x => x.id)).toEqual(['MLC1111111']);
-    expect(getGroupedListingProducts(others).map(x => x.id)).toEqual(['MLC1111111']);
+    // La agrupación general conserva los productos válidos de otras categorías.
+    // El filtrado por categoría ocurre antes de agrupar, en la página /lista/[slug].
+    expect(getGroupedListingProducts(others).map(x => x.id)).toEqual(['MLC1111111', 'MLC4444444']);
+    expect(getGroupedListingProducts(others.filter(x => x.lista_id === 'creatina'))
+      .map(x => x.id)).toEqual(['MLC1111111']);
     expect(getOfferSavings(getOffersForProduct(first, others))).toBeNull();
   });
   it('no marca ahorro cuando hay un solo precio o no hay diferencia', () => {
