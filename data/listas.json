@@ -297,35 +297,5 @@
         "conversion": "peso_a_gramos"
       }
     }
-  },
-  {
-    "id": "lista-prueba",
-    "slug": "lista-prueba",
-    "nombre": "Lista prueba",
-    "descripcion": "Lista de prueba",
-    "unidad_base": "g",
-    "activa": true,
-    "orden_defecto": {
-      "campo": "precio_por_gramo",
-      "direccion": "menor"
-    },
-    "campos": [],
-    "metricas": [],
-    "mapa_atributos_ml": {}
-  },
-  {
-    "id": "lista-validacion",
-    "slug": "lista-validacion",
-    "nombre": "Lista validación",
-    "descripcion": "Lista de prueba local",
-    "unidad_base": "g",
-    "activa": true,
-    "orden_defecto": {
-      "campo": "precio_por_gramo",
-      "direccion": "menor"
-    },
-    "campos": [],
-    "metricas": [],
-    "mapa_atributos_ml": {}
   }
 ]
