@@ -31,19 +31,19 @@ const pageTitle = title === 'D’MonkeySport' ? title : `${title} | D’MonkeySp
     <link rel="canonical" href={canonicalUrl} />
     <title>{pageTitle}</title>
   </head>
-  <body class="min-h-full bg-slate-50 text-slate-900 antialiased dark:bg-slate-950 dark:text-slate-100">
-    <header class="border-b border-slate-200 bg-white/90 backdrop-blur dark:border-slate-800 dark:bg-slate-900/90">
+  <body class="min-h-full bg-[#f5f5f5] text-slate-900 antialiased dark:bg-slate-950 dark:text-slate-100">
+    <header class="border-b border-[#e0ca00] bg-[#ffe600] text-slate-950 shadow-sm">
       <div class="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-4">
-        <a href="/" class="text-xl font-black tracking-tight text-slate-900 dark:text-white">D’MonkeySport</a>
+        <a href="/" class="text-xl font-black tracking-tight text-[#172554]">D’MonkeySport</a>
         <nav class="hidden items-center gap-4 text-sm font-medium md:flex" aria-label="Navegación principal">
-          <a href="/" class={currentPath === '/' ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-600 dark:text-slate-300'}>Inicio</a>
-          <a href="/#categorias" class="text-slate-600 dark:text-slate-300">Categorías</a>
-          <a href="/como-comparamos" class={currentPath === '/como-comparamos' ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-600 dark:text-slate-300'}>Cómo comparamos</a>
-          <a href="/aviso-afiliados" class={currentPath === '/aviso-afiliados' ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-600 dark:text-slate-300'}>Afiliados</a>
+          <a href="/" class={currentPath === '/' ? 'text-[#1d4ed8] underline underline-offset-4' : 'text-slate-800 hover:text-[#1d4ed8]'}>Inicio</a>
+          <a href="/#categorias" class="text-slate-800 hover:text-[#1d4ed8]">Categorías</a>
+          <a href="/como-comparamos" class={currentPath === '/como-comparamos' ? 'text-[#1d4ed8] underline underline-offset-4' : 'text-slate-800 hover:text-[#1d4ed8]'}>Cómo comparamos</a>
+          <a href="/aviso-afiliados" class={currentPath === '/aviso-afiliados' ? 'text-[#1d4ed8] underline underline-offset-4' : 'text-slate-800 hover:text-[#1d4ed8]'}>Afiliados</a>
         </nav>
         <details class="relative md:hidden" id="mobile-nav">
-          <summary class="cursor-pointer rounded-lg border border-slate-300 px-3 py-2 text-sm font-bold text-slate-800 focus-visible:outline-2 focus-visible:outline-emerald-500 dark:border-slate-600 dark:text-slate-100">Menú</summary>
-          <nav aria-label="Navegación móvil" class="absolute right-0 top-full z-50 mt-2 flex min-w-44 flex-col gap-1 rounded-xl border border-slate-200 bg-white p-2 shadow-xl dark:border-slate-700 dark:bg-slate-900">
+          <summary class="cursor-pointer rounded-lg border border-[#ccb900] bg-white px-3 py-2 text-sm font-bold text-[#172554] focus-visible:outline-2 focus-visible:outline-blue-600">Menú</summary>
+          <nav aria-label="Navegación móvil" class="absolute right-0 top-full z-50 mt-2 flex min-w-44 flex-col gap-1 rounded-xl border border-slate-200 bg-white p-2 text-slate-900 shadow-xl dark:border-slate-700">
             <a href="/" class="rounded-lg px-3 py-2 hover:bg-emerald-50 dark:hover:bg-slate-800">Inicio</a>
             <a href="/#categorias" class="rounded-lg px-3 py-2 hover:bg-emerald-50 dark:hover:bg-slate-800">Categorías</a>
             <a href="/como-comparamos" class="rounded-lg px-3 py-2 hover:bg-emerald-50 dark:hover:bg-slate-800">Cómo comparamos</a>
