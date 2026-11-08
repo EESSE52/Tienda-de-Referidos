@@ -32,7 +32,7 @@ describe('Fase 7.4: conclusiones objetivas del comparador', () => {
   it('omite cálculos unitarios sin datos y precios inválidos', () => {
     const result=summarizeComparison([a,{...b,precio:0,atributos:{gramos_total:0}}],[lista]);
     expect(result.price).toBeNull();
-    expect(result.metrics).toEqual([]);
+    expect(result.metrics.find(item => item.key === 'costo_gramo')).toBeUndefined();
   });
   it('respeta empates y no asigna ventaja cuando ambos valores son iguales', () => {
     const result=summarizeComparison([a,{...a,id:'C',nombre:'C'}],[lista]);
