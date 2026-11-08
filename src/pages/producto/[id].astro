@@ -80,6 +80,7 @@ const metricDisplay = (metrica: { etiqueta?: string; decimales?: number; plantil
 ---
 
 <Layout title={producto.nombre} description={`${producto.marca} - ${producto.nombre}. Comparación y precio de referencia.`}>
+  <span data-product-view={producto.id} hidden></span>
   <div class="mx-auto max-w-6xl px-4 py-8">
     <div class="mb-5 flex flex-wrap items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
       <a href="/" class="transition hover:text-emerald-600">Inicio</a>
@@ -141,7 +142,7 @@ const metricDisplay = (metrica: { etiqueta?: string; decimales?: number; plantil
 
         <div class="mt-6 flex flex-col gap-3 sm:flex-row">
           {hasAffiliateLink && isPublicOffer ? (
-            <a href={producto.enlace_referido} target="_blank" rel="sponsored nofollow noopener" aria-label={`Ver oferta de ${producto.nombre} en tienda externa`} class="inline-flex min-h-12 flex-1 items-center justify-center rounded-xl bg-emerald-600 px-5 py-3 text-center text-sm font-bold text-white shadow-sm transition hover:bg-emerald-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600">Ver oferta en Mercado Libre ↗</a>
+            <a href={producto.enlace_referido} data-affiliate-product={producto.id} data-affiliate-placement="product" target="_blank" rel="sponsored nofollow noopener" aria-label={`Ver oferta de ${producto.nombre} en tienda externa`} class="inline-flex min-h-12 flex-1 items-center justify-center rounded-xl bg-emerald-600 px-5 py-3 text-center text-sm font-bold text-white shadow-sm transition hover:bg-emerald-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600">Ver oferta en Mercado Libre ↗</a>
           ) : (
             <span class="inline-flex min-h-12 flex-1 items-center justify-center rounded-xl bg-slate-200 px-5 py-3 text-center text-sm font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-300">Oferta no disponible para compra desde aquí</span>
           )}
@@ -208,7 +209,7 @@ const metricDisplay = (metrica: { etiqueta?: string; decimales?: number; plantil
                   <td class="whitespace-nowrap px-4 py-4 align-top text-slate-600 dark:text-slate-300">{getPrecioReferencialLabel(offer.fecha_precio)}</td>
                   <td class="px-4 py-4 align-top">
                     {offer.id !== 'DEMO-NO-REAL-002' && offer.activo === true && offer.es_prueba !== true && /^https:\/\//i.test(String(offer.enlace_referido || '')) ? (
-                      <a href={offer.enlace_referido} target="_blank" rel="sponsored nofollow noopener" class="inline-flex whitespace-nowrap rounded-lg bg-emerald-600 px-3 py-2 font-semibold text-white hover:bg-emerald-700">Ver oferta ↗</a>
+                      <a href={offer.enlace_referido} data-affiliate-product={offer.id} data-affiliate-placement="seller_offer" target="_blank" rel="sponsored nofollow noopener" class="inline-flex whitespace-nowrap rounded-lg bg-emerald-600 px-3 py-2 font-semibold text-white hover:bg-emerald-700">Ver oferta ↗</a>
                     ) : <span class="text-slate-500 dark:text-slate-300">{offer.id === 'DEMO-NO-REAL-002' ? 'Demostración sin compra' : 'Oferta no habilitada'}</span>}
                   </td>
                 </tr>
