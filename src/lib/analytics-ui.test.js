@@ -1,0 +1,37 @@
+import { readFileSync } from 'node:fs';
+import { describe, expect, it } from 'vitest';
+const root = new URL('../../', import.meta.url);
+const read = path => readFileSync(new URL(path, root), 'utf8');
+describe('Fase 6: instrumentación y tablero', () => {
+  it('mide vistas de producto y clics sin reemplazar la URL de afiliado', () => {
+    const layout = read('src/layouts/Layout.astro');
+    const product = read('src/pages/producto/[id].astro');
+    const category = read('src/pages/lista/[slug].astro');
+    const comparison = read('src/pages/comparador.astro');
+    expect(layout).toContain("navigator.sendBeacon('/api/analytics/event'");
+    expect(layout).toContain("send('view'");
+    expect(layout).toContain("send('affiliate_click'");
+    expect(product).toContain('data-product-view={producto.id}');
+    expect(product).toContain('href={producto.enlace_referido} data-affiliate-product={producto.id}');
+    expect(product).toContain('href={offer.enlace_referido} data-affiliate-product={offer.id}');
+    expect(category).toContain('data-affiliate-placement="category_card"');
+    expect(comparison).toContain('data-affiliate-placement="comparison"');
+  });
+  it('protege las estadísticas en la API administrativa y mantiene fallos inocuos', () => {
+    const adminApi = read('src/pages/api/admin/analytics.ts');
+    const eventApi = read('src/pages/api/analytics/event.ts');
+    expect(adminApi).toContain('requireAdmin({ env, request })');
+    expect(adminApi).toContain('displayAnalytics');
+    expect(eventApi).toContain('validateAnalyticsEvent(data)');
+    expect(eventApi).toContain('status: 204');
+    expect(eventApi).not.toContain('cookies.');
+  });
+  it('muestra estadísticas separadas de ventas y comisiones', () => {
+    const admin = read('public/admin/index.html');
+    expect(admin).toContain('id="analytics-dashboard-panel"');
+    expect(admin).toContain('function analyticsTable(title, rows, columns)');
+    expect(admin).toContain("api('/api/admin/analytics?days='");
+    expect(admin).toContain('Los clics no equivalen a ventas');
+    expect(admin).toContain('Rendimiento por vendedor (clics, no ventas)');
+  });
+});
