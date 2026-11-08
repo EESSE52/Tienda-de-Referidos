@@ -362,6 +362,23 @@
           <div id="batch-review-results" class="preview" aria-live="polite"></div>
         </section>
 
+        <section class="card" style="margin-bottom:20px" id="manual-price-panel" hidden>
+          <h2>Registrar revisión manual de precio</h2>
+          <p class="subtle">Comprueba el precio en la publicación de Mercado Libre Chile y confirma el importe observado. La revisión se guardará con fecha y fuente, incluso si el precio no cambió. No verifica disponibilidad ni enlace de afiliación.</p>
+          <div id="manual-price-product" class="preview"></div>
+          <form id="manual-price-form">
+            <div class="admin-fields">
+              <label>Precio observado en Mercado Libre (CLP)<input id="manual-price-value" type="number" min="1" step="1" required /></label>
+              <label><input id="manual-price-confirm" type="checkbox" required /> Confirmo que comprobé este precio en la publicación oficial.</label>
+            </div>
+            <div class="button-row">
+              <button type="submit">Guardar precio y fecha de revisión</button>
+              <button type="button" id="manual-price-cancel" class="secondary">Cancelar</button>
+            </div>
+          </form>
+          <div id="manual-price-status" class="status" aria-live="polite"></div>
+        </section>
+
         <section class="card" style="margin-bottom:20px" id="price-history-panel" hidden>
           <h2>Historial de precios</h2>
           <p class="subtle">Registros guardados en D1. No se consultan precios externos al abrir este historial.</p>
@@ -1100,6 +1117,14 @@
               actions.appendChild(edit);
               const publicationLink = createOfficialPriceLink(offer);
               if (publicationLink) actions.appendChild(publicationLink);
+              if (publicationLink && offer.es_prueba !== true) {
+                const manual = document.createElement('button');
+                manual.type = 'button';
+                manual.className = 'secondary';
+                manual.textContent = 'Registrar precio manual';
+                manual.addEventListener('click', () => showManualPriceReview(offer.id));
+                actions.appendChild(manual);
+              }
               if (offer.activo && !offer.es_prueba && /^MLC[0-9]{6,}$/i.test(String(offer.id_publicacion || '').replace(/[-_]/g,''))) {
                 const review = document.createElement('button');
                 review.type = 'button'; review.textContent = 'Revisar precio'; review.className = 'secondary';
@@ -1182,6 +1207,14 @@
             div.appendChild(historyButton);
             const publicationLink = createOfficialPriceLink(product);
             if (publicationLink) div.appendChild(publicationLink);
+            if (publicationLink && product.es_prueba !== true) {
+              const manual = document.createElement('button');
+              manual.type = 'button';
+              manual.className = 'secondary';
+              manual.textContent = 'Registrar precio manual';
+              manual.addEventListener('click', () => showManualPriceReview(product.id));
+              div.appendChild(manual);
+            }
             if (!product.es_prueba && /^MLC[0-9]{6,}$/i.test(String(product.id_publicacion || '').replace(/[-_]/g, ''))) {
               const reviewButton = document.createElement('button');
               reviewButton.type = 'button';
@@ -1282,6 +1315,74 @@
               + '. No se ha guardado ningún cambio sin confirmación.');
           } finally {
             batchButton.disabled = false;
+          }
+        });
+
+        const manualPricePanel = document.getElementById('manual-price-panel');
+        const manualPriceForm = document.getElementById('manual-price-form');
+        const manualPriceProduct = document.getElementById('manual-price-product');
+        const manualPriceStatus = document.getElementById('manual-price-status');
+        const manualPriceValue = document.getElementById('manual-price-value');
+        const manualPriceConfirm = document.getElementById('manual-price-confirm');
+        let manualReviewSnapshot = null;
+        function hideManualPriceReview() {
+          manualReviewSnapshot = null;
+          manualPricePanel.hidden = true;
+          manualPriceForm.reset();
+          manualPriceProduct.replaceChildren();
+        }
+        function showManualPriceReview(id) {
+          const product = currentProducts.find(p => p.id === id);
+          if (!product || product.es_prueba === true) return;
+          const link = createOfficialPriceLink(product);
+          if (!link) return message(adminStatus, 'No existe una publicación oficial comprobable.', true);
+          manualReviewSnapshot = {
+            id: product.id, nombre: product.nombre, precio: Number(product.precio),
+            id_publicacion: String(product.id_publicacion || ''),
+          };
+          manualPriceForm.reset();
+          manualPriceValue.value = '';
+          manualPriceProduct.replaceChildren();
+          const desc = document.createElement('p');
+          desc.textContent = product.nombre + ' · Precio registrado: ' + offerMoney(product.precio);
+          manualPriceProduct.appendChild(desc);
+          manualPriceProduct.appendChild(link);
+          manualPricePanel.hidden = false;
+          message(manualPriceStatus, 'Abre la publicación, comprueba su precio y confirma el importe observado. No se guardará nada antes de pulsar Guardar.');
+          manualPricePanel.scrollIntoView({behavior:'smooth'});
+        }
+        document.getElementById('manual-price-cancel').addEventListener('click', hideManualPriceReview);
+        manualPriceForm.addEventListener('submit', async event => {
+          event.preventDefault();
+          if (!manualReviewSnapshot) return;
+          const amount = Number(manualPriceValue.value);
+          if (!Number.isSafeInteger(amount) || amount <= 0 || !manualPriceConfirm.checked) {
+            return message(manualPriceStatus, 'Introduce un precio CLP válido y confirma que lo has comprobado.', true);
+          }
+          if (!confirm('¿Guardar precio observado ' + offerMoney(amount) + ' para ' + manualReviewSnapshot.nombre + '? Se actualizará la fecha de revisión.')) return;
+          const submit = manualPriceForm.querySelector('button[type="submit"]');
+          submit.disabled = true;
+          try {
+            const result = await api('/api/admin/products/' + encodeURIComponent(manualReviewSnapshot.id) + '/manual-price-review', {
+              method: 'POST',
+              headers: {'Content-Type':'application/json'},
+              body: JSON.stringify({
+                confirmar: true,
+                fuente: 'mercadolibre_manual',
+                id_publicacion: manualReviewSnapshot.id_publicacion,
+                precio_actual: manualReviewSnapshot.precio,
+                precio_observado: amount,
+              }),
+            });
+            hideManualPriceReview();
+            await refresh();
+            message(productStatus, result.actualizado
+              ? 'Precio registrado manualmente, con fecha e historial.'
+              : 'Precio comprobado sin cambios: se actualizó la fecha de revisión.');
+          } catch (error) {
+            message(manualPriceStatus, error.message + ' No se realizó una actualización confirmada.', true);
+          } finally {
+            submit.disabled = false;
           }
         });
 
