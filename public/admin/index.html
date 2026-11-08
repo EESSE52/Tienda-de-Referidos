@@ -193,7 +193,7 @@
       <aside class="sidebar">
         <div class="brand">D’MonkeySport</div>
         <nav class="nav" aria-label="Navegación del administrador">
-          <a href="#analytics-dashboard-panel" data-admin-nav>Estadísticas</a>
+          <a href="#analytics-dashboard-panel" data-admin-nav>Inteligencia comercial</a>
           <a href="#products-panel" data-admin-nav>Productos</a>
           <a href="#offer-management-panel" data-admin-nav>Vendedores y ofertas</a>
           <a href="#price-management-panel" data-admin-nav>Control de precios</a>
@@ -354,10 +354,11 @@
         </section>
 
         <section class="card" style="margin-bottom:20px" id="analytics-dashboard-panel">
-          <h2>Estadísticas comerciales</h2>
+          <h2>Inteligencia comercial</h2>
           <p class="subtle">Conteos diarios agregados, no usuarios únicos. Los clics en enlaces afiliados no significan ventas ni comisiones. No almacenamos datos personales en estas métricas.</p>
           <div class="admin-fields">
             <label>Período<select id="analytics-days"><option value="7">Últimos 7 días</option><option value="30" selected>Últimos 30 días</option><option value="90">Últimos 90 días</option></select></label>
+            <label>Ordenar productos<select id="analytics-sort"><option value="visitas">Más visitas</option><option value="clics">Más clics afiliados</option><option value="ctr">Mayor CTR (mínimo 10 visitas)</option><option value="opportunity">Muchas visitas y pocos clics</option></select></label>
           </div>
           <div class="button-row"><button id="analytics-refresh" class="secondary" type="button">Actualizar estadísticas</button></div>
           <div id="analytics-status" class="status" aria-live="polite">Conecta el administrador para ver las estadísticas.</div>
@@ -1045,6 +1046,53 @@
         const analyticsStatus = document.getElementById('analytics-status');
         const analyticsDays = document.getElementById('analytics-days');
         const analyticsRefresh = document.getElementById('analytics-refresh');
+        const analyticsSort = document.getElementById('analytics-sort');
+        let analyticsSnapshot = null;
+        const analyticsCount = value => Math.max(0, Number(value) || 0);
+        const analyticsCtr = item => {
+          const visits = analyticsCount(item.visitas);
+          return visits > 0 ? (analyticsCount(item.clics) / visits) * 100 : 0;
+        };
+        const analyticsCtrText = item => analyticsCount(item.visitas) > 0
+          ? analyticsCtr(item).toLocaleString('es-CL', {maximumFractionDigits:1}) + '%'
+          : '—';
+        const analyticsRank = products => {
+          const mode = analyticsSort.value;
+          const items = (Array.isArray(products) ? products : []).map(item => ({
+            ...item,
+            ctr: analyticsCtrText(item),
+          }));
+          const score = item => {
+            const views = analyticsCount(item.visitas);
+            const clicks = analyticsCount(item.clics);
+            if (mode === 'clics') return clicks;
+            if (mode === 'ctr') return views >= 10 ? analyticsCtr(item) : -1;
+            if (mode === 'opportunity') return Math.max(0, views - clicks);
+            return views;
+          };
+          return items.sort((a,b) => score(b) - score(a) || analyticsCount(b.visitas) - analyticsCount(a.visitas));
+        };
+        function renderAnalyticsSnapshot(result) {
+          analyticsResult.replaceChildren();
+          const summary = document.createElement('p');
+          summary.textContent = 'Visitas de fichas: ' + result.totals.visitas
+            + ' · Clics afiliados: ' + result.totals.clics;
+          analyticsResult.appendChild(summary);
+          const help = document.createElement('p');
+          help.className = 'subtle';
+          help.textContent = 'CTR = clics / visitas de ficha × 100. Es una relación entre eventos agregados, no una tasa de ventas ni usuarios únicos. El ranking CTR exige 10 visitas para ordenar con más estabilidad.';
+          analyticsResult.appendChild(help);
+          analyticsTable('Ranking de productos', analyticsRank(result.products), [
+            ['Producto','nombre'],['Categoría','categoria'],['Vendedor','vendedor'],
+            ['Visitas','visitas'],['Clics','clics'],['CTR','ctr'],
+          ]);
+          analyticsTable('Interés por categoría', (result.categories || []).map(item => ({...item,ctr:analyticsCtrText(item)})), [
+            ['Categoría','categoria'],['Visitas','visitas'],['Clics','clics'],['CTR','ctr'],
+          ]);
+          analyticsTable('Rendimiento por vendedor (clics, no ventas)', (result.sellers || []).map(item => ({...item,ctr:analyticsCtrText(item)})), [
+            ['Vendedor','vendedor'],['Categoría','categoria'],['Visitas','visitas'],['Clics','clics'],['CTR','ctr'],
+          ]);
+        }
         function analyticsTable(title, rows, columns) {
           const heading = document.createElement('h3');
           heading.textContent = title;
@@ -1077,20 +1125,8 @@
             const result = await api('/api/admin/analytics?days=' + encodeURIComponent(analyticsDays.value));
             message(analyticsStatus, 'Eventos registrados en los últimos ' + result.days
               + ' días. Los clics no equivalen a ventas.');
-            const summary = document.createElement('p');
-            summary.textContent = 'Visitas de fichas: ' + result.totals.visitas
-              + ' · Clics afiliados: ' + result.totals.clics;
-            analyticsResult.appendChild(summary);
-            analyticsTable('Productos más consultados', result.products, [
-              ['Producto','nombre'],['Categoría','categoria'],['Vendedor','vendedor'],
-              ['Visitas','visitas'],['Clics','clics'],
-            ]);
-            analyticsTable('Interés por categoría', result.categories, [
-              ['Categoría','categoria'],['Visitas','visitas'],['Clics','clics'],
-            ]);
-            analyticsTable('Rendimiento por vendedor (clics, no ventas)', result.sellers, [
-              ['Vendedor','vendedor'],['Categoría','categoria'],['Visitas','visitas'],['Clics','clics'],
-            ]);
+            analyticsSnapshot = result;
+            renderAnalyticsSnapshot(result);
           } catch (error) {
             message(analyticsStatus, error.message, true);
           } finally {
@@ -1098,6 +1134,7 @@
           }
         }
         analyticsRefresh.addEventListener('click', refreshAnalytics);
+        analyticsSort.addEventListener('change', () => { if (analyticsSnapshot) renderAnalyticsSnapshot(analyticsSnapshot); });
         analyticsDays.addEventListener('change', () => { if (adminToken) refreshAnalytics(); });
 
         const offerDashboard = document.getElementById('offers-dashboard-list');
