@@ -54,6 +54,16 @@ describe('administración y listado de múltiples ofertas', () => {
     expect(admin).toContain('if (publicationLink) {');
     expect(admin).toContain('reviewDetails.appendChild(publicationLink)');
   });
+  it('integra alertas de antigüedad en el panel sin modificar precios ni D1', () => {
+    expect(admin).toContain("import { priceAgeStatus, summarizePriceAges } from './price-alerts.js'");
+    expect(admin).toContain('id="offers-age-filter"');
+    expect(admin).toContain('id="offers-age-summary"');
+    expect(admin).toContain('Más de 14 días significa que conviene comprobar el precio');
+    expect(admin).toContain('const ageCounts = summarizePriceAges(currentProducts)');
+    expect(admin).toContain('priceAgeStatus(p).status === offerAgeFilter.value');
+    expect(admin).toContain('const age = priceAgeStatus(offer)');
+    expect(admin).toContain("offerAgeFilter.addEventListener('change', renderOfferDashboard)");
+  });
   it('muestra un producto por grupo y anuncia las publicaciones asociadas', () => {
     expect(listing).toContain('getGroupedListingProducts(catalog.getProductosByListaId(lista.id))');
     expect(listing).toContain('getOffersForProduct(producto, catalog.productos).length');
