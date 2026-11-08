@@ -39,6 +39,21 @@ describe('administración y listado de múltiples ofertas', () => {
     expect(admin).toContain("offer.es_prueba === true ? 'PRUEBA'");
     expect(admin).toContain('Diferencia entre precios activos registrados (sin envío)');
   });
+  it('abre publicación oficial para comprobar precio manual sin modificar D1', () => {
+    expect(admin).toContain('function officialPriceUrl(product)');
+    expect(admin).toContain('function createOfficialPriceLink(product)');
+    expect(admin).toContain("host === 'mercadolibre.cl' || host.endsWith('.mercadolibre.cl')");
+    expect(admin).toContain("url.protocol === 'https:'");
+    expect(admin).toContain("product.es_prueba === true");
+    expect(admin).toContain("https://articulo.mercadolibre.cl/MLC-");
+    expect(admin).toContain("link.target = '_blank'");
+    expect(admin).toContain("link.rel = 'noopener noreferrer'");
+    expect(admin).toContain('Ver precio en Mercado Libre ↗');
+    expect(admin).toContain('if (publicationLink) actions.appendChild(publicationLink)');
+    expect(admin).toContain('if (publicationLink) div.appendChild(publicationLink)');
+    expect(admin).toContain('if (publicationLink) {');
+    expect(admin).toContain('reviewDetails.appendChild(publicationLink)');
+  });
   it('muestra un producto por grupo y anuncia las publicaciones asociadas', () => {
     expect(listing).toContain('getGroupedListingProducts(catalog.getProductosByListaId(lista.id))');
     expect(listing).toContain('getOffersForProduct(producto, catalog.productos).length');
