@@ -343,8 +343,11 @@
             <label>Categoría<select id="offers-category-filter"><option value="todos">Todas las categorías</option></select></label>
             <label>Buscar producto, vendedor o grupo<input type="search" id="offers-search" placeholder="Foodtech, tienda o grupo..." /></label>
             <label>Estado<select id="offers-status-filter"><option value="todos">Todos</option><option value="activos">Activos</option><option value="inactivos">Inactivos</option><option value="sin-grupo">Sin agrupar</option></select></label>
+            <label>Antigüedad de precio<select id="offers-age-filter"><option value="todos">Todos los precios</option><option value="vencido">Revisar (más de 14 días)</option><option value="sin_fecha">Sin fecha válida</option><option value="fecha_futura">Fecha futura</option><option value="vigente">Dentro de 14 días</option></select></label>
           </div>
           <div id="offers-dashboard-summary" class="preview" aria-live="polite">Conecta el administrador para revisar las ofertas.</div>
+          <div id="offers-age-summary" class="preview" aria-live="polite"></div>
+          <p class="subtle">Alerta basada en fecha_precio del catálogo. Más de 14 días significa que conviene comprobar el precio, no que el precio haya cambiado. No consulta Mercado Libre ni modifica datos.</p>
           <div id="offers-dashboard-list" class="preview" aria-label="Grupos de ofertas y vendedores"></div>
         </section>
 
@@ -705,7 +708,8 @@
       importBtn.addEventListener('click', importRows);
     </script>
 
-    <script>
+    <script type="module">
+      import { priceAgeStatus, summarizePriceAges } from './price-alerts.js';
       (() => {
         let adminToken = '';
         let currentProducts = [];
@@ -978,6 +982,8 @@
         const offerSummary = document.getElementById('offers-dashboard-summary');
         const offerCategoryFilter = document.getElementById('offers-category-filter');
         const offerStatusFilter = document.getElementById('offers-status-filter');
+        const offerAgeFilter = document.getElementById('offers-age-filter');
+        const offerAgeSummary = document.getElementById('offers-age-summary');
         const offerSearch = document.getElementById('offers-search');
         const offerMoney = value => new Intl.NumberFormat('es-CL', {style:'currency',currency:'CLP',maximumFractionDigits:0}).format(value);
         const offerKey = product => {
@@ -1008,6 +1014,14 @@
             groups.get(key).push(p);
           }
           const term = offerSearch.value.trim().toLocaleLowerCase('es');
+          const ageCounts = summarizePriceAges(currentProducts);
+          offerAgeSummary.textContent = 'Precios por revisar: ' + ageCounts.vencido
+            + ' · Sin fecha: ' + ageCounts.sin_fecha
+            + ' · Fechas futuras: ' + ageCounts.fecha_futura
+            + ' · Dentro de plazo: ' + ageCounts.vigente
+            + ' · Inactivos: ' + ageCounts.inactivo
+            + ' · De prueba: ' + ageCounts.prueba;
+          offerAgeSummary.style.fontWeight = 'bold';
           let shown = 0;
           for (const [key, group] of groups) {
             const category = group[0].lista_id;
@@ -1015,9 +1029,17 @@
             if (offerStatusFilter.value === 'activos' && !group.some(p => p.activo === true && p.es_prueba !== true)) continue;
             if (offerStatusFilter.value === 'inactivos' && !group.some(p => p.activo !== true)) continue;
             if (offerStatusFilter.value === 'sin-grupo' && !key.includes(':single:')) continue;
+            if (offerAgeFilter.value !== 'todos' && !group.some(p => priceAgeStatus(p).status === offerAgeFilter.value)) continue;
             if (term && !group.some(p => [p.nombre,p.marca,p.vendedor_nombre,p.vendedor,p.grupo_ofertas,p.id_catalogo,p.id_publicacion].join(' ').toLocaleLowerCase('es').includes(term))) continue;
             shown++;
-            const entries = [...group].sort((a,b) => Number(a.precio) - Number(b.precio));
+            const entries = [...group].sort((a,b) => {
+              if (offerAgeFilter.value !== 'todos') {
+                const first = priceAgeStatus(a).status === offerAgeFilter.value ? 0 : 1;
+                const second = priceAgeStatus(b).status === offerAgeFilter.value ? 0 : 1;
+                if (first !== second) return first - second;
+              }
+              return Number(a.precio) - Number(b.precio);
+            });
             const wrap = document.createElement('div');
             wrap.style.cssText = 'border:1px solid #cbd5e1;border-radius:12px;padding:14px;margin:12px 0;overflow-x:auto';
             const title = document.createElement('h3');
@@ -1056,7 +1078,7 @@
             }
             const table = document.createElement('table');
             const head = document.createElement('tr');
-            ['Vendedor','Precio registrado','Estado','Revisión','Acciones'].forEach(label => {
+            ['Vendedor','Precio registrado','Estado','Fecha precio','Alerta','Acciones'].forEach(label => {
               const th = document.createElement('th'); th.textContent = label; head.appendChild(th);
             });
             table.appendChild(head);
@@ -1066,6 +1088,11 @@
               cell(row, Number(offer.precio) > 0 ? offerMoney(offer.precio) : 'Sin precio válido');
               cell(row, offer.es_prueba === true ? 'PRUEBA' : offer.activo === true ? 'Activo' : 'Inactivo');
               cell(row, offer.fecha_precio || 'Sin fecha');
+              const age = priceAgeStatus(offer);
+              const ageCell = cell(row, age.label);
+              if (['vencido','sin_fecha','fecha_futura'].includes(age.status)) {
+                ageCell.style.cssText = 'color:#9a3412;font-weight:700;background:#fff7ed';
+              }
               const actions = document.createElement('td');
               const edit = document.createElement('button');
               edit.type = 'button'; edit.textContent = 'Editar oferta'; edit.className = 'secondary';
@@ -1101,6 +1128,7 @@
         }
         offerCategoryFilter.addEventListener('change', () => { renderOfferDashboard.lastCategory = offerCategoryFilter.value; renderOfferDashboard(); });
         offerStatusFilter.addEventListener('change', renderOfferDashboard);
+        offerAgeFilter.addEventListener('change', renderOfferDashboard);
         offerSearch.addEventListener('input', renderOfferDashboard);
 
         function renderProducts() {
