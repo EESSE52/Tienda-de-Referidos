@@ -1127,7 +1127,6 @@
           selectedBatchIds.clear();
           batchResults.replaceChildren();
           renderProducts();
-          renderOfferDashboard();
           message(batchStatus, 'Selección limpia.');
         });
         batchButton.addEventListener('click', async () => {
@@ -1330,6 +1329,7 @@
           const body = await api('/api/admin/products');
           currentProducts = body.productos || [];
           renderProducts();
+          renderOfferDashboard();
         }
 
         document.getElementById('connect-btn').addEventListener('click', async () => {
