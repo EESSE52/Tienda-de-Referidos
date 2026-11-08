@@ -454,7 +454,7 @@
               <label>ID publicación Mercado Libre<input name="id_publicacion" /></label>
               <label>Imagen candidata (URL HTTPS; solo administración)<input name="imagen_candidata" type="url" placeholder="https://http2.mlstatic.com/..." /></label>
               <label>Origen de la imagen candidata (URL de publicación)<input name="imagen_origen_url" type="url" placeholder="https://www.mercadolibre.cl/..." /></label>
-              <label>Imagen autorizada para publicar (URL HTTPS)<input name="imagen_propia" type="url" placeholder="https://tusitio.cl/foto-producto.webp" /></label>
+              <label>Imagen autorizada para publicar (URL HTTPS o enlace de Google Drive)<input name="imagen_propia" type="url" placeholder="https://drive.google.com/file/d/.../view" /></label>
             </div>
             <p class="subtle">Para comparar vendedores del mismo artículo, asigna a cada publicación un ID distinto y el mismo <strong>Grupo de ofertas</strong>. Solo agrupa envases idénticos en marca, peso, sabor y formato. El ID de catálogo también puede vincular publicaciones sin grupo manual.</p>
             <div class="upload-box">
@@ -462,6 +462,8 @@
               <p class="subtle">La foto candidata no se muestra públicamente. No uses imágenes de Mercado Libre sin permiso. Este formulario acepta URL HTTPS; no sube archivos.</p>
               <p class="subtle">Los enlaces de la consulta se conservan para trazabilidad. Obtener una URL de la API no equivale a recibir licencia de publicación.</p>
               <div id="candidate-image-summary" class="preview" aria-live="polite">Sin imagen candidata.</div>
+              <p class="subtle">Puedes pegar el enlace compartido de una fotografía de Google Drive: se convertirá automáticamente a una URL para mostrar la imagen. El archivo debe ser accesible públicamente; compruébalo también en incógnito.</p>
+              <div id="drive-image-status" class="status" aria-live="polite"></div>
               <div id="product-image-preview" class="preview" aria-live="polite">
                 <p class="subtle">Sin imagen autorizada seleccionada. La tienda utilizará una imagen genérica.</p>
               </div>
@@ -785,6 +787,7 @@
 
     <script type="module">
       import { priceAgeStatus, summarizePriceAges } from './price-alerts.js';
+      import { normalizeGoogleDriveImageUrl, isGoogleDriveImageLink } from './drive-image-url.js';
       import { reviewCatalogProducts } from './catalog-review.js';
       import { summarizeBatchReviews, classifyBatchReview, batchReviewCsv } from './batch-review-report.js';
       (() => {
@@ -1041,6 +1044,26 @@
         form.elements.imagen_candidata.addEventListener('change', updateCandidateImageSummary);
         form.elements.imagen_origen_url.addEventListener('change', updateCandidateImageSummary);
         const imagePreview = document.getElementById('product-image-preview');
+        const driveImageStatus = document.getElementById('drive-image-status');
+        function normalizeAuthorizedImageInput() {
+          const input = form.elements.imagen_propia;
+          const original = input.value.trim();
+          if (!original) { driveImageStatus.textContent = ''; return; }
+          try {
+            const normalized = normalizeGoogleDriveImageUrl(original);
+            if (isGoogleDriveImageLink(original)) {
+              input.value = normalized;
+              driveImageStatus.textContent = 'Enlace de Google Drive convertido. Revisa la vista previa y confirma que tienes permiso para publicar esta foto.';
+              driveImageStatus.className = 'status success';
+            } else {
+              driveImageStatus.textContent = '';
+            }
+          } catch (error) {
+            driveImageStatus.textContent = error.message;
+            driveImageStatus.className = 'status error';
+          }
+        }
+        form.elements.imagen_propia.addEventListener('change', normalizeAuthorizedImageInput);
         function showAuthorizedImagePreview() {
           imagePreview.replaceChildren();
           const url = form.elements.imagen_propia.value.trim();
@@ -1075,6 +1098,7 @@
         function resetForm() {
           editingId = null;
           form.reset();
+          driveImageStatus.textContent = '';
           showAuthorizedImagePreview();
           updateCandidateImageSummary();
           renderProductFields();
@@ -1821,6 +1845,7 @@
             body.activo = form.elements.activo.checked;
             body.es_prueba = form.elements.es_prueba.checked;
             body.imagen_autorizada_confirmada = form.elements.imagen_autorizada_confirmada.checked;
+            body.imagen_propia = normalizeGoogleDriveImageUrl(body.imagen_propia);
             if (body.imagen_candidata && !body.imagen_origen_url) body.imagen_origen_url = body.url_publicacion || '';
             if (body.activo && !body.enlace_referido) throw new Error('Para activar el producto, pega primero el enlace de afiliado de tu cuenta.');
             if (!body.url_publicacion && !body.enlace_referido) throw new Error('Indica la URL del producto o el enlace de afiliado.');
