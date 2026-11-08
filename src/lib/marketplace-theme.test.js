@@ -22,7 +22,7 @@ describe('Identidad visual D’MonkeySport: amarillo y azul', () => {
   it('presenta una portada amarilla con texto oscuro y CTA azul', () => {
     const home = read('src/pages/index.astro');
     expect(home).toContain('bg-[#ffe600]');
-    expect(home).toContain('text-[#172554]');
+    expect(home).toContain('text-black'); // Título negro del nuevo diseño deportivo.
     expect(home).toContain('bg-[#2563eb]');
     expect(home).toContain('D’MonkeySport');
     expect(home).not.toContain('from-emerald-500 to-teal-700');
