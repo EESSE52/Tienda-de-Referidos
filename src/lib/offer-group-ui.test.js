@@ -22,6 +22,16 @@ describe('administración y listado de múltiples ofertas', () => {
     expect(admin).toContain('offerSummary.textContent = currentProducts.length');
     expect(admin).toContain('renderOfferDashboard();');
   });
+  it('prepara ofertas nuevas inactivas sin copiar enlaces ni precios ajenos', () => {
+    expect(admin).toContain('Preparar nueva oferta para este producto');
+    expect(admin).toContain('form.elements.activo.checked = false');
+    expect(admin).toContain("form.elements.precio.value = ''");
+    expect(admin).toContain("form.elements.id_publicacion.value = ''");
+    expect(admin).toContain("form.elements.enlace_referido.value = ''");
+    expect(admin).toContain("form.elements.url_publicacion.value = ''");
+    expect(admin).toContain("renderProductFields(reference.atributos || {})");
+    expect(admin).toContain("document.getElementById('product-form-title').textContent = 'Preparar oferta nueva (inactiva)'");
+  });
   it('agrupa solo con identificadores explícitos y nunca por nombre comercial', () => {
     expect(admin).toContain("return product.lista_id + ':manual:' + group");
     expect(admin).toContain("product.lista_id + ':catalog:' + catalogId");
