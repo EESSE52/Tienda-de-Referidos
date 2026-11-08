@@ -1,1 +1,24 @@
 @import "tailwindcss";
+
+/* Paleta comercial D’MonkeySport: amarillo luminoso, azul y neutros claros.
+   Reasignamos los acentos existentes para conservar todas las pantallas funcionales. */
+@theme {
+  --color-emerald-50: #eff6ff;
+  --color-emerald-100: #dbeafe;
+  --color-emerald-200: #bfdbfe;
+  --color-emerald-300: #93c5fd;
+  --color-emerald-400: #60a5fa;
+  --color-emerald-500: #3483fa;
+  --color-emerald-600: #2563eb;
+  --color-emerald-700: #1d4ed8;
+  --color-emerald-800: #1e40af;
+  --color-emerald-900: #1e3a8a;
+  --color-emerald-950: #172554;
+  --color-teal-700: #1d4ed8;
+}
+
+:root {
+  --dm-yellow: #ffe600;
+  --dm-blue: #2563eb;
+  --dm-page: #f5f5f5;
+}
