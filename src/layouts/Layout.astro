@@ -46,5 +46,29 @@ const canonicalUrl = new URL(currentPath, Astro.site ?? Astro.url.origin).toStri
         </div>
       </div>
     </footer>
+    <script is:inline>
+      (() => {
+        // Conteo anónimo agregado: no usa cookies, almacenamiento ni identificadores.
+        const send = (event, productId, placement) => {
+          if (!productId || !/^[a-zA-Z0-9_-]{3,100}$/.test(productId)) return;
+          const payload = JSON.stringify({ event, product_id: productId, placement });
+          try {
+            if (navigator.sendBeacon) {
+              navigator.sendBeacon('/api/analytics/event', new Blob([payload], {type:'application/json'}));
+            } else {
+              fetch('/api/analytics/event', {method:'POST',headers:{'Content-Type':'application/json'},
+                body:payload,keepalive:true,credentials:'omit'}).catch(() => {});
+            }
+          } catch { /* Las métricas nunca impiden navegar. */ }
+        };
+        const view = document.querySelector('[data-product-view]');
+        if (view) send('view', view.getAttribute('data-product-view'), 'product');
+        document.addEventListener('click', event => {
+          const link = event.target.closest?.('a[data-affiliate-product]');
+          if (!link || !/^https:\/\//i.test(link.href)) return;
+          send('affiliate_click', link.dataset.affiliateProduct, link.dataset.affiliatePlacement || 'product');
+        }, {capture: true});
+      })();
+    </script>
   </body>
 </html>
