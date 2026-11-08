@@ -64,6 +64,18 @@ describe('administración y listado de múltiples ofertas', () => {
     expect(admin).toContain('const age = priceAgeStatus(offer)');
     expect(admin).toContain("offerAgeFilter.addEventListener('change', renderOfferDashboard)");
   });
+  it('registra revisión manual con confirmación y permite consultar su historial', () => {
+    expect(admin).toContain('id="manual-price-panel"');
+    expect(admin).toContain('id="manual-price-value"');
+    expect(admin).toContain('id="manual-price-confirm"');
+    expect(admin).toContain('Registrar precio manual');
+    expect(admin).toContain('function showManualPriceReview(id)');
+    expect(admin).toContain("manualPriceForm.addEventListener('submit'");
+    expect(admin).toContain("fuente: 'mercadolibre_manual'");
+    expect(admin).toContain("'/manual-price-review'");
+    expect(admin).toContain('Revisiones manuales registradas');
+    expect(admin).toContain('Precio confirmado sin cambios');
+  });
   it('muestra un producto por grupo y anuncia las publicaciones asociadas', () => {
     expect(listing).toContain('getGroupedListingProducts(catalog.getProductosByListaId(lista.id))');
     expect(listing).toContain('getOffersForProduct(producto, catalog.productos).length');
