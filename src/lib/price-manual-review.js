@@ -23,16 +23,22 @@ export async function registerManualPriceReview(env, id, input, now = new Date()
     throw new PriceReviewError('El precio registrado cambió. Actualiza el listado antes de guardar.', 409);
   if (String(input.id_publicacion || '') !== String(product.id_publicacion || ''))
     throw new PriceReviewError('La publicación cambió. Actualiza el listado antes de guardar.', 409);
-  if (typeof product.url_publicacion !== 'string' || !product.url_publicacion.trim())
-    throw new PriceReviewError('La publicación no tiene URL de origen para comprobar el precio.');
-  let url;
-  try { url = new URL(product.url_publicacion); } catch {
-    throw new PriceReviewError('La URL de publicación no es válida.');
+  const publicationUrl = String(product.url_publicacion || '').trim();
+  // Si el registro antiguo carece de URL se acepta un ID MLC válido,
+  // que el administrador abre en la ficha oficial.
+  if (!publicationUrl) {
+    if (!/^MLC[0-9]{6,}$/i.test(String(product.id_publicacion || '').replace(/[-_]/g, '')))
+      throw new PriceReviewError('La publicación necesita un ID MLC válido o una URL oficial.');
+  } else {
+    let url;
+    try { url = new URL(publicationUrl); } catch {
+      throw new PriceReviewError('La URL de publicación no es válida.');
+    }
+    const host = url.hostname.toLowerCase();
+    if (url.protocol !== 'https:' || url.username || url.password || url.port
+      || !(host === 'mercadolibre.cl' || host.endsWith('.mercadolibre.cl')))
+      throw new PriceReviewError('La revisión manual exige una URL oficial de Mercado Libre Chile.');
   }
-  const host = url.hostname.toLowerCase();
-  if (url.protocol !== 'https:' || url.username || url.password || url.port
-    || !(host === 'mercadolibre.cl' || host.endsWith('.mercadolibre.cl')))
-    throw new PriceReviewError('La revisión manual exige una URL oficial de Mercado Libre Chile.');
   const previous = Array.isArray(product.historial_precios) ? product.historial_precios.slice() : [];
   const history = previous.length ? previous : [{ fecha: product.fecha_precio || date, precio: expected }];
   const changed = expected !== amount;
