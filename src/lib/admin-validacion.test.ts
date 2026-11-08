@@ -20,6 +20,20 @@ describe('normaliseProductPayload', () => {
     expect(product.enlace_referido).toBe('https://example.com/creatina');
   });
 
+  it('conserva el historial de revisiones manuales al editar otros campos y no admite su reemplazo', () => {
+    const existing = {
+      id: 'MLC1859621269', lista_id: 'creatina', nombre: 'Foodtech',
+      precio: 34990, enlace_referido: 'https://meli.la/22bG2Z5',
+      historial_revisiones: [{ fecha: '2026-11-08', precio_observado: 34990, fuente: 'mercadolibre_manual', cambio: false }],
+    };
+    const normalized = normaliseProductPayload({
+      nombre: 'Foodtech corregido',
+      historial_revisiones: [],
+    }, existing);
+    expect(normalized.historial_revisiones).toEqual(existing.historial_revisiones);
+    expect(normalized.historial_revisiones).not.toBe(existing.historial_revisiones);
+  });
+
   it('mantiene los campos del modelo enriquecido y la compatibilidad de ML', () => {
     const product = normaliseProductPayload({
       lista_id: 'creatina',
