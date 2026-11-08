@@ -740,6 +740,39 @@
           return body;
         }
 
+        // Solo enlaces de publicación en Mercado Libre Chile. Nunca usar el
+        // enlace afiliado como sustituto de la URL para comprobar el precio.
+        function officialPriceUrl(product) {
+          if (!product || product.es_prueba === true) return null;
+          const original = String(product.url_publicacion || '').trim();
+          if (original) {
+            try {
+              const url = new URL(original);
+              const host = url.hostname.toLowerCase();
+              if (url.protocol === 'https:' && !url.username && !url.password && !url.port
+                && (host === 'mercadolibre.cl' || host.endsWith('.mercadolibre.cl'))) {
+                return url.href;
+              }
+            } catch {}
+          }
+          const publication = String(product.id_publicacion || '').trim().replace(/[-_]/g, '').toUpperCase();
+          return /^MLC[0-9]{6,}$/.test(publication)
+            ? 'https://articulo.mercadolibre.cl/MLC-' + publication.slice(3)
+            : null;
+        }
+        function createOfficialPriceLink(product) {
+          const url = officialPriceUrl(product);
+          if (!url) return null;
+          const link = document.createElement('a');
+          link.href = url;
+          link.target = '_blank';
+          link.rel = 'noopener noreferrer';
+          link.className = 'button secondary';
+          link.textContent = 'Ver precio en Mercado Libre ↗';
+          link.setAttribute('aria-label', 'Abrir publicación oficial de Mercado Libre para verificar el precio de ' + product.nombre);
+          return link;
+        }
+
         function cell(row, value) {
           const td = document.createElement('td');
           td.textContent = String(value ?? '');
@@ -1038,6 +1071,8 @@
               edit.type = 'button'; edit.textContent = 'Editar oferta'; edit.className = 'secondary';
               edit.addEventListener('click', () => startEditingOffer(offer));
               actions.appendChild(edit);
+              const publicationLink = createOfficialPriceLink(offer);
+              if (publicationLink) actions.appendChild(publicationLink);
               if (offer.activo && !offer.es_prueba && /^MLC[0-9]{6,}$/i.test(String(offer.id_publicacion || '').replace(/[-_]/g,''))) {
                 const review = document.createElement('button');
                 review.type = 'button'; review.textContent = 'Revisar precio'; review.className = 'secondary';
@@ -1117,6 +1152,8 @@
             historyButton.textContent = 'Historial';
             historyButton.addEventListener('click', () => showPriceHistory(product.id));
             div.appendChild(historyButton);
+            const publicationLink = createOfficialPriceLink(product);
+            if (publicationLink) div.appendChild(publicationLink);
             if (!product.es_prueba && /^MLC[0-9]{6,}$/i.test(String(product.id_publicacion || '').replace(/[-_]/g, ''))) {
               const reviewButton = document.createElement('button');
               reviewButton.type = 'button';
@@ -1295,6 +1332,14 @@
         async function reviewPrice(id) {
           clearPriceReview();
           reviewPanel.hidden = false;
+          const publication = currentProducts.find(product => product.id === id);
+          const publicationLink = createOfficialPriceLink(publication);
+          if (publicationLink) {
+            const help = document.createElement('p');
+            help.textContent = 'Consulta el precio en la publicación oficial. Abrir la página no guarda ni actualiza datos.';
+            reviewDetails.appendChild(help);
+            reviewDetails.appendChild(publicationLink);
+          }
           message(reviewStatus, 'Consultando precio en Mercado Libre...');
           try {
             const response = await api('/api/admin/products/' + encodeURIComponent(id) + '/price-review');
