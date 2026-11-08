@@ -336,6 +336,17 @@
           <div id="product-list" class="preview"><p class="subtle">Conecta el administrador para consultar productos.</p></div>
         </section>
 
+        <section class="card" style="margin-bottom:20px" id="analytics-dashboard-panel">
+          <h2>Estadísticas comerciales</h2>
+          <p class="subtle">Conteos diarios agregados, no usuarios únicos. Los clics en enlaces afiliados no significan ventas ni comisiones. No almacenamos datos personales en estas métricas.</p>
+          <div class="admin-fields">
+            <label>Período<select id="analytics-days"><option value="7">Últimos 7 días</option><option value="30" selected>Últimos 30 días</option><option value="90">Últimos 90 días</option></select></label>
+          </div>
+          <div class="button-row"><button id="analytics-refresh" class="secondary" type="button">Actualizar estadísticas</button></div>
+          <div id="analytics-status" class="status" aria-live="polite">Conecta el administrador para ver las estadísticas.</div>
+          <div id="analytics-results" class="preview"></div>
+        </section>
+
         <section class="card" style="margin-bottom:20px" id="offer-management-panel">
           <h2>Panel de vendedores y ofertas</h2>
           <p class="subtle">Vista de solo lectura basada en las publicaciones guardadas en D1. Agrupa únicamente por Grupo de ofertas explícito o por ID de catálogo; nunca por similitud de nombre. Edita cada publicación por separado. Los precios son referenciales y no incluyen envío.</p>
@@ -995,6 +1006,65 @@
           form.scrollIntoView({behavior:'smooth'});
         }
 
+        const analyticsResult = document.getElementById('analytics-results');
+        const analyticsStatus = document.getElementById('analytics-status');
+        const analyticsDays = document.getElementById('analytics-days');
+        const analyticsRefresh = document.getElementById('analytics-refresh');
+        function analyticsTable(title, rows, columns) {
+          const heading = document.createElement('h3');
+          heading.textContent = title;
+          analyticsResult.appendChild(heading);
+          if (!rows.length) {
+            const empty = document.createElement('p');
+            empty.textContent = 'Sin eventos registrados para este período.';
+            analyticsResult.appendChild(empty);
+            return;
+          }
+          const table = document.createElement('table');
+          const header = document.createElement('tr');
+          for (const [name] of columns) {
+            const th = document.createElement('th');
+            th.textContent = name;
+            header.appendChild(th);
+          }
+          table.appendChild(header);
+          for (const item of rows) {
+            const tr = document.createElement('tr');
+            for (const [, key] of columns) cell(tr, item[key] ?? '');
+            table.appendChild(tr);
+          }
+          analyticsResult.appendChild(table);
+        }
+        async function refreshAnalytics() {
+          analyticsRefresh.disabled = true;
+          analyticsResult.replaceChildren();
+          try {
+            const result = await api('/api/admin/analytics?days=' + encodeURIComponent(analyticsDays.value));
+            message(analyticsStatus, 'Eventos registrados en los últimos ' + result.days
+              + ' días. Los clics no equivalen a ventas.');
+            const summary = document.createElement('p');
+            summary.textContent = 'Visitas de fichas: ' + result.totals.visitas
+              + ' · Clics afiliados: ' + result.totals.clics;
+            analyticsResult.appendChild(summary);
+            analyticsTable('Productos más consultados', result.products, [
+              ['Producto','nombre'],['Categoría','categoria'],['Vendedor','vendedor'],
+              ['Visitas','visitas'],['Clics','clics'],
+            ]);
+            analyticsTable('Interés por categoría', result.categories, [
+              ['Categoría','categoria'],['Visitas','visitas'],['Clics','clics'],
+            ]);
+            analyticsTable('Rendimiento por vendedor (clics, no ventas)', result.sellers, [
+              ['Vendedor','vendedor'],['Categoría','categoria'],['Visitas','visitas'],['Clics','clics'],
+            ]);
+          } catch (error) {
+            message(analyticsStatus, error.message, true);
+          } finally {
+            analyticsRefresh.disabled = false;
+          }
+        }
+        analyticsRefresh.addEventListener('click', refreshAnalytics);
+        analyticsDays.addEventListener('change', () => { if (adminToken) refreshAnalytics(); });
+
         const offerDashboard = document.getElementById('offers-dashboard-list');
         const offerSummary = document.getElementById('offers-dashboard-summary');
         const offerCategoryFilter = document.getElementById('offers-category-filter');
@@ -1560,6 +1630,7 @@
           try {
             await refresh();
             await refreshCategories();
+            await refreshAnalytics();
             message(adminStatus, 'Conectado a D1. Productos: ' + currentProducts.length);
           } catch (error) {
             // Un fallo de D1/autenticación NO debe reemplazarse por un aviso de OAuth.
