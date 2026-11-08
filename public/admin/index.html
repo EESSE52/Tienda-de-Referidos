@@ -994,6 +994,33 @@
             meta.className = 'subtle';
             meta.textContent = key.includes(':single:') ? 'Sin grupo de ofertas · 1 publicación independiente' : 'Grupo: ' + key.split(':').slice(1).join(':') + ' · ' + entries.length + ' publicaciones';
             wrap.appendChild(meta);
+            if (!key.includes(':single:')) {
+              const createOffer = document.createElement('button');
+              createOffer.type = 'button';
+              createOffer.className = 'secondary';
+              createOffer.textContent = 'Preparar nueva oferta para este producto';
+              createOffer.addEventListener('click', () => {
+                const reference = entries[0];
+                resetForm();
+                form.elements.lista_id.value = reference.lista_id;
+                form.elements.nombre.value = reference.nombre;
+                form.elements.marca.value = reference.marca || '';
+                form.elements.grupo_ofertas.value = reference.grupo_ofertas || '';
+                form.elements.id_catalogo.value = reference.id_catalogo || '';
+                form.elements.vendedor_nombre.value = '';
+                form.elements.precio.value = '';
+                form.elements.id_publicacion.value = '';
+                form.elements.enlace_referido.value = '';
+                form.elements.url_publicacion.value = '';
+                form.elements.activo.checked = false;
+                form.elements.es_prueba.checked = false;
+                renderProductFields(reference.atributos || {});
+                document.getElementById('product-form-title').textContent = 'Preparar oferta nueva (inactiva)';
+                message(productStatus, 'Revisa que sea el mismo producto exacto. Agrega publicación, vendedor, precio y enlace propios. El nuevo registro quedará inactivo hasta que lo autorices.');
+                form.scrollIntoView({behavior:'smooth'});
+              });
+              wrap.appendChild(createOffer);
+            }
             const table = document.createElement('table');
             const head = document.createElement('tr');
             ['Vendedor','Precio registrado','Estado','Revisión','Acciones'].forEach(label => {
