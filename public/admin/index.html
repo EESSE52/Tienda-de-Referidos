@@ -391,12 +391,14 @@
 
         <section class="card" style="margin-bottom:20px" id="price-management-panel">
           <h2>Revisión de precios en lote</h2>
-          <p class="subtle">Selecciona productos MLC no marcados como prueba. Máximo 10 por consulta. Cada precio debe confirmarse individualmente antes de guardarse.</p>
+          <p class="subtle">Selecciona productos MLC no marcados como prueba. Máximo 10 por consulta. Cada precio debe confirmarse individualmente antes de guardarse. La consulta de precio no verifica stock ni afiliación.</p>
           <div class="button-row">
             <button id="batch-review-btn" type="button">Consultar precios seleccionados</button>
             <button id="batch-clear-btn" class="secondary" type="button">Limpiar selección</button>
+            <button id="batch-export-btn" class="secondary" type="button" disabled>Exportar informe CSV</button>
           </div>
           <div id="batch-review-status" class="status" aria-live="polite"></div>
+          <div id="batch-review-totals" class="summary" aria-live="polite"></div>
           <div id="batch-review-results" class="preview" aria-live="polite"></div>
         </section>
 
@@ -784,6 +786,7 @@
     <script type="module">
       import { priceAgeStatus, summarizePriceAges } from './price-alerts.js';
       import { reviewCatalogProducts } from './catalog-review.js';
+      import { summarizeBatchReviews, classifyBatchReview, batchReviewCsv } from './batch-review-report.js';
       (() => {
         let adminToken = '';
         let currentProducts = [];
@@ -1441,9 +1444,31 @@
         const batchResults = document.getElementById('batch-review-results');
         const batchStatus = document.getElementById('batch-review-status');
         const batchButton = document.getElementById('batch-review-btn');
+        const batchExport = document.getElementById('batch-export-btn');
+        const batchTotals = document.getElementById('batch-review-totals');
+        let batchReport = [];
+        const refreshBatchTotals = () => {
+          const totals = summarizeBatchReviews(batchReport);
+          batchTotals.textContent = 'Consultados: ' + totals.consultados +
+            ' · Bajas: ' + totals.bajas + ' · Subidas: ' + totals.subidas +
+            ' · Sin cambios: ' + totals.sin_cambio + ' · Fallidos: ' + totals.fallidos +
+            ' · Disponibilidad: no verificada';
+          batchExport.disabled = batchReport.length === 0;
+        };
+        batchExport.addEventListener('click', () => {
+          if (!batchReport.length) return;
+          const blob = new Blob([batchReviewCsv(batchReport)], { type: 'text/csv;charset=utf-8' });
+          const url = URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.href = url; link.download = 'revision-precios-dmonkeysport.csv';
+          document.body.appendChild(link); link.click(); link.remove();
+          setTimeout(() => URL.revokeObjectURL(url), 1000);
+        });
         document.getElementById('batch-clear-btn').addEventListener('click', () => {
           selectedBatchIds.clear();
           batchResults.replaceChildren();
+          batchReport = [];
+          refreshBatchTotals();
           renderProducts();
           message(batchStatus, 'Selección limpia.');
         });
@@ -1454,6 +1479,8 @@
           if (!eligible.length) return message(batchStatus, 'Selecciona al menos un producto MLC que no sea de prueba.', true);
           if (eligible.length > 10) return message(batchStatus, 'Selecciona máximo 10 productos por lote.', true);
           batchResults.replaceChildren();
+          batchReport = [];
+          refreshBatchTotals();
           batchButton.disabled = true;
           try {
             let success = 0;
@@ -1472,9 +1499,21 @@
                 const data = await api('/api/admin/products/' + encodeURIComponent(product.id) + '/price-review');
                 const review = data.revision;
                 success++;
+                const estado = classifyBatchReview(review);
+                batchReport.push({
+                  nombre: review.nombre, id_publicacion: review.id_publicacion,
+                  precio_actual: review.precio_actual, precio_consultado: review.precio_consultado,
+                  estado, observacion: 'Precio consultado; confirmar manualmente. Disponibilidad no verificada.',
+                });
+                refreshBatchTotals();
                 const fmt = n => new Intl.NumberFormat('es-CL', {style:'currency',currency:'CLP',maximumFractionDigits:0}).format(n);
                 summary.textContent = fmt(review.precio_actual) + ' → ' + fmt(review.precio_consultado)
                   + ' · Variación: ' + review.porcentaje + '%';
+                const stateLabel = document.createElement('p');
+                stateLabel.textContent = estado === 'baja' ? 'Bajada de precio consultada' :
+                  estado === 'subida' ? 'Subida de precio consultada' : 'Precio sin cambios';
+                stateLabel.textContent += ' · Disponibilidad no verificada';
+                item.appendChild(stateLabel);
                 if (review.cambio) {
                   const confirmButton = document.createElement('button');
                   confirmButton.type = 'button';
@@ -1502,6 +1541,12 @@
                 } else summary.textContent += ' · Sin cambios.';
               } catch (error) {
                 summary.textContent = 'No se pudo consultar: ' + error.message;
+                batchReport.push({
+                  nombre: product.nombre, id_publicacion: product.id_publicacion,
+                  precio_actual: null, precio_consultado: null,
+                  estado: 'error', observacion: error.message,
+                });
+                refreshBatchTotals();
               }
             }
             message(batchStatus, 'Consultas completadas: ' + success + ' de ' + eligible.length
