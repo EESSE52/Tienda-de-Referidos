@@ -34,8 +34,8 @@ const pageTitle = title === 'D’MonkeySport' ? title : `${title} | D’MonkeySp
   <body class="min-h-full bg-[#f5f5f5] text-slate-900 antialiased dark:bg-slate-950 dark:text-slate-100">
     <header class="border-b border-[#e0ca00] bg-[#ffe600] text-slate-950 shadow-sm">
       <div class="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-4">
-        <a href="/" class="text-xl font-black tracking-tight text-[#172554]">D’MonkeySport</a>
-        <nav class="hidden items-center gap-4 text-sm font-medium md:flex" aria-label="Navegación principal">
+        <a href="/" class="flex shrink-0 items-center gap-2 text-xl font-black tracking-tight text-slate-950 sm:text-2xl" aria-label="D’MonkeySport, ir al inicio"><span class="flex h-10 w-10 items-center justify-center rounded-full border-2 border-slate-950 bg-[#ffed53] text-2xl shadow-sm" aria-hidden="true">🐵</span><span>D’MonkeySport</span></a>
+        <nav class="hidden items-center gap-5 text-sm font-extrabold lg:gap-7 md:flex" aria-label="Navegación principal">
           <a href="/" class={currentPath === '/' ? 'text-[#1d4ed8] underline underline-offset-4' : 'text-slate-800 hover:text-[#1d4ed8]'}>Inicio</a>
           <a href="/#categorias" class="text-slate-800 hover:text-[#1d4ed8]">Categorías</a>
           <a href="/como-comparamos" class={currentPath === '/como-comparamos' ? 'text-[#1d4ed8] underline underline-offset-4' : 'text-slate-800 hover:text-[#1d4ed8]'}>Cómo comparamos</a>
@@ -53,7 +53,7 @@ const pageTitle = title === 'D’MonkeySport' ? title : `${title} | D’MonkeySp
       </div>
     </header>
 
-    <main class="mx-auto max-w-7xl px-4 py-8">
+    <main class="mx-auto max-w-7xl px-4 py-6 sm:py-8">
       <slot />
     </main>
 
