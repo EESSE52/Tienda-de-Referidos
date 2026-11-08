@@ -33,13 +33,13 @@ const listaCards = catalog.listas.filter((lista) => lista.activa !== false).map(
 ---
 
 <Layout title="Comparador de precios y productos en Chile" description="Compara productos por precio, cantidad y características en D’MonkeySport. Revisa listas y ofertas referenciales en Chile.">
-  <section class="mb-10 rounded-3xl bg-gradient-to-br from-emerald-500 to-teal-700 p-8 text-white shadow-lg shadow-emerald-200/30 dark:shadow-emerald-950/50">
-    <p class="mb-3 text-sm font-semibold uppercase tracking-[0.2em] text-emerald-100">D’MonkeySport</p>
+  <section class="mb-10 rounded-3xl border border-[#e7cf00] bg-[#ffe600] p-8 text-[#172554] shadow-lg shadow-[#d1c000]/20">
+    <p class="mb-3 text-sm font-bold uppercase tracking-[0.2em] text-[#1d4ed8]">D’MonkeySport</p>
     <h1 class="max-w-2xl text-4xl font-black tracking-tight">Comparador de productos, listas creadas por ti y precios claros.</h1>
-    <p class="mt-4 max-w-2xl text-base text-emerald-50">
+    <p class="mt-4 max-w-2xl text-base text-slate-800">
       Compara productos por mérito real, sin ruido ni promesas de salud: solo precio, cantidad, formato y métricas relevantes.
     </p>
-    <p class="mt-4 inline-flex rounded-lg bg-white/20 px-3 py-2 text-sm text-emerald-50">{AVISO_AFILIADOS_BREVE}</p>
+    <p class="mt-4 inline-flex rounded-lg bg-white/75 px-3 py-2 text-sm text-slate-800">{AVISO_AFILIADOS_BREVE}</p>
   </section>
 
   {bajasRegistradas.length > 0 && (
@@ -125,7 +125,7 @@ const listaCards = catalog.listas.filter((lista) => lista.activa !== false).map(
           )}
         </div>
 
-        <a href={`/lista/${lista.slug}`} class="inline-flex items-center rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-700 dark:bg-emerald-500 dark:hover:bg-emerald-400 dark:text-slate-950">
+        <a href={`/lista/${lista.slug}`} class="inline-flex items-center rounded-xl bg-[#2563eb] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#1d4ed8]">
           Ver lista
         </a>
       </article>
