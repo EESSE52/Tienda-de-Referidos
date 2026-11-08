@@ -195,6 +195,7 @@
         <nav class="nav" aria-label="Navegación del administrador">
           <a href="#analytics-dashboard-panel" data-admin-nav>Inteligencia comercial</a>
           <a href="#products-panel" data-admin-nav>Productos</a>
+          <a href="#catalog-review-panel" data-admin-nav>Revisión del catálogo</a>
           <a href="#offer-management-panel" data-admin-nav>Vendedores y ofertas</a>
           <a href="#price-management-panel" data-admin-nav>Control de precios</a>
           <a href="#import-panel" data-admin-nav>Importar productos</a>
@@ -351,6 +352,14 @@
           <div class="button-row"><button id="refresh-products" class="secondary" type="button">Actualizar listado</button></div>
           <div class="admin-fields"><label>Filtro<select id="product-origin-filter"><option value="todos">Todos</option><option value="prueba">Pruebas</option><option value="sin_verificar">Sin confirmar</option><option value="consultado">Precio consultado</option></select></label></div>
           <div id="product-list" class="preview"><p class="subtle">Conecta el administrador para consultar productos.</p></div>
+        </section>
+
+        <section class="card" style="margin-bottom:20px" id="catalog-review-panel">
+          <h2>Revisión priorizada del catálogo</h2>
+          <p class="subtle">Diagnóstico de solo lectura de los productos activos: fechas de precios, enlaces afiliados y datos incompletos. No confirma disponibilidad ni actualiza Mercado Libre automáticamente.</p>
+          <div class="button-row"><button id="catalog-review-refresh" type="button" class="secondary">Actualizar diagnóstico</button></div>
+          <div id="catalog-review-summary" class="status" aria-live="polite">Conecta el administrador para revisar el catálogo.</div>
+          <div id="catalog-review-results" class="preview"></div>
         </section>
 
         <section class="card" style="margin-bottom:20px" id="analytics-dashboard-panel">
@@ -774,11 +783,53 @@
 
     <script type="module">
       import { priceAgeStatus, summarizePriceAges } from './price-alerts.js';
+      import { reviewCatalogProducts } from './catalog-review.js';
       (() => {
         let adminToken = '';
         let currentProducts = [];
         let editingId = null;
         const selectedBatchIds = new Set();
+        const reviewSummary = document.getElementById('catalog-review-summary');
+        const reviewResults = document.getElementById('catalog-review-results');
+        function renderCatalogReview() {
+          reviewResults.replaceChildren();
+          const issues = reviewCatalogProducts(currentProducts);
+          const active = currentProducts.filter(p => p.activo === true && p.es_prueba !== true).length;
+          reviewSummary.textContent = issues.length + ' de ' + active + ' productos activos requieren revisión.';
+          if (!issues.length) {
+            const empty = document.createElement('p');
+            empty.textContent = 'No se detectaron problemas con las reglas automáticas. Esto no confirma precios, enlaces ni disponibilidad externa.';
+            reviewResults.appendChild(empty);
+            return;
+          }
+          const table = document.createElement('table');
+          const headings = document.createElement('tr');
+          ['Producto', 'Categoría', 'Pendientes', 'Acción'].forEach(label => {
+            const th = document.createElement('th'); th.textContent = label; headings.appendChild(th);
+          });
+          table.appendChild(headings);
+          for (const item of issues) {
+            const row = document.createElement('tr');
+            [item.nombre, item.categoria, item.problems.map(p => p.label).join(' · ')].forEach(value => {
+              const td = document.createElement('td'); td.textContent = value; row.appendChild(td);
+            });
+            const action = document.createElement('td');
+            const button = document.createElement('button');
+            button.type = 'button'; button.className = 'secondary';
+            button.textContent = 'Editar producto';
+            button.addEventListener('click', () => {
+              const product = currentProducts.find(p => p.id === item.id);
+              if (product) startEditingOffer(product);
+            });
+            action.appendChild(button);
+            row.appendChild(action); table.appendChild(row);
+          }
+          reviewResults.appendChild(table);
+        }
+        document.getElementById('catalog-review-refresh').addEventListener('click', () => {
+          if (!adminToken) return message(reviewSummary, 'Primero conecta el administrador.', true);
+          refresh().catch(error => message(reviewSummary, error.message, true));
+        });
         const form = document.getElementById('product-form');
         const productStatus = document.getElementById('product-status');
         const adminStatus = document.getElementById('admin-status');
@@ -1693,6 +1744,7 @@
           currentProducts = body.productos || [];
           renderProducts();
           renderOfferDashboard();
+          renderCatalogReview();
         }
 
         document.getElementById('connect-btn').addEventListener('click', async () => {
