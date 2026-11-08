@@ -152,6 +152,10 @@ export function normaliseProductPayload(payload = {}, existing = null) {
     notas,
     atributos,
     historial_precios: historial,
+    // Historial administrativo: no aceptar que el formulario ordinario lo altere
+    // ni borrarlo accidentalmente al editar los demás campos.
+    historial_revisiones: Array.isArray(existing?.historial_revisiones)
+      ? existing.historial_revisiones.slice() : [],
     creado: existing?.creado || new Date().toISOString(),
     actualizado: new Date().toISOString(),
   };
