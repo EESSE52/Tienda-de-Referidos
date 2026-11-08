@@ -16,6 +16,7 @@ if (!lista) {
 const productos = getGroupedListingProducts(catalog.getProductosByListaId(lista.id));
 const monetaryMetrics = lista.metricas.filter(metrica => metrica.plantilla?.tipo === 'precio_dividido_por' || metrica.formula?.tipo === 'precio_dividido_por');
 const filterFields = lista.campos.filter((campo) => campo.filtrable);
+const brands = [...new Set(productos.map(producto => String(producto.marca || '').trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'es'));
 const defaultSortField = lista.orden_defecto?.campo || 'precio';
 const defaultSortDirection = lista.orden_defecto?.direccion || 'menor';
 
@@ -82,7 +83,7 @@ const formatMetricValueForDisplay = (metrica: any, valor: number | null) => {
   )}
 
   <section class="mb-4 rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
-    <div class="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+    <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
       <label class="block w-full max-w-md text-sm text-slate-700 dark:text-slate-200">
         <span class="mb-1 block font-medium">Buscar producto</span>
         <input id="search-input" type="search" placeholder="Nombre, marca o atributo" class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-900 outline-none focus:border-emerald-500 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100" />
@@ -96,6 +97,24 @@ const formatMetricValueForDisplay = (metrica: any, valor: number | null) => {
           ))}
         </select>
       </label>
+      <label class="block text-sm text-slate-700 dark:text-slate-200">
+        <span class="mb-1 block font-medium">Marca</span>
+        <select id="brand-filter" class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-900 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100">
+          <option value="">Todas las marcas</option>
+          {brands.map(marca => <option value={marca}>{marca}</option>)}
+        </select>
+      </label>
+      <div class="text-sm text-slate-700 dark:text-slate-200">
+        <span class="mb-1 block font-medium">Precio registrado (CLP)</span>
+        <div class="flex gap-2">
+          <input id="price-min" type="number" min="0" step="1" inputmode="numeric" placeholder="Mínimo" aria-label="Precio mínimo" class="w-1/2 min-w-0 rounded-lg border border-slate-300 bg-white px-2 py-2 text-slate-900 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100" />
+          <input id="price-max" type="number" min="0" step="1" inputmode="numeric" placeholder="Máximo" aria-label="Precio máximo" class="w-1/2 min-w-0 rounded-lg border border-slate-300 bg-white px-2 py-2 text-slate-900 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100" />
+        </div>
+      </div>
+      <div class="flex flex-wrap items-end gap-3 sm:col-span-2 lg:col-span-4">
+        <p id="filter-count" role="status" aria-live="polite" class="text-sm text-slate-600 dark:text-slate-300">{productos.length} productos encontrados</p>
+        <button id="reset-filters" type="button" class="rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 dark:border-slate-700 dark:text-slate-200">Limpiar filtros</button>
+      </div>
     </div>
   </section>
 
@@ -169,7 +188,7 @@ const formatMetricValueForDisplay = (metrica: any, valor: number | null) => {
         </thead>
         <tbody>
           {productos.map((producto) => (
-            <tr class="border-t border-slate-200 text-sm dark:border-slate-800" data-row data-product-id={producto.id} data-price-value={producto.precio}>
+            <tr class="border-t border-slate-200 text-sm dark:border-slate-800" data-row data-product-id={producto.id} data-price-value={producto.precio} data-brand-value={producto.marca || ''}>
               <td class="sticky left-0 z-10 bg-white px-4 py-3 dark:bg-slate-900">
                 <input type="checkbox" class="compare-toggle h-5 w-5 rounded border-slate-400" value={producto.id} data-product-id={producto.id} aria-label={`Comparar ${producto.nombre}`} />
               </td>
@@ -230,6 +249,11 @@ const formatMetricValueForDisplay = (metrica: any, valor: number | null) => {
     const filters = document.querySelectorAll('[data-filter-field]');
     const sortField = document.getElementById('sort-field');
     const searchInput = document.getElementById('search-input');
+    const brandFilter = document.getElementById('brand-filter');
+    const priceMin = document.getElementById('price-min');
+    const priceMax = document.getElementById('price-max');
+    const resetFilters = document.getElementById('reset-filters');
+    const filterCount = document.getElementById('filter-count');
     const tableBody = document.querySelector('tbody');
     const emptyState = document.getElementById('empty-state');
     const listRoot = document.getElementById('lista-root');
@@ -267,12 +291,19 @@ const formatMetricValueForDisplay = (metrica: any, valor: number | null) => {
 
     const applyFilters = () => {
       const term = (searchInput?.value ?? '').trim().toLowerCase();
+      const brand = brandFilter?.value || '';
+      const minPrice = priceMin?.value === '' ? null : Number(priceMin?.value);
+      const maxPrice = priceMax?.value === '' ? null : Number(priceMax?.value);
       let visibleCount = 0;
       rows().forEach((row) => {
         let visible = true;
         if (term) {
           visible = row.textContent.toLowerCase().includes(term);
         }
+        if (brand && row.dataset.brandValue !== brand) visible = false;
+        const price = Number(row.dataset.priceValue);
+        if (minPrice !== null && Number.isFinite(minPrice) && (!Number.isFinite(price) || price < minPrice)) visible = false;
+        if (maxPrice !== null && Number.isFinite(maxPrice) && (!Number.isFinite(price) || price > maxPrice)) visible = false;
         filters.forEach((field) => {
           const key = field.getAttribute('data-filter-field');
           const value = field.value;
@@ -289,6 +320,7 @@ const formatMetricValueForDisplay = (metrica: any, valor: number | null) => {
       if (emptyState) {
         emptyState.classList.toggle('hidden', visibleCount > 0);
       }
+      if (filterCount) filterCount.textContent = visibleCount + (visibleCount === 1 ? ' producto encontrado' : ' productos encontrados');
     };
 
     const compareTray = document.getElementById('compare-tray');
@@ -355,6 +387,17 @@ const formatMetricValueForDisplay = (metrica: any, valor: number | null) => {
     });
 
     searchInput?.addEventListener('input', applyFilters);
+    brandFilter?.addEventListener('change', applyFilters);
+    priceMin?.addEventListener('input', applyFilters);
+    priceMax?.addEventListener('input', applyFilters);
+    resetFilters?.addEventListener('click', () => {
+      if (searchInput) searchInput.value = '';
+      if (brandFilter) brandFilter.value = '';
+      if (priceMin) priceMin.value = '';
+      if (priceMax) priceMax.value = '';
+      filters.forEach(field => { field.value = ''; });
+      applyFilters();
+    });
     if (sortField) {
       const initialSortField = listRoot?.dataset.defaultSortField || 'precio';
       if (Array.from(sortField.options).some((option) => option.value === initialSortField)) {
@@ -368,6 +411,7 @@ const formatMetricValueForDisplay = (metrica: any, valor: number | null) => {
     }
     sortField?.addEventListener('change', refreshSort);
     refreshSort();
+    applyFilters();
 
     syncCompare();
   </script>
