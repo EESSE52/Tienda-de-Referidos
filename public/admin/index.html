@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Admin | Importar CSV</title>
+    <title>Administrador | D’MonkeySport</title>
     <style>
       :root {
         --bg: #f3f4f6;
@@ -33,6 +33,20 @@
         background: #0f172a;
         color: white;
         padding: 24px 18px;
+        position: sticky;
+        top: 0;
+        height: 100vh;
+        overflow-y: auto;
+      }
+      html { scroll-behavior: smooth; scroll-padding-top: 18px; }
+      .content { min-width: 0; }
+      .content section[id] { scroll-margin-top: 18px; }
+      @media (max-width: 820px) {
+        .shell { display: block; }
+        .sidebar { position: relative; height: auto; padding: 16px; }
+        .nav { flex-direction: row; flex-wrap: wrap; gap: 6px; }
+        .nav a { padding: 9px 10px; font-size: .9rem; }
+        .content { padding: 16px; }
       }
       .brand {
         font-size: 1.4rem;
@@ -50,6 +64,7 @@
         padding: 10px 12px;
         border-radius: 10px;
       }
+      .nav a:focus-visible { outline: 2px solid #5eead4; outline-offset: 2px; }
       .nav a.active, .nav a:hover {
         background: rgba(255,255,255,0.08);
         color: white;
@@ -176,25 +191,27 @@
   <body>
     <div class="shell">
       <aside class="sidebar">
-        <div class="brand">Tienda</div>
-        <nav class="nav">
-          <a href="#">Dashboard</a>
-          <a href="#">Productos</a>
-          <a href="#" class="active">Importar Excel</a>
-          <a href="#">Listas</a>
-          <a href="#">Configuración</a>
+        <div class="brand">D’MonkeySport</div>
+        <nav class="nav" aria-label="Navegación del administrador">
+          <a href="#analytics-dashboard-panel" data-admin-nav>Estadísticas</a>
+          <a href="#products-panel" data-admin-nav>Productos</a>
+          <a href="#offer-management-panel" data-admin-nav>Vendedores y ofertas</a>
+          <a href="#price-management-panel" data-admin-nav>Control de precios</a>
+          <a href="#import-panel" data-admin-nav>Importar productos</a>
+          <a href="#categories-panel" data-admin-nav>Categorías</a>
+          <a href="#settings-panel" data-admin-nav>Configuración</a>
         </nav>
       </aside>
 
       <main class="content">
         <div class="topbar">
-          <h1 class="title">Importación masiva</h1>
+          <h1 class="title">Administración D’MonkeySport</h1>
           <button class="secondary" type="button">Cerrar sesión</button>
         </div>
 
 
-        <section class="card" style="margin-bottom:20px">
-          <h2>Acceso de administración (entorno de pruebas)</h2>
+        <section class="card" style="margin-bottom:20px" id="access-panel">
+          <h2>Acceso de administración</h2>
           <p class="subtle">Introduce el token del servidor local. Solo se mantiene en memoria mientras esta página esté abierta; no se guarda en el navegador. No publiques este panel sin proteger también /admin/ mediante Cloudflare Access.</p>
           <div class="button-row">
             <input id="admin-token" type="password" autocomplete="off" placeholder="Token administrativo local" aria-label="Token administrativo" style="flex:1;min-width:220px;padding:12px;border:1px solid #cbd5e1;border-radius:10px" />
@@ -204,7 +221,7 @@
         </section>
 
 
-        <section class="card" style="margin-bottom:20px">
+        <section class="card" style="margin-bottom:20px" id="categories-panel">
           <h2>Categorías de comparación</h2>
           <p class="subtle">Puedes crear categorías nuevas y cambiar sus nombres y descripciones. Las métricas y filtros existentes se conservan.</p>
           <div class="button-row">
@@ -253,7 +270,7 @@
 
         </section>
 
-        <section class="card" style="margin-bottom:20px">
+        <section class="card" style="margin-bottom:20px" id="settings-panel">
           <h2>Conexión OAuth de Mercado Libre (solo pruebas)</h2>
           <p class="subtle">Funciona únicamente en el Worker HTTPS de pruebas configurado. Cuando exista un KV exclusivo y los secretos privados, la autorización guarda tokens cifrados. La renovación requiere pulsar el botón: evita ejecuciones simultáneas. No funciona en localhost ni en dmonkeysport.com.</p>
           <div class="button-row">
@@ -328,7 +345,7 @@
           <div id="ml-bulk-results" class="preview" aria-live="polite"></div>
         </section>
 
-        <section class="card" style="margin-bottom:20px">
+        <section class="card" style="margin-bottom:20px" id="products-panel">
           <h2>Productos guardados en D1</h2>
           <p class="subtle">Los cambios se reflejan en el comparador local después de recargar la página. Desactivar oculta el producto sin eliminar su registro.</p>
           <div class="button-row"><button id="refresh-products" class="secondary" type="button">Actualizar listado</button></div>
@@ -362,7 +379,7 @@
           <div id="offers-dashboard-list" class="preview" aria-label="Grupos de ofertas y vendedores"></div>
         </section>
 
-        <section class="card" style="margin-bottom:20px">
+        <section class="card" style="margin-bottom:20px" id="price-management-panel">
           <h2>Revisión de precios en lote</h2>
           <p class="subtle">Selecciona productos MLC no marcados como prueba. Máximo 10 por consulta. Cada precio debe confirmarse individualmente antes de guardarse.</p>
           <div class="button-row">
@@ -452,7 +469,7 @@
           <div id="product-status" class="status" aria-live="polite"></div>
         </section>
 
-        <section class="card">
+        <section class="card" id="import-panel">
           <h2>Importar productos</h2>
           <p class="subtle">Descarga la plantilla, complétala en Excel y súbela aquí para cargar productos en la base de datos.</p>
 
@@ -486,6 +503,24 @@
     </div>
 
     <script>
+      // Navegación por secciones. Los enlaces son anclas reales y funcionan
+      // aun cuando la conexión a D1 o el módulo de estadísticas esté pendiente.
+      (() => {
+        const navLinks = [...document.querySelectorAll('[data-admin-nav]')];
+        const selectActive = () => {
+          const hash = window.location.hash;
+          for (const link of navLinks) {
+            const active = link.getAttribute('href') === hash;
+            link.classList.toggle('active', active);
+            if (active) link.setAttribute('aria-current', 'location');
+            else link.removeAttribute('aria-current');
+          }
+        };
+        window.addEventListener('hashchange', selectActive);
+        if (!window.location.hash) history.replaceState(null, '', '#analytics-dashboard-panel');
+        selectActive();
+      })();
+
       const state = { rows: [], validRows: [] };
       const statusNode = document.getElementById('status');
       const summaryNode = document.getElementById('summary');
