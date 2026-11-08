@@ -1,3 +1,4 @@
+import { normalizeGoogleDriveImageUrl } from '../../public/admin/drive-image-url.js';
 function cleanText(value) {
   return String(value ?? '').trim().replace(/\s+/g, ' ');
 }
@@ -104,7 +105,7 @@ export function normaliseProductPayload(payload = {}, existing = null) {
   const atributos = payload.atributos && typeof payload.atributos === 'object' ? payload.atributos : (existing?.atributos ?? {});
   const finalId = String(payload.id ?? existing?.id ?? `${slugify(nombre || 'producto')}-${Date.now()}`).trim();
   const estadoOferta = cleanText(payload.estado_oferta ?? existing?.estado_oferta ?? 'sin_verificar') || 'sin_verificar';
-  const imagenPropia = cleanText(payload.imagen_propia ?? existing?.imagen_propia ?? '');
+  const imagenPropia = normalizeGoogleDriveImageUrl(cleanText(payload.imagen_propia ?? existing?.imagen_propia ?? ''));
   const imagenCandidata = cleanText(payload.imagen_candidata ?? existing?.imagen_candidata ?? '');
   const imagenOrigenUrl = cleanText(payload.imagen_origen_url ?? existing?.imagen_origen_url ?? '');
   const imagenFuente = cleanText(payload.imagen_fuente ?? existing?.imagen_fuente ?? '') || 'ml_api';
