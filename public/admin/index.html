@@ -336,6 +336,18 @@
           <div id="product-list" class="preview"><p class="subtle">Conecta el administrador para consultar productos.</p></div>
         </section>
 
+        <section class="card" style="margin-bottom:20px" id="offer-management-panel">
+          <h2>Panel de vendedores y ofertas</h2>
+          <p class="subtle">Vista de solo lectura basada en las publicaciones guardadas en D1. Agrupa únicamente por Grupo de ofertas explícito o por ID de catálogo; nunca por similitud de nombre. Edita cada publicación por separado. Los precios son referenciales y no incluyen envío.</p>
+          <div class="admin-fields">
+            <label>Categoría<select id="offers-category-filter"><option value="todos">Todas las categorías</option></select></label>
+            <label>Buscar producto, vendedor o grupo<input type="search" id="offers-search" placeholder="Foodtech, tienda o grupo..." /></label>
+            <label>Estado<select id="offers-status-filter"><option value="todos">Todos</option><option value="activos">Activos</option><option value="inactivos">Inactivos</option><option value="sin-grupo">Sin agrupar</option></select></label>
+          </div>
+          <div id="offers-dashboard-summary" class="preview" aria-live="polite">Conecta el administrador para revisar las ofertas.</div>
+          <div id="offers-dashboard-list" class="preview" aria-label="Grupos de ofertas y vendedores"></div>
+        </section>
+
         <section class="card" style="margin-bottom:20px">
           <h2>Revisión de precios en lote</h2>
           <p class="subtle">Selecciona productos MLC no marcados como prueba. Máximo 10 por consulta. Cada precio debe confirmarse individualmente antes de guardarse.</p>
@@ -914,6 +926,121 @@
           document.getElementById('product-form-title').textContent = 'Crear producto';
         }
 
+        function startEditingOffer(product) {
+          editingId = product.id;
+          for (const name of ['lista_id','nombre','marca','vendedor_nombre','grupo_ofertas','id_catalogo','precio','enlace_referido','url_publicacion','id_publicacion','imagen_candidata','imagen_origen_url','imagen_propia']) {
+            form.elements[name].value = product[name] ?? '';
+          }
+          form.elements.imagen_autorizada_confirmada.checked = false;
+          showAuthorizedImagePreview();
+          updateCandidateImageSummary();
+          renderProductFields(product.atributos || {});
+          form.elements.activo.checked = !!product.activo;
+          form.elements.es_prueba.checked = product.es_prueba === true;
+          document.getElementById('product-form-title').textContent = 'Editar: ' + product.nombre;
+          form.scrollIntoView({behavior:'smooth'});
+        }
+
+        const offerDashboard = document.getElementById('offers-dashboard-list');
+        const offerSummary = document.getElementById('offers-dashboard-summary');
+        const offerCategoryFilter = document.getElementById('offers-category-filter');
+        const offerStatusFilter = document.getElementById('offers-status-filter');
+        const offerSearch = document.getElementById('offers-search');
+        const offerMoney = value => new Intl.NumberFormat('es-CL', {style:'currency',currency:'CLP',maximumFractionDigits:0}).format(value);
+        const offerKey = product => {
+          const group = String(product.grupo_ofertas || '').trim().toLowerCase();
+          if (group) return product.lista_id + ':manual:' + group;
+          const catalogId = String(product.id_catalogo || '').trim().toUpperCase();
+          return catalogId ? product.lista_id + ':catalog:' + catalogId : product.lista_id + ':single:' + product.id;
+        };
+        function renderOfferDashboard() {
+          offerDashboard.replaceChildren();
+          offerCategoryFilter.replaceChildren();
+          const all = document.createElement('option');
+          all.value = 'todos';
+          all.textContent = 'Todas las categorías';
+          offerCategoryFilter.appendChild(all);
+          const categoryNames = [...new Set(currentProducts.map(p => p.lista_id).filter(Boolean))].sort();
+          for (const id of categoryNames) {
+            const opt = document.createElement('option');
+            opt.value = id;
+            opt.textContent = id;
+            offerCategoryFilter.appendChild(opt);
+          }
+          if (categoryNames.includes(renderOfferDashboard.lastCategory)) offerCategoryFilter.value = renderOfferDashboard.lastCategory;
+          const groups = new Map();
+          for (const p of currentProducts) {
+            const key = offerKey(p);
+            if (!groups.has(key)) groups.set(key, []);
+            groups.get(key).push(p);
+          }
+          const term = offerSearch.value.trim().toLocaleLowerCase('es');
+          let shown = 0;
+          for (const [key, group] of groups) {
+            const category = group[0].lista_id;
+            if (offerCategoryFilter.value !== 'todos' && offerCategoryFilter.value !== category) continue;
+            if (offerStatusFilter.value === 'activos' && !group.some(p => p.activo === true && p.es_prueba !== true)) continue;
+            if (offerStatusFilter.value === 'inactivos' && !group.some(p => p.activo !== true)) continue;
+            if (offerStatusFilter.value === 'sin-grupo' && !key.includes(':single:')) continue;
+            if (term && !group.some(p => [p.nombre,p.marca,p.vendedor_nombre,p.vendedor,p.grupo_ofertas,p.id_catalogo,p.id_publicacion].join(' ').toLocaleLowerCase('es').includes(term))) continue;
+            shown++;
+            const entries = [...group].sort((a,b) => Number(a.precio) - Number(b.precio));
+            const wrap = document.createElement('div');
+            wrap.style.cssText = 'border:1px solid #cbd5e1;border-radius:12px;padding:14px;margin:12px 0;overflow-x:auto';
+            const title = document.createElement('h3');
+            title.textContent = group[0].nombre + ' · ' + category;
+            wrap.appendChild(title);
+            const meta = document.createElement('p');
+            meta.className = 'subtle';
+            meta.textContent = key.includes(':single:') ? 'Sin grupo de ofertas · 1 publicación independiente' : 'Grupo: ' + key.split(':').slice(1).join(':') + ' · ' + entries.length + ' publicaciones';
+            wrap.appendChild(meta);
+            const table = document.createElement('table');
+            const head = document.createElement('tr');
+            ['Vendedor','Precio registrado','Estado','Revisión','Acciones'].forEach(label => {
+              const th = document.createElement('th'); th.textContent = label; head.appendChild(th);
+            });
+            table.appendChild(head);
+            for (const offer of entries) {
+              const row = document.createElement('tr');
+              cell(row, offer.vendedor_nombre || offer.vendedor || 'Vendedor no indicado');
+              cell(row, Number(offer.precio) > 0 ? offerMoney(offer.precio) : 'Sin precio válido');
+              cell(row, offer.es_prueba === true ? 'PRUEBA' : offer.activo === true ? 'Activo' : 'Inactivo');
+              cell(row, offer.fecha_precio || 'Sin fecha');
+              const actions = document.createElement('td');
+              const edit = document.createElement('button');
+              edit.type = 'button'; edit.textContent = 'Editar oferta'; edit.className = 'secondary';
+              edit.addEventListener('click', () => startEditingOffer(offer));
+              actions.appendChild(edit);
+              if (offer.activo && !offer.es_prueba && /^MLC[0-9]{6,}$/i.test(String(offer.id_publicacion || '').replace(/[-_]/g,''))) {
+                const review = document.createElement('button');
+                review.type = 'button'; review.textContent = 'Revisar precio'; review.className = 'secondary';
+                review.addEventListener('click', () => reviewPrice(offer.id));
+                actions.appendChild(review);
+              }
+              row.appendChild(actions);
+              table.appendChild(row);
+            }
+            wrap.appendChild(table);
+            if (entries.length > 1 && !key.includes(':single:')) {
+              const amounts = entries.filter(p => p.activo === true && p.es_prueba !== true).map(p => Number(p.precio)).filter(n => Number.isFinite(n) && n > 0);
+              if (amounts.length > 1) {
+                const note = document.createElement('p');
+                note.className = 'subtle';
+                note.textContent = 'Diferencia entre precios activos registrados (sin envío): ' + offerMoney(Math.max(...amounts) - Math.min(...amounts));
+                wrap.appendChild(note);
+              }
+            }
+            offerDashboard.appendChild(wrap);
+          }
+          offerSummary.textContent = currentProducts.length + ' publicaciones registradas · ' + groups.size + ' grupos/entradas · ' + shown + ' resultados visibles. Los datos no se actualizan automáticamente.';
+          if (!shown) {
+            const empty = document.createElement('p'); empty.textContent = 'No hay ofertas que coincidan con los filtros.'; offerDashboard.appendChild(empty);
+          }
+        }
+        offerCategoryFilter.addEventListener('change', () => { renderOfferDashboard.lastCategory = offerCategoryFilter.value; renderOfferDashboard(); });
+        offerStatusFilter.addEventListener('change', renderOfferDashboard);
+        offerSearch.addEventListener('input', renderOfferDashboard);
+
         function renderProducts() {
           list.replaceChildren();
           if (!currentProducts.length) {
@@ -955,20 +1082,7 @@
             const edit = document.createElement('button');
             edit.type = 'button';
             edit.textContent = 'Editar';
-            edit.addEventListener('click', () => {
-              editingId = product.id;
-              for (const name of ['lista_id','nombre','marca','vendedor_nombre','grupo_ofertas','id_catalogo','precio','enlace_referido','url_publicacion','id_publicacion','imagen_candidata','imagen_origen_url','imagen_propia']) {
-                form.elements[name].value = product[name] ?? '';
-              }
-              form.elements.imagen_autorizada_confirmada.checked = false;
-              showAuthorizedImagePreview();
-              updateCandidateImageSummary();
-              renderProductFields(product.atributos || {});
-              form.elements.activo.checked = !!product.activo;
-              form.elements.es_prueba.checked = product.es_prueba === true;
-              document.getElementById('product-form-title').textContent = 'Editar: ' + product.nombre;
-              form.scrollIntoView({behavior:'smooth'});
-            });
+            edit.addEventListener('click', () => startEditingOffer(product));
             div.appendChild(edit);
             const historyButton = document.createElement('button');
             historyButton.type = 'button';
@@ -1013,6 +1127,7 @@
           selectedBatchIds.clear();
           batchResults.replaceChildren();
           renderProducts();
+          renderOfferDashboard();
           message(batchStatus, 'Selección limpia.');
         });
         batchButton.addEventListener('click', async () => {
