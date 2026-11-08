@@ -21,7 +21,7 @@ export const GET: APIRoute = async ({ request, params }) => {
       revisiones_manuales: Array.isArray(product.historial_revisiones)
         ? product.historial_revisiones.filter((entry: { fuente?: string; fecha?: string; precio_observado?: number }) =>
             entry?.fuente === 'mercadolibre_manual'
-            && /^\\d{4}-\\d{2}-\\d{2}$/.test(String(entry.fecha ?? ''))
+            && /^\d{4}-\d{2}-\d{2}$/.test(String(entry.fecha ?? ''))
             && Number.isSafeInteger(Number(entry.precio_observado))
             && Number(entry.precio_observado) > 0).slice(-50)
         : [],
