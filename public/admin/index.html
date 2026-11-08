@@ -1435,6 +1435,26 @@
                 + ' CLP · Máximo registrado: ' + result.highest.toLocaleString('es-CL') + ' CLP';
               historyContent.appendChild(range);
             }
+            if (Array.isArray(result.revisiones_manuales) && result.revisiones_manuales.length) {
+              const heading = document.createElement('h3');
+              heading.textContent = 'Revisiones manuales registradas';
+              historyContent.appendChild(heading);
+              const table = document.createElement('table');
+              const header = document.createElement('tr');
+              ['Fecha', 'Precio observado', 'Resultado', 'Fuente'].forEach(label => {
+                const th = document.createElement('th'); th.textContent = label; header.appendChild(th);
+              });
+              table.appendChild(header);
+              for (const entry of result.revisiones_manuales) {
+                const row = document.createElement('tr');
+                cell(row, entry.fecha);
+                cell(row, offerMoney(entry.precio_observado));
+                cell(row, entry.cambio ? 'Precio modificado' : 'Precio confirmado sin cambios');
+                cell(row, 'Mercado Libre (comprobación manual)');
+                table.appendChild(row);
+              }
+              historyContent.appendChild(table);
+            }
             message(historyStatus, 'Historial consultado. No se modificaron registros.');
             historyPanel.scrollIntoView({ behavior: 'smooth' });
           } catch (error) {
