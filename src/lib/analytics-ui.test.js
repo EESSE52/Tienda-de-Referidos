@@ -26,6 +26,26 @@ describe('Fase 6: instrumentación y tablero', () => {
     expect(eventApi).toContain('status: 204');
     expect(eventApi).not.toContain('cookies.');
   });
+  it('activa enlaces reales de la barra lateral hacia todos los módulos', () => {
+    const admin = read('public/admin/index.html');
+    const sections = [
+      ['analytics-dashboard-panel', 'Estadísticas'],
+      ['products-panel', 'Productos'],
+      ['offer-management-panel', 'Vendedores y ofertas'],
+      ['price-management-panel', 'Control de precios'],
+      ['import-panel', 'Importar productos'],
+      ['categories-panel', 'Categorías'],
+      ['settings-panel', 'Configuración'],
+    ];
+    for (const [id, label] of sections) {
+      expect(admin).toContain('href="#' + id + '" data-admin-nav>' + label + '</a>');
+      expect(admin).toMatch(new RegExp('<section[^>]*id="' + id + '"'));
+    }
+    expect(admin).not.toContain('<a href="#">Dashboard</a>');
+    expect(admin).toContain("window.addEventListener('hashchange', selectActive)");
+    expect(admin).toContain("link.setAttribute('aria-current', 'location')");
+    expect(admin).toContain('position: sticky;');
+  });
   it('muestra estadísticas separadas de ventas y comisiones', () => {
     const admin = read('public/admin/index.html');
     expect(admin).toContain('id="analytics-dashboard-panel"');
