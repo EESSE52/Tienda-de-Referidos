@@ -29,7 +29,7 @@ describe('Fase 6: instrumentación y tablero', () => {
   it('activa enlaces reales de la barra lateral hacia todos los módulos', () => {
     const admin = read('public/admin/index.html');
     const sections = [
-      ['analytics-dashboard-panel', 'Estadísticas'],
+      ['analytics-dashboard-panel', 'Inteligencia comercial'],
       ['products-panel', 'Productos'],
       ['offer-management-panel', 'Vendedores y ofertas'],
       ['price-management-panel', 'Control de precios'],
@@ -45,6 +45,17 @@ describe('Fase 6: instrumentación y tablero', () => {
     expect(admin).toContain("window.addEventListener('hashchange', selectActive)");
     expect(admin).toContain("link.setAttribute('aria-current', 'location')");
     expect(admin).toContain('position: sticky;');
+  });
+  it('permite ordenar por visitas, clics, CTR y oportunidades sin modificar D1', () => {
+    const admin = read('public/admin/index.html');
+    for (const mode of ['visitas', 'clics', 'ctr', 'opportunity']) {
+      expect(admin).toContain('<option value="' + mode + '">');
+    }
+    expect(admin).toContain('id="analytics-sort"');
+    expect(admin).toContain('function renderAnalyticsSnapshot(result)');
+    expect(admin).toContain('analyticsSort.addEventListener');
+    expect(admin).toContain('const analyticsCtr = item =>');
+    expect(admin).toContain('views >= 10 ? analyticsCtr(item) : -1');
   });
   it('muestra estadísticas separadas de ventas y comisiones', () => {
     const admin = read('public/admin/index.html');
