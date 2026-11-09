@@ -136,4 +136,19 @@ describe('Mercado Libre item lookup', () => {
       .rejects
       .toThrow('Mercado Libre rechazó esta consulta a su API');
   });
+  it('informa fallos de red sin exponer detalles internos ni inventar un precio', async () => {
+    const fetchImplementation = vi.fn().mockRejectedValue(new TypeError('connection failed'));
+    await expect(fetchMercadoLibreItem('MLC2908577036', fetchImplementation, 'token'))
+      .rejects.toThrow('No fue posible conectar con la API de Mercado Libre');
+    expect(fetchImplementation).toHaveBeenCalledTimes(1);
+  });
+
+  it('informa respuestas ilegibles de la API sin guardar datos', async () => {
+    const fetchImplementation = vi.fn().mockResolvedValue({
+      ok: true, json: async () => { throw new SyntaxError('Unexpected token'); },
+    });
+    await expect(fetchMercadoLibreItem('MLC2908577036', fetchImplementation, 'token'))
+      .rejects.toThrow('sin datos JSON válidos');
+  });
+
 });
