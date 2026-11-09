@@ -89,14 +89,19 @@ export async function fetchMercadoLibreItem(itemId, fetchImplementation = fetch,
     throw new Error('El enlace no contiene un ID de publicación válido de Mercado Libre.');
   }
 
-  const response = await fetchImplementation(`https://api.mercadolibre.com/items/${normalizedId}`, {
-    headers: {
-      Accept: 'application/json',
-      'Accept-Language': 'es-CL,es;q=0.9',
-      'User-Agent': 'TiendaDeReferidos/1.0 (+https://github.com/EESSE52/Tienda-de-Referidos)',
-      ...(accessToken ? { Authorization: 'Bearer ' + accessToken } : {}),
-    },
-  });
+  let response;
+  try {
+    response = await fetchImplementation(`https://api.mercadolibre.com/items/${normalizedId}`, {
+      headers: {
+        Accept: 'application/json',
+        'Accept-Language': 'es-CL,es;q=0.9',
+        'User-Agent': 'TiendaDeReferidos/1.0 (+https://github.com/EESSE52/Tienda-de-Referidos)',
+        ...(accessToken ? { Authorization: 'Bearer ' + accessToken } : {}),
+      },
+    });
+  } catch {
+    throw new Error('No fue posible conectar con la API de Mercado Libre para la publicación ' + normalizedId + '. Comprueba el acceso al proveedor o ingresa el producto manualmente con datos verificados.');
+  }
 
   if (!response.ok) {
     let errorPayload = {};
@@ -132,7 +137,12 @@ export async function fetchMercadoLibreItem(itemId, fetchImplementation = fetch,
     throw new Error(`Mercado Libre no pudo entregar la publicación (${response.status}).`);
   }
 
-  const item = await response.json();
+  let item;
+  try {
+    item = await response.json();
+  } catch {
+    throw new Error('Mercado Libre respondió sin datos JSON válidos para la publicación ' + normalizedId + '. Puedes registrar los datos manualmente tras verificarlos.');
+  }
   if (!Number.isSafeInteger(Number(item?.price)) || Number(item?.price) <= 0 || item?.currency_id && item.currency_id !== 'CLP') {
     throw new Error('La API de Mercado Libre no entregó un precio válido en pesos chilenos para esta publicación. Comprueba que sea una publicación real, vigente y con precio visible. No se modificó el precio guardado.');
   }
