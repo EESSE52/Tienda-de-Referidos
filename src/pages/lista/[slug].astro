@@ -174,6 +174,7 @@ const formatMetricValueForDisplay = (metrica: any, valor: number | null) => {
         <thead class="bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-100">
           <tr>
             <th scope="col" class="sticky left-0 z-20 bg-slate-100 px-4 py-3 dark:bg-slate-800"><span class="sr-only">Seleccionar</span></th>
+            <th scope="col" class="w-20 px-2 py-3 text-center font-semibold">Imagen</th>
             <th class="px-4 py-3 font-semibold">Producto</th>
             <th class="px-4 py-3 font-semibold">Marca</th>
             <th class="px-4 py-3 font-semibold">Precio</th>
@@ -191,6 +192,11 @@ const formatMetricValueForDisplay = (metrica: any, valor: number | null) => {
             <tr class="border-t border-slate-200 text-sm dark:border-slate-800" data-row data-product-id={producto.id} data-price-value={producto.precio} data-brand-value={producto.marca || ''}>
               <td class="sticky left-0 z-10 bg-white px-4 py-3 dark:bg-slate-900">
                 <input type="checkbox" class="compare-toggle h-5 w-5 rounded border-slate-400" value={producto.id} data-product-id={producto.id} aria-label={`Comparar ${producto.nombre}`} />
+              </td>
+              <td class="px-2 py-3 text-center">
+                <a href={`/producto/${encodeURIComponent(producto.id)}`} aria-label={`Ver ficha de ${producto.nombre}`} class="inline-flex h-16 w-16 items-center justify-center overflow-hidden rounded-xl border border-slate-200 bg-white p-1 shadow-sm transition hover:border-blue-400 hover:shadow-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600">
+                  <img src={getPublicProductImage(producto)} alt={`Fotografía referencial de ${producto.nombre}`} loading="lazy" decoding="async" width="64" height="64" class="h-full w-full object-contain" />
+                </a>
               </td>
               <td class="px-4 py-3">
                 <a href={`/producto/${producto.id}`} class="font-semibold text-emerald-600 hover:underline dark:text-emerald-400">{producto.nombre}</a>
