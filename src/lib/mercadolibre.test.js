@@ -24,8 +24,51 @@ describe('Mercado Libre item lookup', () => {
       seller: 'Tienda Oficial',
       price: 19990,
       image: 'https://example.com/product.jpg',
-      attributes: { gramos_total: 300, sabor: 'Sin sabor' },
+      attributes: { gramos_total: 300, sabor: 'Sin sabor', dosis_3g: 100, dosis_5g: 60 },
     });
+  });
+
+  it('extrae atributos declarados y dosis teóricas para la ficha Kiffer Labs de 400 g', () => {
+    const result = mapMercadoLibreItem({
+      title: 'Creatina monohidratada Creapure Kiffer Labs X Series 400 g',
+      price: 33000, // Dato simulado exclusivamente para la prueba.
+      attributes: [
+        { id: 'BRAND', value_name: 'Kiffer Labs' },
+        { id: 'NET_WEIGHT', value_name: '0,4 kg' },
+        { id: 'SUPPLEMENT_FORMAT', value_name: 'En polvo' },
+        { id: 'FLAVOR', value_name: 'Sin sabor' },
+        { id: 'SERVINGS_NUMBER', value_struct: { number: 80 } },
+      ],
+    });
+    expect(result.attributes).toEqual({
+      gramos_total: 400, formato: 'Polvo', sabor: 'Sin sabor',
+      porciones: 80, dosis_3g: 133, dosis_5g: 80,
+    });
+    expect(result.brand).toBe('Kiffer Labs');
+  });
+
+  it('no inventa porciones ni peso desde el título cuando no están en los atributos', () => {
+    const result = mapMercadoLibreItem({
+      title: 'Creatina monohidratada de 400 g con 80 porciones',
+      price: 18000,
+      attributes: [{ id: 'SERVINGS_NUMBER', value_name: '80' }],
+    });
+    expect(result.attributes).toEqual({ porciones: 80 });
+  });
+
+  it('normaliza peso estructurado y omite datos inválidos', () => {
+    const structured = mapMercadoLibreItem({
+      attributes: [{ id:'NET_WEIGHT', value_struct: { number: 0.3, unit: 'kg' } }],
+    });
+    expect(structured.attributes.gramos_total).toBe(300);
+    const invalid = mapMercadoLibreItem({
+      attributes: [
+        { id:'NET_WEIGHT', value_name:'Tamaño 3kg aprox' },
+        { id:'SERVINGS_NUMBER', value_name:'varias' },
+        { id:'SUPPLEMENT_FORMAT', value_name:'Gomitas' },
+      ],
+    });
+    expect(invalid.attributes).toEqual({});
   });
 
   it('requests the official public item endpoint', async () => {
