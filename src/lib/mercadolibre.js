@@ -1,22 +1,56 @@
 import { extractAffiliateProductData } from './link-extractor.js';
 
 function normalizeNumber(value) {
-  const text = String(value ?? '').trim().replace(/\s/g, '').replace(/\./g, '').replace(',', '.');
-  const number = Number(text);
-  return Number.isFinite(number) ? number : null;
+  const raw = String(value ?? '').trim().replace(/\s/g, '');
+  if (!/^\d+(?:[.,]\d+)?$/.test(raw)) return null;
+  const number = Number(raw.replace(',', '.'));
+  return Number.isFinite(number) && number > 0 ? number : null;
 }
 
 function findAttribute(attributes, ids) {
-  return attributes.find((attribute) => ids.includes(attribute?.id))?.value_name || '';
+  return attributes.find(attribute => ids.includes(String(attribute?.id || '').toUpperCase())) || null;
+}
+
+function attributeText(attributes, ids) {
+  const attribute = findAttribute(attributes, ids);
+  return String(attribute?.value_name ?? attribute?.value ?? '').trim();
+}
+
+function attributePositiveNumber(attributes, ids) {
+  const attribute = findAttribute(attributes, ids);
+  if (!attribute) return null;
+  const structured = attribute.value_struct?.number;
+  if (structured !== undefined && structured !== null) {
+    const number = Number(structured);
+    return Number.isFinite(number) && number > 0 ? number : null;
+  }
+  return normalizeNumber(attributeText(attributes, ids));
 }
 
 function weightToGrams(value) {
-  const match = String(value || '').match(/([\d.,]+)\s*(kg|g|gr)\b/i);
+  const match = String(value || '').match(/^\s*(\d+(?:[.,]\d+)?)\s*(kg|g|gr|gramos?)\s*$/i);
   if (!match) return null;
-
   const amount = normalizeNumber(match[1]);
-  if (amount === null) return null;
-  return /^kg$/i.test(match[2]) ? amount * 1000 : amount;
+  return amount === null ? null : /^kg$/i.test(match[2]) ? amount * 1000 : amount;
+}
+
+function attributeWeightGrams(attributes, ids) {
+  const attribute = findAttribute(attributes, ids);
+  if (!attribute) return null;
+  const structured = attribute.value_struct;
+  if (structured && structured.number != null && structured.unit) {
+    return weightToGrams(String(structured.number) + ' ' + structured.unit);
+  }
+  return weightToGrams(attributeText(attributes, ids));
+}
+
+function supplementFormat(attributes) {
+  const raw = attributeText(attributes, ['SUPPLEMENT_FORMAT', 'PRODUCT_FORMAT', 'FORMAT']);
+  const clean = raw.toLocaleLowerCase('es');
+  if (['polvo', 'en polvo', 'powder'].includes(clean)) return 'Polvo';
+  if (['capsulas', 'cápsulas', 'capsules'].includes(clean)) return 'Capsulas';
+  if (['tabletas', 'tablets', 'comprimidos'].includes(clean)) return 'Tabletas';
+  return '';
 }
 
 export function getMercadoLibreItemId(value) {
@@ -27,17 +61,30 @@ export function getMercadoLibreItemId(value) {
 
 export function mapMercadoLibreItem(item = {}) {
   const attributes = Array.isArray(item.attributes) ? item.attributes : [];
-  const gramosTotal = weightToGrams(findAttribute(attributes, ['NET_WEIGHT', 'WEIGHT']));
+  const gramosTotal = attributeWeightGrams(attributes, ['NET_WEIGHT', 'WEIGHT']);
   const productAttributes = {};
 
   if (gramosTotal !== null) productAttributes.gramos_total = gramosTotal;
 
-  const flavor = findAttribute(attributes, ['FLAVOR']);
+  const flavor = attributeText(attributes, ['FLAVOR']);
   if (flavor) productAttributes.sabor = flavor;
+
+  const porciones = attributePositiveNumber(attributes, ['SERVINGS_NUMBER', 'NUMBER_OF_SERVINGS']);
+  if (porciones !== null) productAttributes.porciones = porciones;
+
+  const formato = supplementFormat(attributes);
+  if (formato) productAttributes.formato = formato;
+
+  // No inferimos porciones de gramos ni dosis desde el título: necesitan dato verificable.
+  // Solo calculamos dosis estándar cuando existe peso neto explícito en atributos.
+  if (gramosTotal !== null) {
+    productAttributes.dosis_3g = Math.floor(gramosTotal / 3);
+    productAttributes.dosis_5g = Math.floor(gramosTotal / 5);
+  }
 
   return {
     name: String(item.title || '').trim(),
-    brand: String(findAttribute(attributes, ['BRAND']) || '').trim(),
+    brand: attributeText(attributes, ['BRAND']),
     seller: String(item.seller?.nickname || '').trim(),
     price: Number.isFinite(Number(item.price)) ? Number(item.price) : 0,
     image: String(item.pictures?.[0]?.secure_url || item.pictures?.[0]?.url || item.thumbnail || '').trim(),
