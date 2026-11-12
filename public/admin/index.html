@@ -2519,8 +2519,14 @@
             for (const [label, value] of [
               ['Nombre', item.name], ['Marca', item.brand],
               ['Precio consultado', new Intl.NumberFormat('es-CL', {style:'currency',currency:'CLP',maximumFractionDigits:0}).format(item.price)],
-              ['Publicación', item.id_publicacion], ['Vendedor', item.seller],
-              ['Origen de datos', 'Consulta a Mercado Libre; uso externo de imágenes no autorizado automáticamente'],
+              ['Publicación', item.id_publicacion], ['Catálogo', item.id_catalogo], ['Vendedor', item.seller],
+              ['Peso neto', item.attributes?.gramos_total != null ? item.attributes.gramos_total + ' g' : 'No informado'],
+              ['Porciones declaradas', item.attributes?.porciones ?? 'No informadas'],
+              ['Formato', item.attributes?.formato || 'No informado'],
+              ['Sabor', item.attributes?.sabor || 'No informado'],
+              ['Dosis teóricas de 3 g', item.attributes?.dosis_3g ?? 'No calculadas'],
+              ['Dosis teóricas de 5 g', item.attributes?.dosis_5g ?? 'No calculadas'],
+              ['Origen de datos', 'Consulta a Mercado Libre; verificar atributos y precio antes de publicar; uso externo de imágenes no autorizado automáticamente'],
               ['Imagen candidata', item.image ? 'URL obtenida para revisión privada (no publicada)' : 'No disponible'],
               ['Afiliación', 'No verificada: requiere enlace de referido válido'],
             ]) {
