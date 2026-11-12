@@ -21,6 +21,15 @@ describe('revisión de publicaciones Mercado Libre Chile', () => {
       id: 'MLC2794500346', catalogId: 'MLC39962085', kind: 'item', url,
     });
   });
+  it('identifica Kiffer Labs con ID de catálogo y oferta individual, sin cambiar enlace de origen', () => {
+    const url = 'https://www.mercadolibre.cl/creatina-monohidratada-creapure-kiffer-labs-x-series-en-polvo-de-400g/p/MLC53674200?pdp_filters=item_id%3AMLC3027701274&matt_tracing_id=19983c39-dc9b-41ef-ae3d-7a67fc7867e9#polycard_client=social-profile-middleend&source=lists&type=product&wid=MLC3027701274&sid=storefronts';
+    expect(normalizeChileMercadoLibreUrl(url)).toEqual({
+      id: 'MLC3027701274',
+      catalogId: 'MLC53674200',
+      kind: 'item',
+      url,
+    });
+  });
   it('conserva la ruta de catálogo cuando no se incluye una oferta wid válida', () => {
     expect(normalizeChileMercadoLibreUrl('https://www.mercadolibre.cl/producto/p/MLC39962085')).toEqual({
       id: 'MLC39962085', kind: 'catalog',
