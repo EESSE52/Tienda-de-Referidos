@@ -289,7 +289,7 @@
           <div class="admin-fields">
             <label>URL de publicación HTTPS<input id="ml-preview-url" type="url" placeholder="https://articulo.mercadolibre.cl/MLC-1234567890" /></label>
           </div>
-          <div class="button-row"><button id="ml-preview-btn" type="button">Consultar publicación</button><button id="ml-copy-btn" class="secondary" type="button" disabled>Pasar al formulario (inactivo)</button></div>
+          <div class="button-row"><button id="ml-preview-btn" type="button">Consultar publicación</button><button id="ml-copy-btn" class="secondary" type="button" disabled>Pasar al formulario (inactivo)</button><button id="ml-preview-manual" type="button" class="secondary">Preparar ingreso manual</button></div>
           <div id="ml-preview-status" class="status" aria-live="polite"></div>
           <div id="ml-preview-details" class="preview" aria-live="polite"></div>
         </section>
@@ -305,8 +305,9 @@
             <button type="button" id="ml-bulk-search">Consultar enlaces</button>
             <button type="button" class="secondary" id="ml-bulk-export" disabled>Descargar CSV revisado</button>
           </div>
-          <h3>Ingreso manual cuando la API no responde</h3>
-          <p class="subtle">Pega la URL completa de la publicación para identificar el producto y, por separado, el enlace meli.la creado en tu cuenta de afiliados. Comprueba el precio real en CLP. Se incluirá en el CSV como producto inactivo, sin afirmar que el precio o la afiliación hayan sido verificados automáticamente.</p>
+          <h3 id="ml-manual-section">Ingreso manual asistido cuando la API no responde</h3>
+          <p class="subtle">Si la API responde 403, utiliza «Preparar ingreso manual» junto al enlace rechazado. Identificaremos el ID de vendedor y el catálogo cuando estén presentes en la URL, sin suponer precio ni marca. Después puedes pegar las especificaciones del producto y aplicar los campos reconocidos. El enlace afiliado se introduce y verifica por separado. No se publica nada automáticamente.</p>
+          <div id="ml-manual-prefill-status" class="status" aria-live="polite"></div>
           <div class="admin-fields">
             <label>URL completa del producto (para identificarlo)<input id="ml-manual-url" type="url" placeholder="https://www.mercadolibre.cl/.../up/MLCU...#wid=MLC..." /></label>
             <label>Enlace de afiliado de tu cuenta (meli.la)<input id="ml-manual-affiliate" type="url" placeholder="https://meli.la/..." /></label>
@@ -2297,6 +2298,29 @@
 
         const bulkStatus = document.getElementById('ml-bulk-status');
         const bulkResults = document.getElementById('ml-bulk-results');
+        const manualPrefillStatus = document.getElementById('ml-manual-prefill-status');
+        async function prepareManualFallback(rawUrl) {
+          const { identifyManualSource } = await import('/admin/manual-source.js');
+          const identified = identifyManualSource(rawUrl);
+          const category = categories.find(item => item.id === bulkCategory.value);
+          if (!category) throw new Error('Selecciona la categoría antes de preparar el ingreso manual.');
+          document.getElementById('ml-manual-url').value = identified.url;
+          // Nunca copiar una URL de publicación como supuesto enlace afiliado.
+          document.getElementById('ml-manual-affiliate').value = '';
+          // No conservar el precio/nombre de un intento previo como si se hubieran extraído.
+          document.getElementById('ml-manual-name').value = '';
+          document.getElementById('ml-manual-brand').value = '';
+          document.getElementById('ml-manual-price').value = '';
+          document.getElementById('ml-manual-image').value = '';
+          for (const control of manualAttributes.querySelectorAll('[data-manual-attribute]')) control.value = '';
+          clearPastedPreview();
+          message(manualPrefillStatus, 'Formulario preparado. ID publicación: ' + (identified.id_publicacion || 'no identificable') +
+            ' · catálogo: ' + (identified.id_catalogo || 'no identificado') +
+            (identified.short ? '. Enlace corto: ábrelo en tu navegador y copia la URL de publicación completa.' : '.') +
+            ' Completa nombre, precio CLP observado, enlace afiliado y atributos o pega las características para analizarlas. Sin guardar.');
+          document.getElementById('ml-manual-section').scrollIntoView({behavior:'smooth'});
+          document.getElementById('ml-manual-name').focus();
+        }
         const bulkSearchButton = document.getElementById('ml-bulk-search');
         const bulkExportButton = document.getElementById('ml-bulk-export');
         const previewD1Button = document.getElementById('ml-batch-preview-d1');
@@ -2355,7 +2379,14 @@
                   + new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP', maximumFractionDigits: 0 }).format(item.price);
               } catch (error) {
                 failed++;
-                row.textContent = 'No incluido: ' + url + ' — ' + error.message;
+                row.textContent = 'No incluido: ' + url + ' — ' + error.message + ' ';
+                const manualButton = document.createElement('button');
+                manualButton.type = 'button';
+                manualButton.className = 'secondary';
+                manualButton.textContent = 'Preparar ingreso manual';
+                manualButton.addEventListener('click', () =>
+                  prepareManualFallback(url).catch(err => message(bulkStatus, err.message, true)));
+                row.appendChild(manualButton);
               }
             }
             invalidateD1Preview();
@@ -2505,6 +2536,10 @@
         const mlStatus = document.getElementById('ml-preview-status');
         const mlDetails = document.getElementById('ml-preview-details');
         const mlCopy = document.getElementById('ml-copy-btn');
+        document.getElementById('ml-preview-manual').addEventListener('click', () => {
+          const url = document.getElementById('ml-preview-url').value.trim();
+          prepareManualFallback(url).catch(error => message(mlStatus, error.message, true));
+        });
         document.getElementById('ml-preview-btn').addEventListener('click', async () => {
           previewedMercadoLibre = null;
           mlCopy.disabled = true;
@@ -2540,7 +2575,7 @@
             mlCopy.disabled = false;
             message(mlStatus, 'Consulta completada. Revisa la información antes de copiarla al formulario.');
           } catch (error) {
-            message(mlStatus, error.message, true);
+            message(mlStatus, error.message + ' Puedes utilizar «Preparar ingreso manual» para copiar el enlace al formulario sin inventar datos.', true);
           }
         });
         mlCopy.addEventListener('click', () => {
