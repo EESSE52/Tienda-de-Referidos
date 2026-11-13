@@ -752,20 +752,43 @@
           setStatus('No hay filas válidas para importar.', 'error');
           return;
         }
-
+        // No perder la vista previa para que el usuario pueda reintentar si hay error de red.
+        importBtn.disabled = true;
         try {
-          setStatus('Guardando productos...');
-          const response = await fetch('/api/admin/products/import', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', ...(window.dmonkeysportAdminHeaders?.() || {}) },
-            body: JSON.stringify({ rows: state.validRows }),
-          });
-          const payload = await response.json();
-          if (!response.ok) throw new Error(payload.error || 'La importación falló.');
-
-          importBtn.disabled = true;
-          setStatus(`Importación completada: ${payload.imported} de ${payload.total} filas guardadas. ${payload.errors?.length || 0} filas rechazadas.`, payload.errors?.length ? 'error' : 'success');
-          if (payload.errors?.length) {
+          const headers = window.dmonkeysportAdminHeaders?.() || {};
+          if (!headers.Authorization) {
+            throw new Error('Primero conecta el administrador con su token. El CSV ya está preparado; no necesitas seleccionarlo nuevamente.');
+          }
+          setStatus('Enviando ' + state.validRows.length + ' productos al Worker...');
+          let response;
+          try {
+            response = await fetch('/api/admin/products/import', {
+              method: 'POST',
+              cache: 'no-store',
+              credentials: 'same-origin',
+              headers: { 'Content-Type': 'application/json', ...headers },
+              body: JSON.stringify({ rows: state.validRows }),
+            });
+          } catch {
+            throw new Error('No se pudo conectar con /api/admin/products/import (fallo de red o conexión interrumpida). Comprueba que estás en https://dmonkeysport.com/admin/, revisa la pestaña Red del navegador y el estado del Worker. Verifica si se guardó algún producto antes de reintentar.');
+          }
+          let payload;
+          try {
+            payload = await response.json();
+          } catch {
+            throw new Error('La API respondió HTTP ' + response.status + ' sin JSON válido. Revisa los registros del Worker; no se puede confirmar la importación.');
+          }
+          if (!response.ok) {
+            throw new Error('Error HTTP ' + response.status + ': ' + (payload.error || 'No se pudo importar.'));
+          }
+          const imported = Number(payload.imported || 0);
+          const rejected = Array.isArray(payload.errors) ? payload.errors.length : 0;
+          // La API puede guardar parcialmente. No informar éxito completo cuando hay filas rechazadas.
+          setStatus('Resultado: ' + imported + ' de ' + payload.total + ' productos guardados. ' +
+            rejected + ' filas rechazadas.' +
+            (rejected ? ' Revisa los errores antes de volver a importar las filas pendientes.' : ''),
+            rejected ? 'error' : 'success');
+          if (rejected) {
             const errors = document.createElement('ul');
             for (const detail of payload.errors.slice(0, 25)) {
               const entry = document.createElement('li');
@@ -775,9 +798,13 @@
             previewContainer.prepend(errors);
           }
           document.getElementById('refresh-products').click();
-          summaryValidNode.textContent = String(payload.imported);
+          summaryValidNode.textContent = String(imported);
+          if (!rejected && imported === state.validRows.length) importBtn.disabled = true;
         } catch (error) {
           setStatus(error instanceof Error ? error.message : 'No se pudo guardar la importación.', 'error');
+        } finally {
+          // Una interrupción puede haber guardado registros: permitir inspección y reintento consciente.
+          if (summaryValidNode.textContent !== String(state.validRows.length)) importBtn.disabled = false;
         }
       }
 
