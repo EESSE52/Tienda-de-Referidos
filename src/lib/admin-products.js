@@ -25,6 +25,19 @@ function checkedAttributes(category, incoming, previous) {
   }
 }
 
+function checkedProduct(payload, products, existingId = null) {
+  try {
+    return validateProductPayload(payload, products, existingId);
+  } catch (error) {
+    // Validaciones corregibles son errores del formulario (400), no fallos internos (500).
+    // Mantener errores inesperados de base de datos/infraestructura como 500.
+    if (error instanceof Error && error.message) {
+      throw new AdminProductError(error.message, 400);
+    }
+    throw error;
+  }
+}
+
 function validateCategory(catalog, listId) {
   if (!catalog.listas.some((lista) => lista.id === listId || lista.slug === listId)) {
     throw new AdminProductError('La categoría seleccionada no existe.');
@@ -34,7 +47,7 @@ function validateCategory(catalog, listId) {
 export async function createAdminProduct(env, body) {
   const payload = ensurePayload(body);
   const catalog = await readCatalog(env);
-  const candidate = validateProductPayload(payload, catalog.productos);
+  const candidate = checkedProduct(payload, catalog.productos);
   validateCategory(catalog, candidate.lista_id);
   if (catalog.productos.some((product) => product.id === candidate.id)) {
     throw new AdminProductError('Ya existe un producto con ese identificador.', 409);
@@ -60,7 +73,7 @@ export async function updateAdminProduct(env, id, body) {
   if (payload.id !== undefined && payload.id !== id) {
     throw new AdminProductError('No se puede cambiar el identificador del producto.');
   }
-  const candidate = validateProductPayload({ ...existing, ...payload, id }, catalog.productos, id);
+  const candidate = checkedProduct({ ...existing, ...payload, id }, catalog.productos, id);
   validateCategory(catalog, candidate.lista_id);
   const category = catalog.listas.find((item) => item.id === candidate.lista_id || item.slug === candidate.lista_id);
   candidate.atributos = checkedAttributes(category, candidate.atributos, existing.atributos);
