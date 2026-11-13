@@ -186,6 +186,24 @@
       .admin-fields input[type=checkbox]{width:18px;height:18px}
       .admin-actions {display:flex;gap:6px;flex-wrap:wrap}
       .admin-actions button {padding:7px 10px;font-size:.8rem}
+      /* Controles de alto contraste exclusivos del listado de productos D1. */
+      #products-panel .product-list-filters {background:#eff6ff;border:1px solid #bfdbfe;border-radius:12px;padding:14px}
+      #products-panel .product-list-filters select {background:#ffffff;border:2px solid #2563eb;color:#172554;font-weight:700;min-height:44px}
+      #products-panel .product-list-filters select:focus-visible,
+      #products-panel button:focus-visible,
+      #products-panel input[type=checkbox]:focus-visible {outline:3px solid #f59e0b;outline-offset:2px}
+      #products-panel #refresh-products {background:#1d4ed8;color:white;border:1px solid #1e40af}
+      #products-panel #refresh-products:hover {background:#1e40af}
+      #products-panel #product-list table th {background:#1e3a8a;color:#ffffff;border-color:#1e40af}
+      #products-panel #product-list tbody tr:nth-child(even) {background:#eff6ff}
+      #products-panel #product-list tbody tr:hover {background:#dbeafe}
+      #products-panel #product-list input[type=checkbox] {width:20px;height:20px;accent-color:#2563eb;cursor:pointer}
+      #products-panel #product-list input[type=checkbox]:disabled {cursor:not-allowed;opacity:.4}
+      #products-panel #product-list .admin-actions button {background:#1d4ed8;color:#fff;border:1px solid #1e40af;border-radius:8px}
+      #products-panel #product-list .admin-actions button.secondary {background:#fff7ed;color:#9a3412;border-color:#fdba74}
+      #products-panel #product-list .admin-actions button:hover {filter:brightness(.92)}
+      #products-panel #product-list .admin-actions .product-action-disable {background:#b91c1c;color:#fff;border-color:#991b1b}
+      #products-panel #product-list .admin-actions a {font-weight:700}
     </style>
   </head>
   <body>
@@ -351,7 +369,11 @@
           <h2>Productos guardados en D1</h2>
           <p class="subtle">Los cambios se reflejan en el comparador local después de recargar la página. Desactivar oculta el producto sin eliminar su registro.</p>
           <div class="button-row"><button id="refresh-products" class="secondary" type="button">Actualizar listado</button></div>
-          <div class="admin-fields"><label>Filtro<select id="product-origin-filter"><option value="todos">Todos</option><option value="prueba">Pruebas</option><option value="sin_verificar">Sin confirmar</option><option value="consultado">Precio consultado</option></select></label></div>
+          <div class="admin-fields product-list-filters">
+            <label>Categoría<select id="product-category-filter"><option value="todos">Todas las categorías</option></select></label>
+            <label>Procedencia<select id="product-origin-filter"><option value="todos">Todos</option><option value="prueba">Pruebas</option><option value="sin_verificar">Sin confirmar</option><option value="consultado">Precio consultado</option></select></label>
+          </div>
+          <p id="product-list-count" class="subtle" role="status" aria-live="polite">Conecta el administrador para ver los resultados.</p>
           <div id="product-list" class="preview"><p class="subtle">Conecta el administrador para consultar productos.</p></div>
         </section>
 
@@ -873,7 +895,10 @@
         const list = document.getElementById('product-list');
         const tokenInput = document.getElementById('admin-token');
         const originFilter = document.getElementById('product-origin-filter');
+        const productCategoryFilter = document.getElementById('product-category-filter');
+        const productListCount = document.getElementById('product-list-count');
         originFilter.addEventListener('change', () => renderProducts());
+        productCategoryFilter.addEventListener('change', () => renderProducts());
         const originStatus = p => p.es_prueba === true ? 'prueba' : p.precio_fuente === 'api' ? 'consultado' : 'sin_verificar';
 
         function message(node, text, error = false) {
@@ -1407,12 +1432,38 @@
         offerAgeFilter.addEventListener('change', renderOfferDashboard);
         offerSearch.addEventListener('input', renderOfferDashboard);
 
+        function renderProductCategoryOptions() {
+          const previous = productCategoryFilter.value;
+          const ids = [...new Set(currentProducts.map(p => String(p.lista_id || '').trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'es'));
+          productCategoryFilter.replaceChildren();
+          const all = document.createElement('option');
+          all.value = 'todos';
+          all.textContent = 'Todas las categorías';
+          productCategoryFilter.appendChild(all);
+          for (const id of ids) {
+            const option = document.createElement('option');
+            option.value = id;
+            option.textContent = categories.find(c => c.id === id || c.slug === id)?.nombre || (id === 'proteina' ? 'Proteína' : id === 'creatina' ? 'Creatina' : id);
+            productCategoryFilter.appendChild(option);
+          }
+          productCategoryFilter.value = ids.includes(previous) ? previous : 'todos';
+        }
         function renderProducts() {
           list.replaceChildren();
+          const filteredProducts = currentProducts.filter(p =>
+            (originFilter.value === 'todos' || originStatus(p) === originFilter.value) &&
+            (productCategoryFilter.value === 'todos' || p.lista_id === productCategoryFilter.value));
+          productListCount.textContent = 'Mostrando ' + filteredProducts.length + ' de ' + currentProducts.length + ' productos registrados.';
           if (!currentProducts.length) {
             const p = document.createElement('p');
             p.textContent = 'No hay productos registrados.';
             list.appendChild(p);
+            return;
+          }
+          if (!filteredProducts.length) {
+            const empty = document.createElement('p');
+            empty.textContent = 'No hay productos que coincidan con estos filtros.';
+            list.appendChild(empty);
             return;
           }
           const table = document.createElement('table');
@@ -1423,7 +1474,8 @@
             head.appendChild(th);
           });
           table.appendChild(head);
-          currentProducts.filter(p => originFilter.value === 'todos' || originStatus(p) === originFilter.value).forEach((product) => {
+          const tbody = document.createElement('tbody');
+          filteredProducts.forEach((product) => {
             const row = document.createElement('tr');
             const selectCell = document.createElement('td');
             const selectBatch = document.createElement('input');
@@ -1477,7 +1529,7 @@
             if (product.activo) {
               const disable = document.createElement('button');
               disable.type = 'button';
-              disable.className = 'secondary';
+              disable.className = 'product-action-disable';
               disable.textContent = 'Desactivar';
               disable.addEventListener('click', async () => {
                 if (!confirm('¿Desactivar este producto?')) return;
@@ -1491,8 +1543,9 @@
             }
             actions.appendChild(div);
             row.appendChild(actions);
-            table.appendChild(row);
+            tbody.appendChild(row);
           });
+          table.appendChild(tbody);
           list.appendChild(table);
         }
 
@@ -1842,6 +1895,7 @@
         async function refresh() {
           const body = await api('/api/admin/products');
           currentProducts = body.productos || [];
+          renderProductCategoryOptions();
           renderProducts();
           renderOfferDashboard();
           renderCatalogReview();
