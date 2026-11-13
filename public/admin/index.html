@@ -246,6 +246,7 @@
           <div class="button-row">
             <button id="refresh-categories" class="secondary" type="button">Actualizar categorías</button>
             <button id="configure-amino" type="button" style="background:#1d4ed8;color:white">Reconfigurar Aminoácidos</button>
+            <button id="create-vitamins" type="button" style="background:#0f766e;color:white">Crear Vitaminas y minerales</button>
           </div>
           <div id="category-list" class="preview"><p class="subtle">Conecta el administrador para consultar categorías.</p></div>
           <h3 id="category-form-title">Crear categoría</h3>
@@ -2181,6 +2182,28 @@
             });
             await refreshCategories();
             message(categoryStatus, 'Aminoácidos reconfigurada: ingrediente, presentación, peso, unidades, porciones, dosis activa, sabor y métricas. Los productos existentes siguen intactos.');
+          } catch (error) {
+            message(categoryStatus, error.message, true);
+          } finally {
+            button.disabled = false;
+          }
+        });
+        document.getElementById('create-vitamins').addEventListener('click', async () => {
+          const button = document.getElementById('create-vitamins');
+          if (categories.some(item => item.id === 'vitaminas' || item.slug === 'vitaminas')) {
+            message(categoryStatus, 'La categoría vitaminas ya existe en D1. No se sobrescribió su configuración.');
+            return;
+          }
+          if (!confirm('¿Crear Vitaminas y minerales con sus campos nutricionales y fórmulas propios? No modifica categorías ni productos anteriores.')) return;
+          button.disabled = true;
+          try {
+            await api('/api/admin/categories', {
+              method:'POST',
+              headers:{'Content-Type':'application/json'},
+              body: JSON.stringify({slug:'vitaminas',aplicar_perfil_vitaminas:true}),
+            });
+            await refreshCategories();
+            message(categoryStatus, 'Categoría vitaminas creada en D1 y activa. Incluye formatos, porciones, unidades, nutrientes declarados y métricas por porción/unidad.');
           } catch (error) {
             message(categoryStatus, error.message, true);
           } finally {
