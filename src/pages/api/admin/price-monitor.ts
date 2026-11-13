@@ -9,6 +9,14 @@ export const GET: APIRoute = async ({request}) => {
   const db=env?.CATALOG_DB;
   if(!db?.prepare)return jsonResponse({error:'CATALOG_DB no disponible.'},503);
   try{
+    const productId=new URL(request.url).searchParams.get('product_id');
+    if (productId !== null) {
+      if (!productId || productId.length > 180) return jsonResponse({error:'ID de producto inválido.'},400);
+      const history=await db.prepare(`SELECT item_id,checked_at,saved_price,observed_price,
+        difference_percent,status,alert,reason FROM price_monitor_checks
+        WHERE product_id=? ORDER BY id DESC LIMIT 60`).bind(productId).all();
+      return jsonResponse({ok:true,product_id:productId,checks:history.results||[],readonly:true});
+    }
     const [runs,checks]=await Promise.all([
       db.prepare('SELECT * FROM price_monitor_runs ORDER BY id DESC LIMIT 12').all(),
       db.prepare(`SELECT p.product_id,p.item_id,p.checked_at,p.saved_price,p.observed_price,
