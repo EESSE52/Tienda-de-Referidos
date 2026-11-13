@@ -578,6 +578,9 @@
       }
 
       function parseCSV(content) {
+        // Excel y los CSV exportados con UTF-8 pueden anteponer BOM al primer encabezado.
+        // Sin quitarlo, "lista_id" se interpreta como "\\ufefflista_id" y cambia de categoría.
+        content = String(content || '').replace(/^\uFEFF/, '');
         const rows = [];
         let currentRow = [];
         let currentCell = '';
