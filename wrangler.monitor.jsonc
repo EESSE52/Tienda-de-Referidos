@@ -1,0 +1,13 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "dmonkeysport-price-monitor",
+  "main": "./src/price-monitor-worker.js",
+  "compatibility_date": "2026-10-20",
+  "workers_dev": false,
+  "triggers": {"crons": ["0 9 * * *"]},
+  "d1_databases": [{
+    "binding": "CATALOG_DB",
+    "database_name": "tienda_referidos",
+    "database_id": "c9cc30c6-365e-489a-9c5d-f4b213c674b2"
+  }]
+}
