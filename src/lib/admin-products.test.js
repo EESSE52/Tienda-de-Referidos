@@ -56,7 +56,7 @@ describe('API de administración: lógica de productos D1', () => {
     const { adminProductErrorResponse } = await import('./admin-products.js');
     for (const input of [
       { lista_id: 'creatina', nombre: 'Dymatize ISO100 600g', precio: 0, activo: false, url_publicacion:'https://www.mercadolibre.cl/p/MLC18561166' },
-      { lista_id: 'creatina', nombre: 'Dymatize ISO100 600g', precio: 60000, activo: true, url_publicacion:'https://www.mercadolibre.cl/p/MLC18561166' },
+      { lista_id: 'creatina', nombre: 'Dymatize ISO100 600g', precio: 60000, activo: true, enlace_referido:'http://insecure.example', url_publicacion:'https://www.mercadolibre.cl/p/MLC18561166' },
     ]) {
       let failure;
       try { await createAdminProduct({}, input); } catch (error) { failure = error; }
