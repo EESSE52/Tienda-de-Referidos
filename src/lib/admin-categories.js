@@ -1,3 +1,4 @@
+import { vitaminsCategoryProfile } from './vitamins-category-profile.js';
 import { aminoCategoryProfile } from './amino-category-profile.js';
 import { readCatalog, saveRecord } from './cloudflare-catalog.js';
 
@@ -47,6 +48,17 @@ function ensureUnique(catalog, category, currentId = null) {
 
 export async function createAdminCategory(env, payload) {
   const catalog = await readCatalog(env);
+  // Perfil explícito: no clonar Creatina ni Aminoácidos por error.
+  // Solo permite crear el slug exacto vitaminas, conservando categorías anteriores.
+  if (payload?.aplicar_perfil_vitaminas === true) {
+    if (payload.slug !== 'vitaminas' || payload.plantilla_id) {
+      throw new AdminCategoryError('El perfil Vitaminas requiere slug vitaminas y no acepta otra plantilla.');
+    }
+    const category = vitaminsCategoryProfile();
+    ensureUnique(catalog, category);
+    await saveRecord(env, 'catalog_lists', category);
+    return category;
+  }
   const category = normalizedCategory(payload);
   if (payload?.plantilla_id) {
     const source = catalog.listas.find((item) => item.id === payload.plantilla_id);
