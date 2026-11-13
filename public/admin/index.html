@@ -216,6 +216,7 @@
           <a href="#catalog-review-panel" data-admin-nav>Revisión del catálogo</a>
           <a href="#offer-management-panel" data-admin-nav>Vendedores y ofertas</a>
           <a href="#price-management-panel" data-admin-nav>Control de precios</a>
+          <a href="#price-monitor-panel" data-admin-nav>Monitor automático</a>
           <a href="#import-panel" data-admin-nav>Importar productos</a>
           <a href="#categories-panel" data-admin-nav>Categorías</a>
           <a href="#settings-panel" data-admin-nav>Configuración</a>
@@ -377,6 +378,15 @@
           </div>
           <p id="product-list-count" class="subtle" role="status" aria-live="polite">Conecta el administrador para ver los resultados.</p>
           <div id="product-list" class="preview"><p class="subtle">Conecta el administrador para consultar productos.</p></div>
+        </section>
+
+        <section class="card" style="margin-bottom:20px" id="price-monitor-panel">
+          <h2>Monitor automático de precios</h2>
+          <p class="subtle">Revisión diaria con API autorizada de Mercado Libre. Alerta desde 2 %. No modifica precios ni enlaces: los resultados requieren revisión manual.</p>
+          <div class="button-row"><button id="refresh-price-monitor" type="button" class="secondary">Actualizar alertas</button></div>
+          <div class="admin-fields"><label>Mostrar<select id="price-monitor-filter"><option value="pendientes">Alertas y pendientes</option><option value="todos">Todos los productos</option><option value="alertas">Cambios desde 2 %</option><option value="no_verificables">Sin verificar</option></select></label></div>
+          <div id="price-monitor-summary" class="status" role="status" aria-live="polite">Conecta el administrador para consultar las alertas.</div>
+          <div id="price-monitor-table" class="preview"></div>
         </section>
 
         <section class="card" style="margin-bottom:20px" id="catalog-review-panel">
@@ -902,6 +912,90 @@
         originFilter.addEventListener('change', () => renderProducts());
         productCategoryFilter.addEventListener('change', () => renderProducts());
         const originStatus = p => p.es_prueba === true ? 'prueba' : p.precio_fuente === 'api' ? 'consultado' : 'sin_verificar';
+        const monitorSummary = document.getElementById('price-monitor-summary');
+        const monitorTable = document.getElementById('price-monitor-table');
+        const monitorFilter = document.getElementById('price-monitor-filter');
+        let monitorSnapshot = null;
+        const monitorCurrency = value => Number.isFinite(Number(value)) ? new Intl.NumberFormat('es-CL',{style:'currency',currency:'CLP',maximumFractionDigits:0}).format(value) : '—';
+        function renderPriceMonitor() {
+          monitorTable.replaceChildren();
+          if (!monitorSnapshot) return;
+          const last = monitorSnapshot.runs?.[0];
+          const byId = new Map((monitorSnapshot.checks || []).map(check => [check.product_id,check]));
+          const products = currentProducts.filter(p=>p.es_prueba!==true && /^MLC[0-9]{6,}$/i.test(String(p.id_publicacion||'').replace(/[-_]/g,'')));
+          const now=Date.now();
+          const all = products.map(p=>{
+            const check=byId.get(p.id);
+            const stale= !check || !Number.isFinite(Date.parse(check.checked_at)) ||
+              now-Date.parse(check.checked_at)>14*86400000;
+            const status= !check?'Sin consulta'
+              : stale?'Revisión pendiente (+14 días)'
+              : check.status==='unverifiable'?'No verificable'
+              : check.alert?'Variación ≥2 %'
+              : check.status==='changed'?'Variación menor de 2 %':'Sin cambios';
+            return {product:p,check,stale,status,pending:stale||check?.status==='unverifiable'||check?.alert===1};
+          });
+          const alerts=all.filter(x=>x.check?.alert===1).length;
+          const notVerifiable=all.filter(x=>!x.check||x.check.status==='unverifiable'||x.stale).length;
+          monitorSummary.textContent = 'Última ejecución: '+ (last?.started_at ? new Date(last.started_at).toLocaleString('es-CL')+' ('+last.status+')' : 'sin ejecuciones') +
+            ' · Alertas ≥2 %: '+alerts+' · Pendientes/no verificables: '+notVerifiable+
+            ' · Monitoreados con publicación MLC: '+all.length+'. El precio público no cambia automáticamente.';
+          const filtered=all.filter(x=>monitorFilter.value==='todos' ||
+            (monitorFilter.value==='alertas' ? x.check?.alert===1
+              : monitorFilter.value==='no_verificables' ? !x.check||x.stale||x.check.status==='unverifiable'
+              : x.pending));
+          if(!filtered.length) {
+            const empty=document.createElement('p');
+            empty.textContent='No hay productos que coincidan con este filtro.';
+            monitorTable.appendChild(empty);
+            return;
+          }
+          const table=document.createElement('table');
+          const head=document.createElement('tr');
+          for (const title of ['Producto','Precio guardado','Consultado','Diferencia','Estado / fecha','Acciones']) {
+            const th=document.createElement('th');th.textContent=title;head.appendChild(th);
+          }
+          table.appendChild(head);
+          for(const entry of filtered){
+            const row=document.createElement('tr');
+            const {product,check}=entry;
+            const values=[product.nombre,monitorCurrency(product.precio),
+              check?.observed_price==null?'—':monitorCurrency(check.observed_price),
+              check?.difference_percent==null?'—':check.difference_percent+' %',
+              entry.status+(check?.checked_at?' · '+new Date(check.checked_at).toLocaleDateString('es-CL'):'')+
+                (check?.status==='unverifiable'?' · '+check.reason:'')];
+            for(const value of values){
+              const td=document.createElement('td');
+              td.textContent=value;
+              row.appendChild(td);
+            }
+            const actionCell=document.createElement('td');
+            const actions=document.createElement('div');
+            actions.className='admin-actions';
+            const edit=document.createElement('button');
+            edit.type='button';edit.textContent='Editar / confirmar';
+            edit.addEventListener('click',()=>startEditingOffer(product));
+            actions.appendChild(edit);
+            const manual=document.createElement('button');
+            manual.type='button';manual.className='secondary';manual.textContent='Revisión manual';
+            manual.addEventListener('click',()=>showManualPriceReview(product.id));
+            actions.appendChild(manual);
+            actionCell.appendChild(actions);row.appendChild(actionCell);table.appendChild(row);
+          }
+          monitorTable.appendChild(table);
+        }
+        async function refreshPriceMonitor() {
+          if(!adminToken) return message(monitorSummary,'Primero conecta el administrador.',true);
+          try {
+            monitorSnapshot=await api('/api/admin/price-monitor');
+            renderPriceMonitor();
+          } catch(error){
+            monitorSnapshot=null;monitorTable.replaceChildren();
+            message(monitorSummary,error instanceof Error?error.message:'No se pudo cargar el monitor.',true);
+          }
+        }
+        monitorFilter.addEventListener('change',renderPriceMonitor);
+        document.getElementById('refresh-price-monitor').addEventListener('click',refreshPriceMonitor);
 
         function message(node, text, error = false) {
           node.textContent = text;
@@ -1901,6 +1995,7 @@
           renderProducts();
           renderOfferDashboard();
           renderCatalogReview();
+          await refreshPriceMonitor();
         }
 
         document.getElementById('connect-btn').addEventListener('click', async () => {
