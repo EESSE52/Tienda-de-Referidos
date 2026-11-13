@@ -18,6 +18,9 @@
     "worker:dev": "npm run build && wrangler dev --config dist/server/wrangler.json --assets dist/client --port 8787 --persist-to .wrangler/state",
     "oauth:prepare-preview": "npm run build && node scripts/prepare-oauth-preview.mjs",
     "worker:deploy": "npm run build && wrangler deploy --config dist/server/wrangler.json --assets dist/client",
+    "monitor:migrate": "wrangler d1 execute tienda_referidos --remote --file=migrations/0002_price_monitor.sql",
+    "monitor:deploy": "wrangler deploy --config wrangler.monitor.jsonc",
+    "monitor:dev": "wrangler dev --config wrangler.monitor.jsonc --test-scheduled",
     "prebuild": "node scripts/preserve-dev-vars.mjs backup",
     "postbuild": "node scripts/preserve-dev-vars.mjs restore"
   },
