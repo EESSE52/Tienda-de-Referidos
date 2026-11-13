@@ -387,6 +387,7 @@
           <div class="admin-fields"><label>Mostrar<select id="price-monitor-filter"><option value="pendientes">Alertas y pendientes</option><option value="todos">Todos los productos</option><option value="alertas">Cambios desde 2 %</option><option value="no_verificables">Sin verificar</option></select></label></div>
           <div id="price-monitor-summary" class="status" role="status" aria-live="polite">Conecta el administrador para consultar las alertas.</div>
           <div id="price-monitor-table" class="preview"></div>
+          <div id="price-monitor-history" class="preview" aria-live="polite"></div>
         </section>
 
         <section class="card" style="margin-bottom:20px" id="catalog-review-panel">
@@ -914,6 +915,7 @@
         const originStatus = p => p.es_prueba === true ? 'prueba' : p.precio_fuente === 'api' ? 'consultado' : 'sin_verificar';
         const monitorSummary = document.getElementById('price-monitor-summary');
         const monitorTable = document.getElementById('price-monitor-table');
+        const monitorHistory = document.getElementById('price-monitor-history');
         const monitorFilter = document.getElementById('price-monitor-filter');
         let monitorSnapshot = null;
         const monitorCurrency = value => Number.isFinite(Number(value)) ? new Intl.NumberFormat('es-CL',{style:'currency',currency:'CLP',maximumFractionDigits:0}).format(value) : '—';
@@ -980,6 +982,43 @@
             manual.type='button';manual.className='secondary';manual.textContent='Revisión manual';
             manual.addEventListener('click',()=>showManualPriceReview(product.id));
             actions.appendChild(manual);
+            const history=document.createElement('button');
+            history.type='button';history.className='secondary';history.textContent='Historial monitor';
+            history.addEventListener('click',async()=>{
+              monitorHistory.replaceChildren();
+              const heading=document.createElement('h3');heading.textContent='Historial de revisiones: '+product.nombre;
+              monitorHistory.appendChild(heading);
+              try {
+                const result=await api('/api/admin/price-monitor?product_id='+encodeURIComponent(product.id));
+                const entries=result.checks||[];
+                if(!entries.length){
+                  const p=document.createElement('p');p.textContent='Sin consultas automáticas registradas.';monitorHistory.appendChild(p);
+                }else{
+                  const table=document.createElement('table');
+                  const labels=['Fecha','Guardado','Observado','Variación','Resultado'];
+                  const thRow=document.createElement('tr');
+                  for(const name of labels){const th=document.createElement('th');th.textContent=name;thRow.appendChild(th);}
+                  table.appendChild(thRow);
+                  for(const entry of entries){
+                    const tr=document.createElement('tr');
+                    for(const value of [
+                      new Date(entry.checked_at).toLocaleString('es-CL'),
+                      monitorCurrency(entry.saved_price),
+                      entry.observed_price==null?'—':monitorCurrency(entry.observed_price),
+                      entry.difference_percent==null?'—':entry.difference_percent+' %',
+                      entry.status+(entry.alert?' · ALERTA':'')+' · '+entry.reason
+                    ]){const td=document.createElement('td');td.textContent=value;tr.appendChild(td);}
+                    table.appendChild(tr);
+                  }
+                  monitorHistory.appendChild(table);
+                }
+                monitorHistory.scrollIntoView({behavior:'smooth'});
+              }catch(error){
+                const p=document.createElement('p');p.textContent=error instanceof Error?error.message:'No se pudo consultar el historial.';
+                monitorHistory.appendChild(p);
+              }
+            });
+            actions.appendChild(history);
             actionCell.appendChild(actions);row.appendChild(actionCell);table.appendChild(row);
           }
           monitorTable.appendChild(table);
