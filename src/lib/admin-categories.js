@@ -1,3 +1,4 @@
+import { aminoCategoryProfile } from './amino-category-profile.js';
 import { readCatalog, saveRecord } from './cloudflare-catalog.js';
 
 export class AdminCategoryError extends Error {
@@ -70,6 +71,15 @@ export async function updateAdminCategory(env, id, payload) {
   if ((payload.id !== undefined && payload.id !== id) ||
       (payload.slug !== undefined && payload.slug !== existing.slug)) {
     throw new AdminCategoryError('No se permite cambiar el ID ni el slug de una categoría existente.');
+  }
+  // Reconfiguración explícita, limitada a la categoría amino, sin borrar registros.
+  if (payload.aplicar_perfil_aminoacidos === true) {
+    if (id !== 'amino' || existing.slug !== 'amino') {
+      throw new AdminCategoryError('Este perfil solo se puede aplicar a la categoría amino.');
+    }
+    const configured = aminoCategoryProfile(existing);
+    await saveRecord(env, 'catalog_lists', configured);
+    return configured;
   }
   const category = normalizedCategory(payload, existing);
   ensureUnique(catalog, category, id);
