@@ -19,17 +19,19 @@ npm test
 npm run build
 
 # Backup recomendado de la base antes de migrar:
-npx wrangler d1 export tienda_referidos --remote --output=./respaldo-tienda-referidos.sql
+npx wrangler d1 export tienda_referidos --remote --output=/tmp/respaldo-tienda-referidos.sql
 npm run monitor:migrate
-
-# Secreto SOLO del Worker de monitoreo; nunca se añade al código ni al CSV:
-npx wrangler secret put ML_ACCESS_TOKEN --config wrangler.monitor.jsonc
 
 # Sitio Astro (nuevo panel /admin):
 npm run worker:deploy
 
 # Worker separado con cron diario (activación explícita):
 npm run monitor:deploy
+
+# Secreto SOLO del Worker de monitoreo; nunca se añade al código ni al CSV.
+# Se configura tras crear el Worker; hasta contar con token válido,
+# las consultas se registrarán como "no verificable".
+npx wrangler secret put ML_ACCESS_TOKEN --config wrangler.monitor.jsonc
 ```
 
 La consulta automática requiere un **token oficial válido y autorizado para leer los precios de estas publicaciones**. Un token de afiliados o una URL `meli.la` no implica esos permisos. Si la API devuelve 401/403, consulta manual; no hay bypass.
