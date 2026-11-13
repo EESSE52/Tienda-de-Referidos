@@ -447,7 +447,7 @@
               <label>Nombre<input name="nombre" required maxlength="200" /></label>
               <label>Marca<input name="marca" maxlength="150" /></label>
               <label>Vendedor / tienda<input name="vendedor_nombre" maxlength="150" placeholder="Nombre visible del vendedor" /></label>
-              <label>Grupo de ofertas (mismo producto exacto)<input name="grupo_ofertas" maxlength="80" pattern="[a-zA-Z0-9][a-zA-Z0-9_-]{2,79}" placeholder="foodtech-creatina-1kg-sin-sabor" /></label>
+              <label>Grupo de ofertas (opcional; mismo producto exacto)<input name="grupo_ofertas" maxlength="80" pattern="[a-zA-Z0-9][a-zA-Z0-9_-]{2,79}" placeholder="winkler-whey-pro-win-1kg-vainilla" title="Opcional. Deja vacío si no agrupas vendedores. Si lo usas: mínimo 3 caracteres, sin espacios ni tildes; solo letras, números, guiones y guion bajo." /><small>Déjalo vacío si no comparas varios vendedores del mismo artículo. No coloques aquí enlaces ni IDs de Mercado Libre.</small></label>
               <label>ID catálogo Mercado Libre (opcional)<input name="id_catalogo" maxlength="80" placeholder="MLC..." /></label>
               <label>Precio CLP<input name="precio" type="number" min="1" step="1" required /></label>
               <label>Enlace de afiliado (generado desde tu cuenta)<input name="enlace_referido" type="url" placeholder="https://meli.la/..." /></label>
@@ -1870,6 +1870,12 @@
         form.addEventListener('submit', async (event) => {
           event.preventDefault();
           try {
+            const groupInput = form.elements.grupo_ofertas;
+            const groupValue = String(groupInput.value || '').trim();
+            if (groupValue && !/^[a-zA-Z0-9][a-zA-Z0-9_-]{2,79}$/.test(groupValue)) {
+              groupInput.focus();
+              throw new Error('Grupo de ofertas inválido. Déjalo vacío o usa, por ejemplo, winkler-whey-pro-win-1kg-vainilla (sin espacios, tildes ni enlaces).');
+            }
             const data = new FormData(form);
             const body = Object.fromEntries(data.entries());
             body.precio = Number(body.precio);
