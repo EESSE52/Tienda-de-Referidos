@@ -65,7 +65,7 @@ export async function runDailyPriceMonitor(env, {fetcher=fetch, now=new Date(), 
       try{return [JSON.parse(row.data)]}catch{return []}
     });
     const candidates=catalog.filter(p=>
-      p && p.activo===true && p.es_prueba!==true &&
+      p && p.es_prueba!==true &&
       /^MLC\d{6,}$/.test(String(p.id_publicacion||'').replace(/[-_]/g,'').toUpperCase()) &&
       Number.isSafeInteger(Number(p.precio)) && Number(p.precio)>0
     );
