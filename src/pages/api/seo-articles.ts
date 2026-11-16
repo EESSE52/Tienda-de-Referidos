@@ -1,6 +1,6 @@
 import type { APIRoute } from 'astro';
 import { env } from 'cloudflare:workers';
-import { validGuideSlug } from '../../lib/seo-guides.js';
+import { validGuideSlug, starterGuides } from '../../lib/seo-guides.js';
 export const prerender = false;
 const json = (data: unknown, status = 200) => new Response(JSON.stringify(data), {
   status, headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff' }
@@ -25,7 +25,9 @@ export const GET: APIRoute = async ({ request }) => {
   if (!env?.CATALOG_DB?.prepare) return json({ error: 'Base de datos D1 no configurada' }, 503);
   try {
     const rows = await env.CATALOG_DB.prepare('SELECT slug,title,description,category,list_slug AS listSlug,body,status,updated_at AS updatedAt FROM seo_articles ORDER BY updated_at DESC').all();
-    return json({ articles: rows.results ?? [] });
+    const merged = new Map(starterGuides.map(g => [g.slug, { ...g, body: g.paragraphs.join('\\n\\n'), status: 'published' }]));
+    for (const row of (rows.results ?? [])) merged.set(row.slug, row);
+    return json({ articles: [...merged.values()] });
   } catch { return json({ error: 'Aplicar migración 0003_seo_articles.sql antes de editar' }, 503); }
 };
 export const POST: APIRoute = async ({ request }) => {
