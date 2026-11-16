@@ -2,7 +2,16 @@
 import Layout from '../../layouts/Layout.astro';
 import { env } from 'cloudflare:workers';
 import { getPublishedGuides } from '../../lib/seo-guides.js';
+import { loadCatalog } from '../../lib/catalog';
+import { getPublicProductImage } from '../../lib/public-site';
 const guides = await getPublishedGuides(env?.CATALOG_DB);
+const catalog = await loadCatalog(env?.CATALOG_DB);
+const cards = guides.map(guide => {
+  const list = catalog.getListaBySlug(guide.listSlug || 'creatina');
+  const products = list ? catalog.getProductosByListaId(list.id).filter(p => p.activo === true && p.es_prueba !== true) : [];
+  const product = products.find(p => !getPublicProductImage(p).startsWith('/img/generica-')) || products[0];
+  return {...guide, image: product ? getPublicProductImage(product) : '/img/generica-producto.svg', photo: Boolean(product && !getPublicProductImage(product).startsWith('/img/generica-')), productName: product?.nombre};
+});
 ---
 <Layout title="Guías y comparativas de suplementos" description="Guías gratuitas para comparar suplementos por precio, cantidad y costo por porción en Chile.">
   <section class="mb-8 rounded-3xl bg-[#ffe600] p-8 text-slate-950">
@@ -11,11 +20,14 @@ const guides = await getPublishedGuides(env?.CATALOG_DB);
     <p class="mt-3 max-w-2xl">Información clara para comparar suplementos y verificar las condiciones de compra antes de elegir.</p>
   </section>
   <section class="grid gap-5 md:grid-cols-2" aria-label="Artículos disponibles">
-    {guides.map(guide => <article class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+    {cards.map(guide => <article class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+      <a href={`/guias/${guide.slug}`} class="block bg-slate-50"><img src={guide.image} alt={guide.photo ? `Fotografía de ${guide.productName}` : 'Ilustración genérica de suplementos'} width="640" height="350" loading="lazy" class="h-48 w-full object-contain p-4" /></a>
+      <div class="p-6">
       <p class="text-xs font-bold uppercase text-blue-700">{guide.category}</p>
       <h2 class="mt-2 text-xl font-black"><a class="hover:text-blue-700" href={`/guias/${guide.slug}`}>{guide.title}</a></h2>
       <p class="mt-3 text-sm text-slate-600">{guide.description}</p>
       <a class="mt-5 inline-block rounded-xl bg-blue-600 px-4 py-2 text-sm font-bold text-white" href={`/guias/${guide.slug}`}>Leer guía →</a>
+      </div>
     </article>)}
   </section>
   <p class="mt-8 text-sm text-slate-600">Estos contenidos son informativos. Los enlaces comerciales pueden generar una comisión sin costo adicional.</p>
