@@ -1,0 +1,28 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import { env } from 'cloudflare:workers';
+import { getPublishedGuides, validGuideSlug } from '../../lib/seo-guides.js';
+export const prerender = false;
+const slug = String(Astro.params.slug ?? '');
+const guide = validGuideSlug(slug) ? (await getPublishedGuides(env?.CATALOG_DB)).find(g => g.slug === slug) : null;
+if (!guide) return Astro.redirect('/guias', 302);
+const listUrl = `/lista/${encodeURIComponent(guide.listSlug || 'creatina')}`;
+---
+<Layout title={guide.title} description={guide.description}>
+  <article class="mx-auto max-w-3xl rounded-3xl border border-slate-200 bg-white p-6 shadow-sm sm:p-10">
+    <nav aria-label="Ruta de navegación" class="mb-5 text-sm"><a href="/guias" class="font-semibold text-blue-700 hover:underline">← Todas las guías</a></nav>
+    <p class="text-xs font-extrabold uppercase tracking-wide text-blue-700">{guide.category}</p>
+    <h1 class="mt-3 text-3xl font-black leading-tight sm:text-4xl">{guide.title}</h1>
+    <p class="mt-4 text-lg text-slate-600">{guide.description}</p>
+    <p class="mt-3 text-xs text-slate-500">Actualizada: {guide.updatedAt}</p>
+    <div class="mt-8 space-y-5 text-base leading-8 text-slate-800">
+      {guide.paragraphs.map(paragraph => <p>{paragraph}</p>)}
+    </div>
+    <aside class="mt-10 rounded-2xl border border-[#eedc00] bg-[#fff8c2] p-6">
+      <h2 class="text-xl font-black">Compara productos reales</h2>
+      <p class="mt-2 text-sm">Consulta el catálogo y comprueba el precio final y disponibilidad en la tienda.</p>
+      <a class="mt-4 inline-block rounded-xl bg-blue-700 px-5 py-3 font-bold text-white hover:bg-blue-800" href={listUrl}>Ver productos y comparar →</a>
+    </aside>
+    <p class="mt-6 text-xs text-slate-500">Contenido educativo. D’MonkeySport puede recibir comisiones de afiliado. No realiza la venta final ni garantiza precios o stock.</p>
+  </article>
+</Layout>
