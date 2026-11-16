@@ -28,3 +28,14 @@ Las cinco guías iniciales vienen en src/lib/seo-guides.js y se muestran aunque 
 - Para una administración más amplia conviene adoptar la autenticación de administrador existente y permisos específicos.
 - Revisar los datos de precios y cualquier afirmación comercial antes de publicar.
 - Verificar el nuevo sitemap y solicitar indexación en Search Console. No se garantiza tráfico de Google.
+
+## Editor visual (migración 0004)
+
+- Se mantiene intacto el contenido anterior de los artículos en la tabla `seo_articles`.
+- Antes de probar la nueva versión, crear respaldo de `tienda_referidos` y aplicar exactamente una vez `migrations/0004_seo_visual_editor.sql` sobre `CATALOG_DB`.
+- El nuevo campo `editor_json` guarda referencias a productos activos del catálogo (fotografía principal, galería y relacionados), secciones y preguntas frecuentes. No almacena ni aloja imágenes; utiliza exclusivamente fotografías aprobadas por `getPublicProductImage`.
+- El usuario introduce la clave `SEO_ADMIN_TOKEN` como antes, pulsa Cargar artículos, selecciona una guía y puede añadir bloques de contenido, fotos, productos y ver una vista previa local.
+- La vista previa del formulario no publica el borrador. Para hacer visible un artículo nuevo, guardar con estado Publicado.
+- Los cinco artículos iniciales mantienen su contenido si no hay cambios en D1. En ausencia de bloques visuales nuevos, la página conserva las secciones y preguntas frecuentes originales.
+- No almacenar claves en GitHub, comandos con historial, capturas, ni archivos compartidos.
+- Verificar `npm test` y `npm run build`, subir primero con `wrangler versions upload` y comprobar preview antes de desplegar.
