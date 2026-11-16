@@ -33,7 +33,7 @@ export const GET: APIRoute = async ({ request }) => {
     const catalog = await loadCatalog(env.CATALOG_DB);
     const products = catalog.productos.filter(p=>p.activo === true && p.es_prueba !== true).map(p=>({id:p.id, name:p.nombre, listId:p.lista_id, image:getPublicProductImage(p)}));
     return json({ articles: [...merged.values()], products });
-  } catch { return json({ error: 'Aplicar migración 0003_seo_articles.sql antes de editar' }, 503); }
+  } catch { return json({ error: 'Aplicar migración 0004_seo_visual_editor.sql antes de editar' }, 503); }
 };
 export const POST: APIRoute = async ({ request }) => {
   if (!(await authorized(request))) return json({ error: 'Acceso no autorizado' }, 401);
