@@ -77,11 +77,14 @@ export async function getPublishedGuides(db) {
   let overrides = [];
   try {
     if (db?.prepare) {
-      const response = await db.prepare("SELECT slug,title,description,category,list_slug AS listSlug,body,updated_at AS updatedAt FROM seo_articles WHERE status='published' ORDER BY updated_at DESC").all();
+      const response = await db.prepare("SELECT slug,title,description,category,list_slug AS listSlug,body,status,updated_at AS updatedAt FROM seo_articles ORDER BY updated_at DESC").all();
       overrides = (response.results ?? []).map(row => ({...row, paragraphs: String(row.body ?? '').split(/\n\s*\n/).filter(Boolean)}));
     }
   } catch { /* Instalación pendiente: las guías iniciales siguen disponibles */ }
   const result = new Map(starterGuides.map(g => [g.slug,g]));
-  for (const override of overrides) if(validGuideSlug(override.slug)) result.set(override.slug,override);
+  for (const override of overrides) if(validGuideSlug(override.slug)) {
+    if (override.status === 'draft') result.delete(override.slug);
+    else result.set(override.slug,override);
+  }
   return [...result.values()];
 }
