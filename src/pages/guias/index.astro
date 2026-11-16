@@ -3,14 +3,14 @@ import Layout from '../../layouts/Layout.astro';
 import { env } from 'cloudflare:workers';
 import { getPublishedGuides } from '../../lib/seo-guides.js';
 import { loadCatalog } from '../../lib/catalog';
-import { getPublicProductImage } from '../../lib/public-site';
+import { selectGuidePhotos } from '../../lib/guide-media.js';
 const guides = await getPublishedGuides(env?.CATALOG_DB);
 const catalog = await loadCatalog(env?.CATALOG_DB);
+const guidePhotos = selectGuidePhotos(guides, catalog);
 const cards = guides.map(guide => {
-  const list = catalog.getListaBySlug(guide.listSlug || 'creatina');
-  const products = list ? catalog.getProductosByListaId(list.id).filter(p => p.activo === true && p.es_prueba !== true) : [];
-  const product = products.find(p => !getPublicProductImage(p).startsWith('/img/generica-')) || products[0];
-  return {...guide, image: product ? getPublicProductImage(product) : '/img/generica-producto.svg', photo: Boolean(product && !getPublicProductImage(product).startsWith('/img/generica-')), productName: product?.nombre};
+  const choice = guidePhotos.get(guide.slug);
+  const image = choice?.image || '/img/generica-producto.svg';
+  return {...guide, image, photo: !image.startsWith('/img/generica-'), productName: choice?.product?.nombre};
 });
 ---
 <Layout title="Guías y comparativas de suplementos" description="Guías gratuitas para comparar suplementos por precio, cantidad y costo por porción en Chile.">
