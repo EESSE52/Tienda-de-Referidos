@@ -206,9 +206,26 @@ import Layout from '../../layouts/Layout.astro';
         for(const paragraph of field('body').value.split(/\n\s*\n/).filter(Boolean)) add('p',paragraph);
         for (const section of blocks('section')) { add('h4',section.heading,'text-lg font-black');add('p',section.body); }
         for (const faq of blocks('faq')) {add('h4',faq.q,'font-bold');add('p',faq.a);}
-        const gallery = selections('gallery-products').length;
-        const related = selections('related-products').length;
-        add('p',`Galería: ${gallery} imágenes · Productos relacionados: ${related}`,'text-xs text-slate-500');
+        const galleryIds = selections('gallery-products');
+        const relatedIds = selections('related-products');
+        if (galleryIds.length) {
+          add('h4','Galería','font-bold');
+          const grid=document.createElement('div');grid.className='grid grid-cols-3 gap-2';
+          for(const id of galleryIds) {
+            const p=products.find(item=>item.id===id);if(!p)continue;
+            const el=document.createElement('img');el.src=p.image;el.alt=p.name;
+            el.className='h-24 w-full rounded-lg border border-slate-200 object-contain';grid.appendChild(el);
+          }
+          panel.appendChild(grid);
+        }
+        if (relatedIds.length) {
+          add('h4','Productos relacionados','font-bold');
+          for(const id of relatedIds) {
+            const p=products.find(item=>item.id===id);
+            if(p)add('p','• '+p.name,'text-xs text-slate-600');
+          }
+        }
+        add('p','Vista orientativa; la publicación conserva estilos y secciones existentes.','text-xs text-slate-500');
       }
 
       function renderList() {
