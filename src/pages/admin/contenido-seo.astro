@@ -1,0 +1,279 @@
+---
+import Layout from '../../layouts/Layout.astro';
+---
+<Layout title="Administrar contenido SEO" description="Editor privado de artículos de D’MonkeySport" noindex={true}>
+  <section class="mx-auto max-w-5xl space-y-6">
+    <div class="rounded-2xl bg-[#ffe600] p-6 text-slate-950">
+      <h1 class="text-3xl font-black">Administración · Contenido SEO</h1>
+      <p class="mt-2">Escribe guías y comparativas. Los artículos publicados aparecerán en /guias.</p>
+    </div>
+    <div class="rounded-2xl border border-slate-200 bg-white p-5">
+      <label class="block text-sm font-bold" for="seo-token">Clave de acceso SEO (secreto del Worker)</label>
+      <div class="mt-2 flex flex-wrap gap-2">
+        <input id="seo-token" type="password" autocomplete="off" class="min-w-0 flex-1 rounded-lg border border-slate-300 p-3" placeholder="SEO_ADMIN_TOKEN" />
+        <button id="load" type="button" class="rounded-lg bg-slate-900 px-5 py-3 font-bold text-white">Cargar artículos</button>
+      </div>
+      <p class="mt-2 text-xs text-slate-500">La clave permanece en esta pestaña y no se guarda en el navegador. Requiere configuración previa del secreto y migración D1.</p>
+    </div>
+    <div class="grid gap-5 lg:grid-cols-[250px_1fr]">
+      <aside class="rounded-2xl border border-slate-200 bg-white p-4">
+        <div class="flex items-center justify-between gap-2">
+          <h2 class="font-bold">Artículos en D1</h2>
+          <button id="new" type="button" class="rounded-lg border border-slate-300 px-3 py-2 text-sm font-bold">Nuevo</button>
+        </div>
+        <div id="articles" class="mt-4 space-y-2 text-sm text-slate-600">Carga los artículos con la clave.</div>
+      </aside>
+      <form id="editor" class="space-y-4 rounded-2xl border border-slate-200 bg-white p-5">
+        <div class="grid gap-3 md:grid-cols-2">
+          <label class="text-sm font-bold">Slug
+            <input name="slug" maxlength="90" required pattern="[a-z0-9]+(-[a-z0-9]+)*" placeholder="comparar-creatinas" class="mt-1 w-full rounded-lg border border-slate-300 p-3 font-normal"/>
+          </label>
+          <label class="text-sm font-bold">Categoría
+            <input name="category" maxlength="90" required placeholder="Creatina" class="mt-1 w-full rounded-lg border border-slate-300 p-3 font-normal"/>
+          </label>
+        </div>
+        <label class="block text-sm font-bold">Título SEO
+          <input name="title" maxlength="160" minlength="10" required class="mt-1 w-full rounded-lg border border-slate-300 p-3 font-normal"/>
+        </label>
+        <label class="block text-sm font-bold">Descripción para Google
+          <textarea name="description" maxlength="260" minlength="35" required rows="2" class="mt-1 w-full rounded-lg border border-slate-300 p-3 font-normal"></textarea>
+        </label>
+        <label class="block text-sm font-bold">Slug de categoría del catálogo
+          <input name="listSlug" maxlength="80" required placeholder="creatina, proteina, vitaminas" class="mt-1 w-full rounded-lg border border-slate-300 p-3 font-normal"/>
+        </label>
+        <label class="block text-sm font-bold">Contenido (texto plano; párrafos separados por una línea vacía)
+          <textarea name="body" maxlength="24000" minlength="100" required rows="13" class="mt-1 w-full rounded-lg border border-slate-300 p-3 font-normal" placeholder="Primer párrafo&#10;&#10;Segundo párrafo"></textarea>
+        </label>
+        <section class="space-y-3 rounded-xl border border-slate-200 bg-slate-50 p-4">
+          <h2 class="text-lg font-black">Fotografías y productos del catálogo</h2>
+          <p class="text-xs text-slate-600">Selecciona fotografías de productos existentes. No se suben archivos ni se reutilizan imágenes ajenas al catálogo.</p>
+          <label class="block text-sm font-bold">Fotografía principal
+            <select id="cover-product" class="mt-1 w-full rounded-lg border border-slate-300 bg-white p-3 font-normal"><option value="">Automática (foto diferente por artículo)</option></select>
+          </label>
+          <div id="cover-preview" class="flex items-center gap-3 rounded-lg border border-slate-200 bg-white p-3 text-sm text-slate-500">Selecciona una fotografía o conserva la opción automática.</div>
+          <div class="grid gap-3 md:grid-cols-2">
+            <label class="block text-sm font-bold">Galería de imágenes (máximo 8)
+              <select id="gallery-products" multiple size="7" class="mt-1 w-full rounded-lg border border-slate-300 bg-white p-2 font-normal"></select>
+            </label>
+            <label class="block text-sm font-bold">Productos relacionados (máximo 6)
+              <select id="related-products" multiple size="7" class="mt-1 w-full rounded-lg border border-slate-300 bg-white p-2 font-normal"></select>
+            </label>
+          </div>
+          <p class="text-xs text-slate-500">Para elegir varias opciones, mantén Ctrl presionado mientras haces clic.</p>
+        </section>
+        <section class="space-y-3 rounded-xl border border-slate-200 p-4">
+          <div class="flex items-center justify-between"><h2 class="text-lg font-black">Secciones con subtítulos</h2><button id="add-section" type="button" class="rounded-lg bg-[#ffe600] px-3 py-2 text-sm font-bold">+ Sección</button></div>
+          <p class="text-xs text-slate-500">Si no agregas secciones nuevas, las guías iniciales conservan su contenido complementario.</p>
+          <div id="visual-sections" class="space-y-3"></div>
+        </section>
+        <section class="space-y-3 rounded-xl border border-slate-200 p-4">
+          <div class="flex items-center justify-between"><h2 class="text-lg font-black">Preguntas frecuentes</h2><button id="add-faq" type="button" class="rounded-lg bg-[#ffe600] px-3 py-2 text-sm font-bold">+ Pregunta</button></div>
+          <div id="visual-faqs" class="space-y-3"></div>
+        </section>
+        <section class="rounded-xl border border-blue-200 bg-blue-50 p-4">
+          <h2 class="text-lg font-black">Vista previa del contenido (no publica)</h2>
+          <button id="refresh-preview" type="button" class="mt-2 rounded-lg border border-blue-500 px-3 py-2 text-sm font-bold text-blue-800">Actualizar vista previa</button>
+          <div id="seo-live-preview" class="mt-3 space-y-3 rounded-lg bg-white p-4 text-sm text-slate-800"></div>
+        </section>
+        <label class="block text-sm font-bold">Estado
+          <select name="status" class="mt-1 w-full rounded-lg border border-slate-300 p-3 font-normal">
+            <option value="draft">Borrador (no publica artículos nuevos)</option>
+            <option value="published">Publicado</option>
+          </select>
+        </label>
+        <div class="flex flex-wrap gap-3">
+          <button type="submit" class="rounded-xl bg-blue-700 px-6 py-3 font-bold text-white">Guardar en D1</button>
+          <a href="/guias" class="rounded-xl border border-slate-300 px-5 py-3 font-bold">Ver guías públicas</a>
+        </div>
+        <p id="status" role="status" aria-live="polite" class="text-sm font-semibold text-slate-700"></p>
+      </form>
+    </div>
+  </section>
+  <script is:inline>
+    (() => {
+      const $ = id => document.getElementById(id);
+      const form = $('editor'), field = name => form.elements.namedItem(name);
+      const state = msg => { $('status').textContent = msg; };
+      let articles = [];
+      let products = [];
+
+      const api = async (method, payload) => {
+        const token = $('seo-token').value;
+        if (!token) throw new Error('Ingresa la clave SEO.');
+        const res = await fetch('/api/seo-articles', {
+          method, credentials:'omit',
+          headers:{'Authorization':'Bearer '+token, ...(payload ? {'Content-Type':'application/json'} : {})},
+          ...(payload ? {body:JSON.stringify(payload)} : {})
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Error de conexión');
+        return data;
+      };
+
+      function addBlock(type, value = {}) {
+        const faq = type==='faq';
+        const container = faq ? $('visual-faqs') : $('visual-sections');
+        const wrap = document.createElement('div');
+        wrap.className = 'space-y-2 rounded-lg border border-slate-200 bg-slate-50 p-3';
+        const first = document.createElement('input');
+        first.className = 'w-full rounded-lg border border-slate-300 p-2';
+        first.maxLength = faq ? 200 : 120;
+        first.placeholder = faq ? 'Pregunta frecuente' : 'Subtítulo de la sección';
+        first.value = faq ? (value.q || '') : (value.heading || '');
+        const second = document.createElement('textarea');
+        second.className = 'w-full rounded-lg border border-slate-300 p-2';
+        second.rows = faq ? 3 : 5;
+        second.maxLength = faq ? 1200 : 2500;
+        second.placeholder = faq ? 'Respuesta' : 'Texto de la sección; separa párrafos con una línea vacía';
+        second.value = faq ? (value.a || '') : (value.body || '');
+        const remove = document.createElement('button');
+        remove.type='button'; remove.className='text-sm font-semibold text-red-700';
+        remove.textContent='Quitar';
+        remove.addEventListener('click',()=>{wrap.remove(); preview();});
+        for (const el of [first,second]) el.addEventListener('input',preview);
+        wrap.append(first,second,remove);
+        container.appendChild(wrap);
+      }
+
+      const blocks = (type) => {
+        const parent = type==='faq' ? $('visual-faqs') : $('visual-sections');
+        return [...parent.children].map(w => {
+          const [a,b] = [w.querySelector('input').value.trim(),w.querySelector('textarea').value.trim()];
+          return type==='faq' ? {q:a,a:b} : {heading:a,body:b};
+        }).filter(x=>Object.values(x).some(Boolean));
+      };
+
+      function selections(id) {
+        return [...$(id).selectedOptions].map(opt=>opt.value).filter(Boolean);
+      }
+      const visual = () => ({
+        coverProductId:$('cover-product').value,
+        galleryProductIds:selections('gallery-products'),
+        relatedProductIds:selections('related-products'),
+        sections:blocks('section'), faqs:blocks('faq')
+      });
+
+      function setSelect(id, values) {
+        const wanted = new Set(values || []);
+        for (const opt of $(id).options) opt.selected = wanted.has(opt.value);
+      }
+
+      function fillProducts() {
+        const options = [['','Automática (sin selección manual)'], ...products.map(p=>[p.id,p.name])];
+        $('cover-product').replaceChildren();
+        for (const [id,name] of options) {
+          const opt=document.createElement('option');opt.value=id;opt.textContent=name;$('cover-product').appendChild(opt);
+        }
+        for (const id of ['gallery-products','related-products']) {
+          $(id).replaceChildren();
+          for (const p of products) {
+            const opt=document.createElement('option');
+            opt.value=p.id;opt.textContent=p.name;
+            $(id).appendChild(opt);
+          }
+        }
+      }
+
+      function choose(article) {
+        for (const key of ['slug','title','description','category','listSlug','body','status']) field(key).value = article?.[key] || (key==='status'?'draft':'');
+        const v = article?.visual || {};
+        $('cover-product').value = v.coverProductId || '';
+        setSelect('gallery-products',v.galleryProductIds);
+        setSelect('related-products',v.relatedProductIds);
+        $('visual-sections').replaceChildren();$('visual-faqs').replaceChildren();
+        for (const s of (v.sections||[])) addBlock('section',s);
+        for (const f of (v.faqs||[])) addBlock('faq',f);
+        state(article ? 'Editando: '+article.slug : 'Nuevo artículo (borrador).');
+        preview();
+      }
+
+      function preview() {
+        const panel=$('seo-live-preview'); panel.replaceChildren();
+        const add=(tag,value,cls='')=>{
+          const el=document.createElement(tag);el.textContent=value;el.className=cls;panel.appendChild(el);return el;
+        };
+        add('p',field('category').value||'Categoría','font-bold text-blue-700');
+        add('h3',field('title').value||'Título de la publicación','text-2xl font-black');
+        add('p',field('description').value||'Descripción breve','text-slate-600');
+        const selected=products.find(p=>p.id===$('cover-product').value);
+        const cover=$('cover-preview');cover.replaceChildren();
+        if(selected) {
+          const image=document.createElement('img');image.src=selected.image;image.alt=selected.name;image.className='h-20 w-24 object-contain';
+          const caption=document.createElement('span');caption.textContent=selected.name;
+          cover.append(image,caption);
+          const photo=document.createElement('img');photo.src=selected.image;photo.alt=selected.name;photo.className='mx-auto max-h-48 object-contain';panel.appendChild(photo);
+        } else cover.textContent='Fotografía automática según el artículo y su categoría.';
+        for(const paragraph of field('body').value.split(/\n\s*\n/).filter(Boolean)) add('p',paragraph);
+        for (const section of blocks('section')) { add('h4',section.heading,'text-lg font-black');add('p',section.body); }
+        for (const faq of blocks('faq')) {add('h4',faq.q,'font-bold');add('p',faq.a);}
+        const galleryIds = selections('gallery-products');
+        const relatedIds = selections('related-products');
+        if (galleryIds.length) {
+          add('h4','Galería','font-bold');
+          const grid=document.createElement('div');grid.className='grid grid-cols-3 gap-2';
+          for(const id of galleryIds) {
+            const p=products.find(item=>item.id===id);if(!p)continue;
+            const el=document.createElement('img');el.src=p.image;el.alt=p.name;
+            el.className='h-24 w-full rounded-lg border border-slate-200 object-contain';grid.appendChild(el);
+          }
+          panel.appendChild(grid);
+        }
+        if (relatedIds.length) {
+          add('h4','Productos relacionados','font-bold');
+          for(const id of relatedIds) {
+            const p=products.find(item=>item.id===id);
+            if(p)add('p','• '+p.name,'text-xs text-slate-600');
+          }
+        }
+        add('p','Vista orientativa; la publicación conserva estilos y secciones existentes.','text-xs text-slate-500');
+      }
+
+      function renderList() {
+        const target=$('articles');target.replaceChildren();
+        if(!articles.length) {target.textContent='No hay artículos disponibles.';return;}
+        for(const article of articles) {
+          const btn=document.createElement('button');btn.type='button';
+          btn.className='block w-full rounded-lg border border-slate-200 p-3 text-left hover:bg-slate-100';
+          btn.textContent=article.title+' · '+(article.status==='published'?'Publicado':'Borrador');
+          btn.addEventListener('click',()=>choose(article));target.appendChild(btn);
+        }
+      }
+
+      async function load() {
+        try {
+          const data=await api('GET');
+          articles=data.articles||[];products=data.products||[];
+          fillProducts();renderList();state('Artículos y fotografías cargados.');
+          preview();
+        } catch(e) {state(e.message);}
+      }
+
+      $('load').addEventListener('click',load);
+      $('new').addEventListener('click',()=>choose(null));
+      $('add-section').addEventListener('click',()=>{addBlock('section');preview();});
+      $('add-faq').addEventListener('click',()=>{addBlock('faq');preview();});
+      $('refresh-preview').addEventListener('click',preview);
+      $('cover-product').addEventListener('change',preview);
+      for(const name of ['title','description','category','body']) field(name).addEventListener('input',preview);
+      for(const id of ['gallery-products','related-products']) $(id).addEventListener('change',preview);
+
+      form.addEventListener('submit',async event=>{
+        event.preventDefault();
+        if(!form.reportValidity())return;
+        const payload=Object.fromEntries(new FormData(form).entries());
+        payload.visual=visual();
+        if(payload.visual.galleryProductIds.length>8 || payload.visual.relatedProductIds.length>6) {
+          state('Galería: máximo 8 imágenes. Productos relacionados: máximo 6.');return;
+        }
+        try {
+          const result=await api('POST',payload);
+          await load();
+          const saved=articles.find(a=>a.slug===result.slug);
+          if(saved)choose(saved);
+          state('Guardado '+(result.status==='published'?'y publicado':'como borrador')+': '+result.slug);
+        } catch(e) {state(e.message);}
+      });
+      preview();
+    })();
+  </script>
+</Layout>

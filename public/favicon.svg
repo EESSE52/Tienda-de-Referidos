@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="D’MonkeySport">
+  <rect width="64" height="64" rx="15" fill="#ffe600"/>
+  <circle cx="13" cy="32" r="10" fill="#8d542b" stroke="#172033" stroke-width="3"/>
+  <circle cx="51" cy="32" r="10" fill="#8d542b" stroke="#172033" stroke-width="3"/>
+  <path d="M32 7c-15 0-23 13-23 27 0 14 10 23 23 23s23-9 23-23C55 20 47 7 32 7Z" fill="#92532e" stroke="#172033" stroke-width="3.5"/>
+  <path d="M32 25c-5-8-16-5-16 6-7 12 1 22 16 22s23-10 16-22c0-11-11-14-16-6Z" fill="#f6c99b"/>
+  <ellipse cx="24" cy="32" rx="2.5" ry="3.4" fill="#172033"/>
+  <ellipse cx="40" cy="32" rx="2.5" ry="3.4" fill="#172033"/>
+  <path d="M30 39q2-2 4 0" fill="none" stroke="#172033" stroke-width="2.4" stroke-linecap="round"/>
+  <path d="M25 44q7 7 14 0" fill="none" stroke="#172033" stroke-width="2.6" stroke-linecap="round"/>
+</svg>
