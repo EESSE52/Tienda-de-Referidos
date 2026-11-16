@@ -79,11 +79,11 @@ const extraFaqs = guide.visual?.faqs?.length ? guide.visual.faqs : null;
           <p class="bg-slate-50 p-3 text-xs text-slate-500">Valores hipotéticos solo para enseñar a comparar; no corresponden a ofertas vigentes.</p>
         </div>}
       </section>)}
-      {!extraFaqs && <section class="border-t border-slate-200 pt-7">
-        <h2 class="text-2xl font-black text-slate-950">Preguntas frecuentes</h2>
-        {extra.faqs.map(item => <div class="mt-5"><h3 class="font-bold text-slate-900">{item.q}</h3><p class="mt-2 leading-7 text-slate-700">{item.a}</p></div>)}
-      </section>}
     </div>}
+    {!extraFaqs && extra?.faqs?.length > 0 && <section class="mt-9 border-t border-slate-200 pt-7">
+      <h2 class="text-2xl font-black text-slate-950">Preguntas frecuentes</h2>
+      {extra.faqs.map(item => <div class="mt-5"><h3 class="font-bold text-slate-900">{item.q}</h3><p class="mt-2 leading-7 text-slate-700">{item.a}</p></div>)}
+    </section>}
     {shownProducts.length > 0 && <section aria-label="Productos de esta categoría" class="mt-10">
       <div class="flex flex-wrap items-center justify-between gap-3"><h2 class="text-2xl font-black">Productos para comparar</h2><a class="text-sm font-bold text-blue-700 underline" href={listUrl}>Ver toda la categoría</a></div>
       <div class="mt-4 grid gap-4 sm:grid-cols-3">
