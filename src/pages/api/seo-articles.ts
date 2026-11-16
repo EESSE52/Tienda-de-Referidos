@@ -7,7 +7,7 @@ const json = (data: unknown, status = 200) => new Response(JSON.stringify(data),
 });
 const text = (value: unknown, max = 5000) => typeof value === 'string' ? value.trim().slice(0, max) : '';
 async function authorized(request: Request) {
-  const expected = String(env?.SEO_ADMIN_TOKEN ?? '');
+  const expected = String((env as any)?.SEO_ADMIN_TOKEN ?? '');
   const received = (request.headers.get('Authorization') ?? '').replace(/^Bearer\s+/i, '');
   if (expected.length < 32 || !received || received.length !== expected.length) return false;
   const encoder = new TextEncoder();
