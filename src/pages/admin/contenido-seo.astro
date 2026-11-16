@@ -1,0 +1,110 @@
+---
+import Layout from '../../layouts/Layout.astro';
+---
+<Layout title="Administrar contenido SEO" description="Editor privado de artículos de D’MonkeySport" noindex={true}>
+  <section class="mx-auto max-w-5xl space-y-6">
+    <div class="rounded-2xl bg-[#ffe600] p-6 text-slate-950">
+      <h1 class="text-3xl font-black">Administración · Contenido SEO</h1>
+      <p class="mt-2">Escribe guías y comparativas. Los artículos publicados aparecerán en /guias.</p>
+    </div>
+    <div class="rounded-2xl border border-slate-200 bg-white p-5">
+      <label class="block text-sm font-bold" for="seo-token">Clave de acceso SEO (secreto del Worker)</label>
+      <div class="mt-2 flex flex-wrap gap-2">
+        <input id="seo-token" type="password" autocomplete="off" class="min-w-0 flex-1 rounded-lg border border-slate-300 p-3" placeholder="SEO_ADMIN_TOKEN" />
+        <button id="load" type="button" class="rounded-lg bg-slate-900 px-5 py-3 font-bold text-white">Cargar artículos</button>
+      </div>
+      <p class="mt-2 text-xs text-slate-500">La clave permanece en esta pestaña y no se guarda en el navegador. Requiere configuración previa del secreto y migración D1.</p>
+    </div>
+    <div class="grid gap-5 lg:grid-cols-[250px_1fr]">
+      <aside class="rounded-2xl border border-slate-200 bg-white p-4">
+        <div class="flex items-center justify-between gap-2">
+          <h2 class="font-bold">Artículos en D1</h2>
+          <button id="new" type="button" class="rounded-lg border border-slate-300 px-3 py-2 text-sm font-bold">Nuevo</button>
+        </div>
+        <div id="articles" class="mt-4 space-y-2 text-sm text-slate-600">Carga los artículos con la clave.</div>
+      </aside>
+      <form id="editor" class="space-y-4 rounded-2xl border border-slate-200 bg-white p-5">
+        <div class="grid gap-3 md:grid-cols-2">
+          <label class="text-sm font-bold">Slug
+            <input name="slug" maxlength="90" required pattern="[a-z0-9]+(-[a-z0-9]+)*" placeholder="comparar-creatinas" class="mt-1 w-full rounded-lg border border-slate-300 p-3 font-normal"/>
+          </label>
+          <label class="text-sm font-bold">Categoría
+            <input name="category" maxlength="90" required placeholder="Creatina" class="mt-1 w-full rounded-lg border border-slate-300 p-3 font-normal"/>
+          </label>
+        </div>
+        <label class="block text-sm font-bold">Título SEO
+          <input name="title" maxlength="160" minlength="10" required class="mt-1 w-full rounded-lg border border-slate-300 p-3 font-normal"/>
+        </label>
+        <label class="block text-sm font-bold">Descripción para Google
+          <textarea name="description" maxlength="260" minlength="35" required rows="2" class="mt-1 w-full rounded-lg border border-slate-300 p-3 font-normal"></textarea>
+        </label>
+        <label class="block text-sm font-bold">Slug de categoría del catálogo
+          <input name="listSlug" maxlength="80" required placeholder="creatina, proteina, vitaminas" class="mt-1 w-full rounded-lg border border-slate-300 p-3 font-normal"/>
+        </label>
+        <label class="block text-sm font-bold">Contenido (texto plano; párrafos separados por una línea vacía)
+          <textarea name="body" maxlength="24000" minlength="100" required rows="13" class="mt-1 w-full rounded-lg border border-slate-300 p-3 font-normal" placeholder="Primer párrafo&#10;&#10;Segundo párrafo"></textarea>
+        </label>
+        <label class="block text-sm font-bold">Estado
+          <select name="status" class="mt-1 w-full rounded-lg border border-slate-300 p-3 font-normal">
+            <option value="draft">Borrador (no publica artículos nuevos)</option>
+            <option value="published">Publicado</option>
+          </select>
+        </label>
+        <div class="flex flex-wrap gap-3">
+          <button type="submit" class="rounded-xl bg-blue-700 px-6 py-3 font-bold text-white">Guardar en D1</button>
+          <a href="/guias" class="rounded-xl border border-slate-300 px-5 py-3 font-bold">Ver guías públicas</a>
+        </div>
+        <p id="status" role="status" aria-live="polite" class="text-sm font-semibold text-slate-700"></p>
+      </form>
+    </div>
+  </section>
+  <script is:inline>
+    (() => {
+      const $ = id => document.getElementById(id);
+      const form = $('editor'), field = name => form.elements.namedItem(name);
+      const state = msg => { $('status').textContent = msg; };
+      let articles = [];
+      const api = async (method, payload) => {
+        const token = $('seo-token').value;
+        if (!token) throw new Error('Ingresa la clave de acceso.');
+        const res = await fetch('/api/seo-articles', {
+          method, credentials: 'omit',
+          headers: {'Authorization': 'Bearer ' + token, ...(payload ? {'Content-Type':'application/json'} : {})},
+          ...(payload ? {body: JSON.stringify(payload)} : {})
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Error de conexión');
+        return data;
+      };
+      const load = async () => {
+        try { const data = await api('GET'); articles = data.articles; render(); state('Artículos cargados.'); }
+        catch(e) { state(e.message); }
+      };
+      const render = () => {
+        const target = $('articles');
+        target.replaceChildren();
+        if (!articles.length) { target.textContent = 'Aún no hay artículos personalizados.'; return; }
+        for (const article of articles) {
+          const btn = document.createElement('button');
+          btn.type='button';
+          btn.className='block w-full rounded-lg border border-slate-200 p-3 text-left hover:bg-slate-100';
+          btn.textContent = article.title + ' · ' + (article.status === 'published' ? 'Publicado' : 'Borrador');
+          btn.addEventListener('click', () => {
+            for (const key of ['slug','title','description','category','listSlug','body','status']) field(key).value = article[key] || '';
+            state('Editando: ' + article.slug);
+          });
+          target.appendChild(btn);
+        }
+      };
+      $('load').addEventListener('click', load);
+      $('new').addEventListener('click', () => { form.reset(); state('Nuevo artículo.'); });
+      form.addEventListener('submit', async event => {
+        event.preventDefault();
+        if (!form.reportValidity()) return;
+        const payload = Object.fromEntries(new FormData(form).entries());
+        try { const result = await api('POST', payload); state('Guardado como ' + result.status + ': ' + result.slug); await load(); }
+        catch(e) { state(e.message); }
+      });
+    })();
+  </script>
+</Layout>
