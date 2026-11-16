@@ -17,7 +17,7 @@ Las cinco guías iniciales vienen en src/lib/seo-guides.js y se muestran aunque 
 2. Ejecutar `npx wrangler d1 execute tienda_referidos --remote --file=migrations/0003_seo_articles.sql` (confirmar el nombre real de la DB enlazada como CATALOG_DB en el entorno).
 3. Configurar un token secreto largo con `npx wrangler secret put SEO_ADMIN_TOKEN` en el Worker que sirve el sitio. No subirlo a Git ni usarlo en URLs.
 4. Abrir /admin/contenido-seo; introducir el token. Permanece solo en memoria de la página, no se guarda en localStorage.
-5. Publicar guías nuevas. Un registro 'published' en D1 sustituye una guía inicial con igual slug. Un registro 'draft' no la sustituye: para retirar una guía inicial se requiere además cambiar su estado en el catálogo de iniciales.
+5. Publicar guías nuevas. Un registro 'published' en D1 sustituye una guía inicial con igual slug. Un registro 'draft' oculta también la guía inicial con el mismo slug, permitiendo despublicarla desde el editor.
 
 ## Seguridad y límites
 - La API requiere bearer token en cabecera Authorization y compara de forma constante mediante WebCrypto.
