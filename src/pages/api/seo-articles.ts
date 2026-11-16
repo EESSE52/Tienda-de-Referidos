@@ -25,7 +25,7 @@ export const GET: APIRoute = async ({ request }) => {
   if (!env?.CATALOG_DB?.prepare) return json({ error: 'Base de datos D1 no configurada' }, 503);
   try {
     const rows = await env.CATALOG_DB.prepare('SELECT slug,title,description,category,list_slug AS listSlug,body,status,updated_at AS updatedAt FROM seo_articles ORDER BY updated_at DESC').all();
-    const merged = new Map(starterGuides.map(g => [g.slug, { ...g, body: g.paragraphs.join('\\n\\n'), status: 'published' }]));
+    const merged = new Map(starterGuides.map(g => [g.slug, { ...g, body: g.paragraphs.join('\n\n'), status: 'published' }]));
     for (const row of (rows.results ?? [])) merged.set(row.slug, row);
     return json({ articles: [...merged.values()] });
   } catch { return json({ error: 'Aplicar migración 0003_seo_articles.sql antes de editar' }, 503); }
