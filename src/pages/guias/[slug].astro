@@ -5,9 +5,11 @@ import { getPublishedGuides, validGuideSlug } from '../../lib/seo-guides.js';
 import { editorialExtras } from '../../lib/seo-editorial.js';
 import { loadCatalog, currencyCLP } from '../../lib/catalog';
 import { getPublicProductImage } from '../../lib/public-site';
+import { selectGuidePhotos } from '../../lib/guide-media.js';
 export const prerender = false;
 const slug = String(Astro.params.slug ?? '');
-const guide = validGuideSlug(slug) ? (await getPublishedGuides(env?.CATALOG_DB)).find(g => g.slug === slug) : null;
+const guides = await getPublishedGuides(env?.CATALOG_DB);
+const guide = validGuideSlug(slug) ? guides.find(g => g.slug === slug) : null;
 if (!guide) return Astro.redirect('/guias', 302);
 const listUrl = `/lista/${encodeURIComponent(guide.listSlug || 'creatina')}`;
 const extra = editorialExtras[slug];
@@ -17,8 +19,9 @@ const products = (targetList ? catalog.getProductosByListaId(targetList.id) : []
   .filter(p => p.activo === true && p.es_prueba !== true)
   .sort((a,b) => Number(Boolean(a.imagen_propia))-Number(Boolean(b.imagen_propia)))
   .reverse().slice(0,3);
-const featured = products.find(p => !getPublicProductImage(p).startsWith('/img/generica-')) || products[0];
-const featuredImage = featured ? getPublicProductImage(featured) : null;
+const selectedPhoto = selectGuidePhotos(guides, catalog).get(slug);
+const featured = selectedPhoto?.product || null;
+const featuredImage = selectedPhoto?.image || null;
 ---
 <Layout title={guide.title} description={guide.description}>
   <article class="mx-auto max-w-3xl rounded-3xl border border-slate-200 bg-white p-6 shadow-sm sm:p-10">
