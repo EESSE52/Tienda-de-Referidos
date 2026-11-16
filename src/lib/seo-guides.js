@@ -1,3 +1,4 @@
+import { parseVisual } from './seo-visual.js';
 // Guías originales, redactadas como material educativo, sin precios ni beneficios inventados.
 export const starterGuides = [
   {
@@ -77,8 +78,8 @@ export async function getPublishedGuides(db) {
   let overrides = [];
   try {
     if (db?.prepare) {
-      const response = await db.prepare("SELECT slug,title,description,category,list_slug AS listSlug,body,status,updated_at AS updatedAt FROM seo_articles ORDER BY updated_at DESC").all();
-      overrides = (response.results ?? []).map(row => ({...row, paragraphs: String(row.body ?? '').split(/\n\s*\n/).filter(Boolean)}));
+      const response = await db.prepare("SELECT slug,title,description,category,list_slug AS listSlug,body,status,updated_at AS updatedAt,editor_json AS editorJson FROM seo_articles ORDER BY updated_at DESC").all();
+      overrides = (response.results ?? []).map(row => ({...row, paragraphs: String(row.body ?? '').split(/\n\s*\n/).filter(Boolean), visual: parseVisual(row.editorJson)}));
     }
   } catch { /* Instalación pendiente: las guías iniciales siguen disponibles */ }
   const result = new Map(starterGuides.map(g => [g.slug,g]));
